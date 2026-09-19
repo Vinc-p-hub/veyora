@@ -89,6 +89,13 @@ test("search: synonyms, typo tolerance and zero-result fallback", () => {
   const zero = searchCatalog(catalog, "zzzzz", { limit: 5, fallbackLimit: 3 });
   assert.equal(zero.results.length, 0);
   assert.equal(zero.fallback.length, 3);
+
+  // generic-noun typo resolves via category hint when the word is absent from product names
+  const lean = [
+    { id: "b", name: "Sony WH-1000XM6 VEYRO Edition", brand: "Sony", category: "Audio", premium_score: 98, rating: 4.9, stock_status: "IN_STOCK", premium_status: "PREMIUM" },
+  ];
+  const nounTypo = searchCatalog(lean, "headfon", { limit: 5 });
+  assert.equal(nounTypo.results[0]?.id, "b");
 });
 
 test("pricing: margin, installments with visible total, currency conversion", () => {

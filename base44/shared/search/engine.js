@@ -50,6 +50,20 @@ export function levenshtein(a, b) {
   return prev[b.length];
 }
 
+// Generic product nouns let typos resolve to the right category even when the
+// catalog's product names don't contain the generic word ("headfon" -> headphones -> Audio).
+export const CATEGORY_NOUNS = {
+  headphones: "Audio", earbuds: "Audio", headset: "Audio", speaker: "Audio",
+  laptop: "Computers", notebook: "Computers", desktop: "Computers",
+  phone: "Phones", smartphone: "Phones", tablet: "Phones",
+  watch: "Wearables", smartwatch: "Wearables", fitness: "Wearables",
+  camera: "Cameras", lens: "Cameras",
+  console: "Gaming", playstation: "Gaming", joystick: "Gaming",
+  tv: "TV", television: "TV", monitor: "TV",
+  drone: "Smart Home", thermostat: "Smart Home", vacuum: "Smart Home",
+  keyboard: "Accessories", charger: "Accessories", cable: "Accessories", case: "Accessories",
+};
+
 export function buildLexicon(products) {
   const lex = new Set();
   for (const p of products) {
@@ -95,6 +109,7 @@ function scoreProduct(p, qTokens) {
     if (nameTokens.includes(t)) s = Math.max(s, 3);
     else if (nameTokens.some((n) => n.startsWith(t) && t.length >= 3)) s = Math.max(s, 2);
     if (String(p.category || "").toLowerCase().includes(t)) s = Math.max(s, 2);
+    if (CATEGORY_NOUNS[t] === p.category) s = Math.max(s, 2);
     if (String(p.model || "").toLowerCase().includes(t)) s = Math.max(s, 3);
     if (s > 0) matched++;
     score += s;
@@ -119,7 +134,7 @@ export function searchCatalog(products, q, opts = {}) {
     const popular = [...products].sort((a, b) => (b.premium_score || 0) - (a.premium_score || 0)).slice(0, limit);
     return { results: popular, brands: [], categories: [], corrected: null, fallback: [], normalizedQuery: "", expandedTokens: [] };
   }
-  const lexicon = buildLexicon(products);
+  const lexicon = new Set([...buildLexicon(products), ...Object.keys(CATEGORY_NOUNS)]);
   const expanded = [...new Set(expandTokens(rawTokens, lexicon))];
   const normalizedQuery = normalizeQuery(q);
 
