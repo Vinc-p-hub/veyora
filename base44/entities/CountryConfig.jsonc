@@ -1,0 +1,75 @@
+{
+  "name": "CountryConfig",
+  "type": "object",
+  "properties": {
+    "code": {
+      "type": "string",
+      "description": "ISO 3166 alpha-2 country code, e.g. US, FR, AE"
+    },
+    "name": {
+      "type": "string"
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD"
+    },
+    "flag": {
+      "type": "string",
+      "description": "Emoji flag shown in the region selector"
+    },
+    "shipping": {
+      "type": "number",
+      "default": 0
+    },
+    "tax_rate": {
+      "type": "number",
+      "default": 0
+    },
+    "duty_rate": {
+      "type": "number",
+      "default": 0
+    },
+    "providers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Payment providers available in this country"
+    },
+    "financing_enabled": {
+      "type": "boolean",
+      "default": true
+    },
+    "delivery_days": {
+      "type": "number",
+      "default": 7
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [
+    "code",
+    "name",
+    "currency"
+  ],
+  "rls": {
+    "read": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

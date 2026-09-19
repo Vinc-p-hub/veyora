@@ -53,16 +53,38 @@ export function levenshtein(a, b) {
 // Generic product nouns let typos resolve to the right category even when the
 // catalog's product names don't contain the generic word ("headfon" -> headphones -> Audio).
 export const CATEGORY_NOUNS = {
-  headphones: "Audio", earbuds: "Audio", headset: "Audio", speaker: "Audio",
-  laptop: "Computers", notebook: "Computers", desktop: "Computers",
-  phone: "Phones", smartphone: "Phones", tablet: "Phones",
-  watch: "Wearables", smartwatch: "Wearables", fitness: "Wearables",
-  camera: "Cameras", lens: "Cameras",
-  console: "Gaming", playstation: "Gaming", joystick: "Gaming",
-  tv: "TV", television: "TV", monitor: "TV",
-  drone: "Smart Home", thermostat: "Smart Home", vacuum: "Smart Home",
-  keyboard: "Accessories", charger: "Accessories", cable: "Accessories", case: "Accessories",
+  headphones: "Headphones & Earbuds", earbuds: "Headphones & Earbuds", headset: "Headphones & Earbuds", earphone: "Headphones & Earbuds", airpods: "Headphones & Earbuds",
+  speaker: "Audio", soundbar: "Audio", amplifier: "Audio", hifi: "Audio", subwoofer: "Audio", turntable: "Audio",
+  laptop: "Laptops", notebook: "Laptops", macbook: "Laptops", ultrabook: "Laptops", thinkpad: "Laptops", chromebook: "Laptops",
+  phone: "Smartphones", smartphone: "Smartphones", mobile: "Smartphones", iphone: "Smartphones",
+  tablet: "Tablets", ipad: "Tablets",
+  watch: "Smartwatches", smartwatch: "Smartwatches", fitbit: "Smartwatches", garmin: "Smartwatches",
+  camera: "Cameras", lens: "Cameras", dslr: "Cameras", camcorder: "Cameras", gopro: "Cameras",
+  console: "Gaming", playstation: "Gaming", joystick: "Gaming", xbox: "Gaming", nintendo: "Gaming",
+  tv: "TVs & Monitors", television: "TVs & Monitors", monitor: "TVs & Monitors", projector: "TVs & Monitors",
+  gpu: "Computer Components", cpu: "Computer Components", motherboard: "Computer Components", ram: "Computer Components", ssd: "Computer Components", graphics: "Computer Components",
+  router: "Networking", wifi: "Networking", modem: "Networking", mesh: "Networking", ethernet: "Networking",
+  thermostat: "Smart Home", vacuum: "Smart Home", doorbell: "Smart Home", drone: "Smart Home",
+  keyboard: "Accessories", charger: "Accessories", cable: "Accessories", case: "Accessories", mouse: "Accessories", dock: "Accessories", webcam: "Accessories",
 };
+
+// Products stored under legacy category values must keep ranking for
+// category-intent queries ("headphones" still matches legacy "Audio" products).
+const CATEGORY_ALIASES = {
+  "Headphones & Earbuds": ["Audio"],
+  "TVs & Monitors": ["TV"],
+  Laptops: ["Computers"],
+  Smartphones: ["Phones"],
+  Smartwatches: ["Wearables"],
+  "Computer Components": ["Computers"],
+};
+
+export function nounMatchesCategory(token, category) {
+  const noun = CATEGORY_NOUNS[token];
+  if (!noun) return false;
+  if (noun === category) return true;
+  return (CATEGORY_ALIASES[noun] || []).includes(category);
+}
 
 export function buildLexicon(products) {
   const lex = new Set();
@@ -109,7 +131,7 @@ function scoreProduct(p, qTokens) {
     if (nameTokens.includes(t)) s = Math.max(s, 3);
     else if (nameTokens.some((n) => n.startsWith(t) && t.length >= 3)) s = Math.max(s, 2);
     if (String(p.category || "").toLowerCase().includes(t)) s = Math.max(s, 2);
-    if (CATEGORY_NOUNS[t] === p.category) s = Math.max(s, 2);
+    if (nounMatchesCategory(t, p.category)) s = Math.max(s, 2);
     if (String(p.model || "").toLowerCase().includes(t)) s = Math.max(s, 3);
     if (s > 0) matched++;
     score += s;

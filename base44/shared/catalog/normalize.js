@@ -63,16 +63,23 @@ export function normalizeBrand(raw, title) {
   return m ? m[1].trim() : null;
 }
 
+// New taxonomy first (most specific wins); legacy values remain valid for old records.
+// Any brand or product type outside these keywords still passes through (category is
+// optional for publication) — discovery is never blocked by classification.
 const CATEGORY_KEYWORDS = [
-  ["Phones", ["iphone", "smartphone", "galaxy s", "pixel", "phone"]],
-  ["Computers", ["macbook", "laptop", "notebook", "computer", "imac", "thinkpad", "chromebook"]],
-  ["Gaming", ["playstation", "xbox", "console", "gaming", "nintendo", "steam deck"]],
-  ["Audio", ["headphone", "earbud", "speaker", "soundbar", "airpods", "wh-1000"]],
-  ["Cameras", ["camera", "lens", "dslr", "mirrorless", "gopro"]],
-  ["TV", ["tv", "television", "projector", "oled"]],
-  ["Smart Home", ["smart home", "thermostat", "alexa", "google home", "doorbell", "vacuum"]],
-  ["Wearables", ["watch", "fitness band", "smartwatch", "galaxy watch"]],
-  ["Accessories", ["cable", "charger", "case", "keyboard", "mouse", "power bank", "adapter"]],
+  ["Computer Components", ["gpu", "rtx", "gtx", "radeon", "graphics card", "cpu cooler", "processor", "motherboard", "nvme", "ssd", "ram module", "power supply", "psu", "pc case", "aio cooler", "imac", "mac mini", "mac studio", "desktop", "workstation"]],
+  ["Networking", ["router", "mesh wifi", "wifi 6", "wifi 7", "access point", "network switch", "modem", "range extender", "ethernet switch", "deco", "orbi"]],
+  ["Headphones & Earbuds", ["headphone", "headset", "earbud", "earphone", "airpods", "wh-1000", "wf-1000"]],
+  ["Smartwatches", ["smartwatch", "smart watch", "apple watch", "galaxy watch", "fitness tracker", "amazfit", "fenix", "forerunner"]],
+  ["Tablets", ["ipad", "tablet", "galaxy tab", "fire hd", "tab s", "tab pro"]],
+  ["Laptops", ["macbook", "laptop", "notebook", "thinkpad", "chromebook", "ideapad", "xps", "zenbook", "vivobook", "yoga book", "legion", "swift go", "gram "]],
+  ["Smartphones", ["iphone", "smartphone", "galaxy s", "galaxy z", "pixel", "oneplus", "redmi", "xiaomi", "nothing phone", "phone"]],
+  ["TVs & Monitors", ["television", " tv", "tv ", "smart tv", "monitor", "oled", "qled", "projector", "bravia", "nec display"]],
+  ["Gaming", ["playstation", "ps5", "ps4", "xbox", "nintendo", "console", "steam deck", "gaming", "switch lite", "dualsense"]],
+  ["Cameras", ["camera", "lens", "dslr", "mirrorless", "gopro", "camcorder", "eos", "alpha 7", "z6", "z8", "r5", "r6"]],
+  ["Audio", ["speaker", "soundbar", "amplifier", "receiver", "turntable", "hi-fi", "hifi", "subwoofer", "sonos", "gherkin"]],
+  ["Smart Home", ["smart home", "thermostat", "alexa", "google home", "doorbell", "vacuum", "nest", "hue", "echo", "roborock"]],
+  ["Accessories", ["cable", "charger", "case", "keyboard", "mouse", "power bank", "adapter", "dock", "stylus", "stand", "memory card", "webcam"]],
 ];
 
 export function inferCategory(text) {

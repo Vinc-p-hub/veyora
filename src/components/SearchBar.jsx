@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Search, Loader2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useRegion } from "@/lib/RegionContext";
+import { useLang } from "@/lib/i18n";
 import { formatPrice } from "@/lib/pricing";
 
 const FALLBACK_IMG =
@@ -14,6 +15,7 @@ const FALLBACK_IMG =
 export default function SearchBar() {
   const navigate = useNavigate();
   const { country, currency } = useRegion();
+  const { t } = useLang();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -81,7 +83,7 @@ export default function SearchBar() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onFocus={() => q.trim().length >= 1 && setOpen(true)}
-          placeholder="What are you looking for? (iphone, sony, macbook…)"
+          placeholder={t("header.searchPlaceholder")}
           className="flex-1 min-w-0 bg-white border border-border-hairline border-r-0 rounded-l-lg px-4 py-2.5 text-sm placeholder:text-text-muted focus:outline-none"
         />
         <button
@@ -106,13 +108,13 @@ export default function SearchBar() {
               onClick={() => go(`/category?q=${encodeURIComponent(data.corrected)}`)}
               className="w-full text-left px-4 py-2.5 text-sm border-b border-border-hairline hover:bg-surface-secondary"
             >
-              Did you mean <span className="font-semibold text-accent-cyan">{data.corrected}</span>?
+              {t("category.didYouMean")} <span className="font-semibold text-accent-cyan">{data.corrected}</span>?
             </button>
           )}
 
           {products.length > 0 && (
             <>
-              <div className="px-4 pt-2.5 pb-1 text-[10px] uppercase tracking-widest text-text-muted">Products</div>
+              <div className="px-4 pt-2.5 pb-1 text-[10px] uppercase tracking-widest text-text-muted">{t("search.products")}</div>
               {products.map((p) => (
                 <Link
                   key={p.id}
@@ -157,7 +159,7 @@ export default function SearchBar() {
           {data && products.length === 0 && (
             <div className="p-4">
               <p className="text-sm text-text-muted">
-                No exact match for “{q}”. {fallback.length > 0 ? "Maybe you’ll like these:" : "Try another search."}
+                {fallback.length > 0 ? `${t("category.maybeLike")}…` : t("category.noMatchQuery", { q })}
               </p>
               {fallback.slice(0, 4).map((p) => (
                 <Link

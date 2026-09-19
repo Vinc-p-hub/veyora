@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { Star, ShieldCheck, Truck, RefreshCw, Check, ChevronRight } from "lucide-react";
+import { Star, ShieldCheck, Truck, RefreshCw, Check, ChevronRight, Heart } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useRegion } from "@/lib/RegionContext";
 import { useCart } from "@/lib/CartContext";
@@ -16,6 +16,7 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true);
   const [planId, setPlanId] = useState("plan_5");
   const [added, setAdded] = useState(false);
+  const [wishlisted, setWishlisted] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -23,6 +24,13 @@ export default function ProductDetail() {
       .then((res) => setProduct(res[0] || null))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  useEffect(() => {
+    if (!product?.id) return;
+    base44.entities.WishlistItem.filter({ product_id: product.id })
+      .then((items) => setWishlisted(items.length > 0))
+      .catch(() => {});
+  }, [product?.id]);
 
   if (loading) {
     return <div className="p-10 max-w-[1400px] mx-auto"><div className="aspect-[3/4] bg-surface-card rounded-lg animate-pulse max-w-md" /></div>;
@@ -44,6 +52,21 @@ export default function ProductDetail() {
     addItem(product, 1);
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
+  };
+
+  const toggleWishlist = async () => {
+    const items = await base44.entities.WishlistItem.filter({ product_id: product.id });
+    if (items.length) {
+      await base44.entities.WishlistItem.delete(items[0].id);
+      setWishlisted(false);
+    } else {
+      await base44.entities.WishlistItem.create({
+        product_id: product.id,
+        product_slug: product.slug,
+        price_at_add: price,
+      });
+      setWishlisted(true);
+    }
   };
 
   const buyNow = () => {
@@ -170,6 +193,17 @@ export default function ProductDetail() {
                 )}
               >
                 {added ? <><Check className="w-4 h-4" /> Added</> : "Add to cart"}
+              </button>
+              <button
+                onClick={toggleWishlist}
+                aria-label="Wishlist"
+                title="Wishlist"
+                className={cn(
+                  "px-4 py-3.5 rounded-lg border transition",
+                  wishlisted ? "border-red-400 text-red-500" : "border-border-hairline hover:border-accent-cyan/40 text-text-muted"
+                )}
+              >
+                <Heart className={cn("w-5 h-5", wishlisted && "fill-red-500 text-red-500")} />
               </button>
             </div>
           </div>

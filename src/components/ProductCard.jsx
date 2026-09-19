@@ -3,16 +3,17 @@ import { Link } from "react-router-dom";
 import { Star } from "lucide-react";
 import { formatPrice, buildInstallmentPlan } from "@/lib/pricing";
 import { useRegion } from "@/lib/RegionContext";
+import { useLang } from "@/lib/i18n";
 
 const FALLBACK_IMG =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="#F0F0F3"/><text x="60" y="64" font-size="12" fill="#787C8D" text-anchor="middle" font-family="sans-serif">VEYRO</text></svg>'
   );
-const STOCK_LABEL = { IN_STOCK: "In stock", LOW_STOCK: "Low stock", OUT_OF_STOCK: "Out of stock", PREORDER: "Preorder", UNKNOWN: "Available" };
 
 export default function ProductCard({ product, compact }) {
   const { currency } = useRegion();
+  const { t } = useLang();
   const price = product.customer_price;
   const plan = buildInstallmentPlan(price, 5, 0.15);
   const discount = product.source_price && product.source_price > price
@@ -31,9 +32,9 @@ export default function ProductCard({ product, compact }) {
           loading="lazy"
           className="w-full h-full object-cover group-hover:scale-[1.02] transition duration-500"
         />
-        <span className="absolute bottom-2 left-2 text-[10px] italic font-bold text-white bg-accent-cyan px-1.5 py-0.5 rounded">express</span>
+        <span className="absolute bottom-2 start-2 text-[10px] italic font-bold text-white bg-accent-cyan px-1.5 py-0.5 rounded">{t("card.express")}</span>
         {product.stock_status === "LOW_STOCK" && (
-          <span className="absolute top-2 right-2 text-[10px] bg-white border border-border-hairline px-1.5 py-0.5 rounded text-text-muted">Low stock</span>
+          <span className="absolute top-2 end-2 text-[10px] bg-white border border-border-hairline px-1.5 py-0.5 rounded text-text-muted">{t("stock.LOW_STOCK")}</span>
         )}
       </div>
       <div className="flex flex-col p-2.5 flex-1">
@@ -52,13 +53,13 @@ export default function ProductCard({ product, compact }) {
               <span className="text-[11px] text-text-muted line-through">{formatPrice(product.source_price, currency)}</span>
             )}
           </div>
-          {discount > 0 && <div className="text-[11px] font-semibold text-accent-cyan">{discount}% off</div>}
+          {discount > 0 && <div className="text-[11px] font-semibold text-accent-cyan">{t("card.off", { n: discount })}</div>}
           <div className="text-[10px] text-text-muted mt-0.5">
-            {formatPrice(plan.downPayment, currency)} today · {plan.installmentCount}× {formatPrice(plan.installmentAmount, currency)}/mo
+            {formatPrice(plan.downPayment, currency)} {t("card.today")} · {plan.installmentCount}× {formatPrice(plan.installmentAmount, currency)}{t("card.perMonth")}
           </div>
           <div className="text-[10px] text-text-muted mt-0.5 flex items-center gap-1">
-            <span className={product.stock_status === "IN_STOCK" ? "text-emerald-600 font-medium" : ""}>{STOCK_LABEL[product.stock_status] || "Available"}</span>
-            <span>· {product.delivery_days || 5}-day delivery</span>
+            <span className={product.stock_status === "IN_STOCK" ? "text-emerald-600 font-medium" : ""}>{t(`stock.${product.stock_status || "UNKNOWN"}`)}</span>
+            <span>· {t("card.deliveryDays", { n: product.delivery_days || 5 })}</span>
           </div>
         </div>
       </div>

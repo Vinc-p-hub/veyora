@@ -1,0 +1,74 @@
+{
+  "name": "SupportTicket",
+  "type": "object",
+  "properties": {
+    "subject": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "email": {
+      "type": "string"
+    },
+    "topic": {
+      "type": "string",
+      "enum": [
+        "order",
+        "payment",
+        "financing",
+        "product",
+        "delivery",
+        "account",
+        "other"
+      ],
+      "default": "other"
+    },
+    "order_number": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "IN_PROGRESS",
+        "RESOLVED",
+        "CLOSED"
+      ],
+      "default": "OPEN"
+    },
+    "reply": {
+      "type": "string",
+      "description": "Staff reply shown to the customer"
+    }
+  },
+  "required": [
+    "subject",
+    "message"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

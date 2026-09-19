@@ -38,7 +38,10 @@ test("normalizer: price / currency / stock / category", () => {
   assert.equal(normalizeCurrency("usd"), "USD");
   assert.equal(normalizeStock("https://schema.org/InStock"), "IN_STOCK");
   assert.equal(normalizeStock(""), "UNKNOWN");
-  assert.equal(inferCategory("MacBook Pro 16"), "Computers");
+  assert.equal(inferCategory("MacBook Pro 16"), "Laptops");
+  assert.equal(inferCategory("iPhone 17 Pro"), "Smartphones");
+  assert.equal(inferCategory("ASUS RT-AX88U Pro Router"), "Networking");
+  assert.equal(inferCategory("Sony WH-1000XM6 Wireless Headphones"), "Headphones & Earbuds");
 });
 
 test("validator: missing stock never rejects a good product", () => {

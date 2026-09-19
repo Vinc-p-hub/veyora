@@ -1,0 +1,46 @@
+{
+  "name": "CurrencyRate",
+  "type": "object",
+  "properties": {
+    "code": {
+      "type": "string",
+      "description": "ISO 4217 currency code, e.g. USD, EUR, NGN"
+    },
+    "name": {
+      "type": "string"
+    },
+    "symbol": {
+      "type": "string"
+    },
+    "rate": {
+      "type": "number",
+      "description": "Units of this currency per 1 USD (store base is USD)"
+    },
+    "updated_by": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "code",
+    "symbol",
+    "rate"
+  ],
+  "rls": {
+    "read": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

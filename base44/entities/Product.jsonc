@@ -26,15 +26,23 @@
     "category": {
       "type": "string",
       "enum": [
+        "Laptops",
+        "Smartphones",
+        "Tablets",
+        "Headphones & Earbuds",
+        "TVs & Monitors",
+        "Cameras",
+        "Gaming",
+        "Smartwatches",
+        "Audio",
+        "Accessories",
+        "Smart Home",
+        "Networking",
+        "Computer Components",
         "Phones",
         "Computers",
-        "Gaming",
-        "Audio",
-        "Cameras",
         "TV",
-        "Smart Home",
-        "Wearables",
-        "Accessories"
+        "Wearables"
       ]
     },
     "source_price": {

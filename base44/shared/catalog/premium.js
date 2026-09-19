@@ -1,10 +1,21 @@
 // Premium engine — decides what belongs in a premium electronics catalog.
 // Inputs: brand reputation, price, data quality, rating. Outputs: score + status.
 
+// Premium scoring guide-list — NOT a whitelist: any discovered brand is still scored
+// (unlisted known brands get base points), and the list can grow without code changes
+// elsewhere since brands come from the merchant feeds / pages themselves.
 const PREMIUM_BRANDS = [
   "apple", "sony", "bose", "samsung", "leica", "bang & olufsen", "sennheiser",
   "canon", "nikon", "dyson", "asus", "rog", "lg", "marshall", "jbl", "shure",
   "microsoft", "dell", "xps", "lenovo", "hp", "garmin", "beats", "google",
+  "xiaomi", "huawei", "oneplus", "nothing", "oppo", "honor", "msi", "razer",
+  "acer", "toshiba", "nintendo", "playstation", "xbox", "gopro", "nvidia",
+  "intel", "amd", "logitech", "steelseries", "hyperx", "sonos", "kef", "denon",
+  "marantz", "yamaha", "audio-technica", "akg", "beyerdynamic", "focal",
+  "panasonic", "philips", "hisense", "tcl", "vizio", "netgear", "tp-link",
+  "tplink", "anker", "belkin", "ring", "ecobee", "roborock", "miele", "bosch",
+  "fujifilm", "fuji", "panasonic lumix", "lumix", "olympus", "om system",
+  "polar", "suunto", "withings", "dji", "insta360", "eight sleep", "molekule",
 ];
 
 export function premiumScore({ brand, priceUsd, qualityScore, rating }) {
