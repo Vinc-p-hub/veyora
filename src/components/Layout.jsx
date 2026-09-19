@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
-import { ShoppingBag, User, MapPin, Compass, LayoutGrid, Package, Search as SearchIcon, Heart, Globe } from "lucide-react";
+import { ShoppingBag, User, MapPin, Compass, LayoutGrid, Package, Search as SearchIcon, Heart, Globe, ChevronDown } from "lucide-react";
 import { useCart } from "@/lib/CartContext";
 import SearchBar from "@/components/SearchBar";
 import { useRegion } from "@/lib/RegionContext";
@@ -19,34 +19,55 @@ function CountryWidget() {
   const { country, countryCode, setCountryCode, countries } = useRegion();
   const { t } = useLang();
   const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return countries;
+    return countries.filter((c) => c.name.toLowerCase().includes(needle) || c.code.toLowerCase().includes(needle));
+  }, [countries, q]);
   return (
-    <div className="relative">
+    <div className="relative shrink-0">
       <button
-        onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text-primary transition whitespace-nowrap"
+        onClick={() => { setOpen((o) => !o); setQ(""); }}
+        className="flex items-center gap-1 text-xs hover:opacity-70 transition max-w-[140px]"
+        title={t("header.deliverTo")}
       >
-        <MapPin className="w-4 h-4" />
-        <span className="hidden lg:inline">{t("header.deliverTo")}</span>
-        <span className="font-medium text-text-primary">{country.flag} <span className="hidden lg:inline">{country.name}</span></span>
+        <MapPin className="w-4 h-4 shrink-0" />
+        <span className="truncate font-medium">
+          {country.flag} <span className="hidden lg:inline">{country.name}</span><span className="lg:hidden">{country.code}</span>
+        </span>
+        <ChevronDown className="w-3.5 h-3.5 shrink-0" />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute end-0 mt-3 w-56 bg-surface-card border border-border-hairline rounded-lg p-1.5 z-50 shadow-xl max-h-80 overflow-auto">
+          <div className="absolute start-0 mt-3 w-72 bg-white border border-border-hairline rounded-lg p-1.5 z-50 shadow-xl">
             <div className="px-2 py-1.5 text-[10px] uppercase tracking-widest text-text-muted">{t("header.deliverTo")}</div>
-            {countries.map((c) => (
-              <button
-                key={c.code}
-                onClick={() => { setCountryCode(c.code); setOpen(false); }}
-                className={cn(
-                  "w-full flex items-center justify-between px-2 py-2 rounded-md text-xs hover:bg-surface-secondary transition",
-                  c.code === countryCode && "bg-surface-secondary font-semibold"
-                )}
-              >
-                <span className="flex items-center gap-2"><span>{c.flag}</span>{c.name}</span>
-                <span className="text-text-muted">{c.currency}</span>
-              </button>
-            ))}
+            <input
+              autoFocus
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search a country…"
+              className="w-full mb-1 bg-surface-primary border border-border-hairline rounded-md px-2.5 py-2 text-xs outline-none focus:border-accent-cyan/50"
+            />
+            <div className="max-h-72 overflow-auto">
+              {filtered.map((c) => (
+                <button
+                  key={c.code}
+                  onClick={() => { setCountryCode(c.code); setOpen(false); }}
+                  className={cn(
+                    "w-full flex items-center justify-between px-2 py-2 rounded-md text-xs hover:bg-surface-secondary transition",
+                    c.code === countryCode && "bg-surface-secondary font-semibold"
+                  )}
+                >
+                  <span className="flex items-center gap-2"><span>{c.flag}</span>{c.name}</span>
+                  <span className="text-text-muted">{c.currency}</span>
+                </button>
+              ))}
+              {filtered.length === 0 && (
+                <div className="px-2 py-3 text-xs text-text-muted">No country found.</div>
+              )}
+            </div>
           </div>
         </>
       )}
@@ -60,19 +81,19 @@ function LanguageWidget() {
   const [open, setOpen] = useState(false);
   const active = languages.find((l) => l.code === lang);
   return (
-    <div className="relative">
+    <div className="relative shrink-0">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1.5 text-xs text-text-muted hover:text-text-primary transition whitespace-nowrap"
+        className="flex items-center gap-1 text-xs hover:opacity-70 transition whitespace-nowrap"
         title={t("header.language")}
       >
         <Globe className="w-4 h-4" />
-        <span className="font-medium text-text-primary">{active?.flag}</span>
+        <span className="font-medium">{active?.label}</span>
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute end-0 mt-3 w-40 bg-surface-card border border-border-hairline rounded-lg p-1.5 z-50 shadow-xl">
+          <div className="absolute end-0 mt-3 w-40 bg-white border border-border-hairline rounded-lg p-1.5 z-50 shadow-xl">
             <div className="px-2 py-1.5 text-[10px] uppercase tracking-widest text-text-muted">{t("header.language")}</div>
             {languages.map((l) => (
               <button
@@ -93,6 +114,18 @@ function LanguageWidget() {
   );
 }
 
+function HeaderAction({ to, icon: Icon, label, onClick, badge }) {
+  return (
+    <Link to={to} onClick={onClick} className="relative flex flex-col items-center gap-0.5 hover:opacity-60 transition no-tap-highlight">
+      <Icon className="w-5 h-5" />
+      <span className="hidden md:block text-[10px] font-medium leading-none">{label}</span>
+      {badge > 0 && (
+        <span className="absolute -top-1 -end-1.5 min-w-[16px] h-4 px-1 rounded-full bg-noon-fg text-white text-[10px] font-bold flex items-center justify-center">{badge}</span>
+      )}
+    </Link>
+  );
+}
+
 function Footer() {
   const { t, tCat } = useLang();
   return (
@@ -101,7 +134,7 @@ function Footer() {
         <div className="col-span-2 md:col-span-1">
           <span className="font-display font-extrabold text-xl">veyro</span>
           <p className="text-xs mt-3 opacity-80 leading-relaxed">{t("footer.tagline")}</p>
-          <div className="text-[11px] mt-3 font-medium">Stripe · Paystack · PayUnit · Alipay · Crypto</div>
+          <div className="text-[11px] mt-3 font-medium">Stripe · Flutterwave · Paystack · M-Pesa · Alipay · Crypto</div>
         </div>
         <div>
           <h4 className="font-semibold text-sm mb-3">{t("footer.electronics")}</h4>
@@ -153,65 +186,53 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-surface-primary text-text-primary flex flex-col">
-      <header className="sticky top-0 z-30 bg-white border-b border-border-hairline">
-        {/* Mobile top bar: search always visible */}
-        <div className="md:hidden flex items-center gap-2 px-3 h-11">
-          <Link to="/" className="shrink-0">
-            <span className="bg-noon text-noon-fg font-display font-extrabold text-sm px-2.5 py-1 rounded-md inline-block leading-none">veyro</span>
-          </Link>
-          <div className="ms-auto flex items-center gap-1">
-            <LanguageWidget />
+      {/* Noon-style yellow header */}
+      <header className="sticky top-0 z-30 bg-noon text-noon-fg shadow-sm">
+        <div className="max-w-[1400px] mx-auto px-3 md:px-8">
+          <div className="flex items-center gap-3 md:gap-6 h-14 md:h-[68px]">
+            <Link to="/" className="shrink-0" aria-label="VEYRO">
+              <span className="font-display font-extrabold text-2xl md:text-[28px] leading-none tracking-tight">veyro</span>
+            </Link>
             <CountryWidget />
-          </div>
-        </div>
-        {/* Main row: logo · search · account */}
-        <div className="max-w-[1400px] mx-auto flex items-center gap-3 md:gap-6 px-3 md:px-8 h-14 md:h-16">
-          <Link to="/" className="shrink-0 hidden md:block">
-            <span className="bg-noon text-noon-fg font-display font-extrabold text-lg md:text-xl px-3 py-1 rounded-md inline-block leading-none">veyro</span>
-          </Link>
-          <SearchBar />
-          <div className="hidden md:flex items-center gap-2 shrink-0">
-            <LanguageWidget />
-            <CountryWidget />
-          </div>
-          <div className="flex items-center gap-1 md:gap-2 shrink-0">
-            <Link to="/wishlist" aria-label={t("nav.wishlist")} className="p-2 rounded-lg hover:bg-surface-secondary text-text-muted hover:text-text-primary transition">
-              <Heart className="w-5 h-5" />
-            </Link>
-            <Link to="/profile" aria-label={t("nav.account")} className="p-2 rounded-lg hover:bg-surface-secondary text-text-muted hover:text-text-primary transition hidden md:block">
-              <User className="w-5 h-5" />
-            </Link>
-            <Link to="/cart" className="relative p-2 rounded-lg hover:bg-surface-secondary text-text-primary transition">
-              <ShoppingBag className="w-5 h-5" />
-              {count > 0 && (
-                <span className="absolute top-0 end-0 min-w-[16px] h-4 px-1 rounded-full bg-noon text-noon-fg text-[10px] font-bold flex items-center justify-center">{count}</span>
-              )}
-            </Link>
+            <SearchBar />
+            <div className="hidden md:flex items-center gap-5 shrink-0">
+              <LanguageWidget />
+              <HeaderAction to="/profile" icon={User} label={t("nav.account")} />
+              <HeaderAction to="/orders" icon={Package} label={t("nav.orders")} />
+              <HeaderAction to="/wishlist" icon={Heart} label={t("nav.wishlist")} />
+              <HeaderAction to="/cart" icon={ShoppingBag} label={t("footer.cart")} badge={count} />
+            </div>
+            <div className="md:hidden flex items-center gap-3 shrink-0 ms-auto">
+              <LanguageWidget />
+              <HeaderAction to="/cart" icon={ShoppingBag} label="" badge={count} />
+            </div>
           </div>
         </div>
         {/* Category strip */}
-        <div className="max-w-[1400px] mx-auto px-3 md:px-8 flex items-center gap-4 md:gap-6 h-11 overflow-x-auto scrollbar-hide text-[13px]">
-          <Link
-            to="/category"
-            className={cn(
-              "whitespace-nowrap py-2.5 border-b-2 -mb-px",
-              !catParam && location.pathname === "/category" ? "border-noon-fg font-semibold text-text-primary" : "border-transparent text-text-muted hover:text-text-primary"
-            )}
-          >
-            {t("header.allProducts")}
-          </Link>
-          {CATS.map((c) => (
+        <div className="bg-white border-b border-border-hairline text-noon-fg">
+          <div className="max-w-[1400px] mx-auto px-3 md:px-8 flex items-center gap-4 md:gap-6 h-11 overflow-x-auto scrollbar-hide text-[13px]">
             <Link
-              key={c}
-              to={`/category?cat=${encodeURIComponent(c)}`}
+              to="/category"
               className={cn(
                 "whitespace-nowrap py-2.5 border-b-2 -mb-px",
-                catParam === c ? "border-noon-fg font-semibold text-text-primary" : "border-transparent text-text-muted hover:text-text-primary"
+                !catParam && location.pathname === "/category" ? "border-noon-fg font-semibold" : "border-transparent text-text-muted hover:text-text-primary"
               )}
             >
-              {tCat(c)}
+              {t("header.allProducts")}
             </Link>
-          ))}
+            {CATS.map((c) => (
+              <Link
+                key={c}
+                to={`/category?cat=${encodeURIComponent(c)}`}
+                className={cn(
+                  "whitespace-nowrap py-2.5 border-b-2 -mb-px",
+                  catParam === c ? "border-noon-fg font-semibold" : "border-transparent text-text-muted hover:text-text-primary"
+                )}
+              >
+                {tCat(c)}
+              </Link>
+            ))}
+          </div>
         </div>
       </header>
 
