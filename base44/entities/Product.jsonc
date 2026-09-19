@@ -140,7 +140,7 @@
         "LOW"
       ],
       "default": "AUTO",
-      "description": "AUTO derives the tier from demand signals (orders, wishlist, premium); explicit values override it"
+      "description": "AUTO derives the tier from demand signals (orders, wishlist, premium, new arrivals); explicit values override it"
     },
     "source_id": {
       "type": "string"
@@ -160,6 +160,31 @@
     },
     "last_crawled_at": {
       "type": "string"
+    },
+    "first_seen_at": {
+      "type": "string",
+      "description": "When the crawler first discovered this product \u2014 drives the New Arrivals logic"
+    },
+    "available_date": {
+      "type": "string",
+      "description": "Availability / release date published by the merchant, when provided"
+    },
+    "variant_info": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Real variant attributes captured from the source: storage, RAM, color, availability date, variant count"
+    },
+    "previous_price": {
+      "type": "number",
+      "description": "Customer price just before the last change"
+    },
+    "price_changed_at": {
+      "type": "string",
+      "description": "When the customer price last changed"
+    },
+    "stock_changed_at": {
+      "type": "string",
+      "description": "When the stock status last changed"
     },
     "available_countries": {
       "type": "array",

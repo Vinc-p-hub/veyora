@@ -89,3 +89,50 @@ export function inferCategory(text) {
   }
   return null;
 }
+
+// Variant extraction — real attributes parsed from the crawled title/data
+// (storage, RAM, color, availability date). Nothing is invented: a field is
+// only set when the source data actually carries it.
+const COLOR_WORDS = [
+  "black", "white", "blue", "navy", "silver", "gold", "graphite", "titanium",
+  "burgundy", "maroon", "green", "purple", "pink", "red", "grey", "gray",
+  "starlight", "midnight", "desert", "natural", "cosmic", "arctic", "lavender",
+  "sage", "teal", "orange", "yellow", "bronze", "copper", "beige", "cream",
+  "mint", "rose gold",
+];
+
+export function extractVariantInfo(raw) {
+  const text = `${raw.title || ""} ${raw.name || ""}`.toLowerCase();
+  const info = {};
+
+  if (raw.color) info.color = String(raw.color);
+
+  let ramIndex = -1;
+  const ram = text.match(/(\d{1,3})\s?(tb|gb)\s?(?:ram|memory|unified|lpddr\w*)/);
+  if (ram) {
+    info.ram = `${ram[1]}${ram[2].toUpperCase()}`;
+    ramIndex = ram.index;
+  }
+
+  // Storage: only when unambiguous (a single capacity, or the capacity that
+  // follows the RAM figure) — never guess between "8GB 256GB".
+  const units = [...text.matchAll(/(\d{1,4})\s?(tb|gb)(?!\s?(?:ram|memory|unified|lpddr))/g)];
+  const afterRam = ram ? units.find((m) => m.index > ramIndex) : null;
+  if (afterRam) info.storage = `${afterRam[1]}${afterRam[2].toUpperCase()}`;
+  else if (!ram && units.length === 1) info.storage = `${units[0][1]}${units[0][2].toUpperCase()}`;
+
+  if (!info.color) {
+    const color = COLOR_WORDS.find((c) => text.includes(c));
+    if (color) info.color = color.replace(/\b\w/g, (ch) => ch.toUpperCase());
+  }
+
+  const available = raw.available_date || raw.release_date || raw.availability_date;
+  if (available) info.available_date = String(available);
+
+  if (Array.isArray(raw.variant_sample) && raw.variant_sample.length) {
+    info.variants_count = raw.variant_sample.length;
+  }
+
+  const entries = Object.entries(info).filter(([, v]) => v !== undefined && v !== "");
+  return entries.length ? Object.fromEntries(entries) : null;
+}

@@ -7,6 +7,7 @@
 
 import { runDiscovery } from "./discover.js";
 import { processQueueBatch } from "./worker.js";
+import { isNewArrival, isPriorityBrand, isPriorityCategory } from "./priority.js";
 
 // Shared secret between this module and the cron automation's function_args —
 // required when the endpoint is hit without a signed-in admin user.
@@ -26,6 +27,12 @@ const MAX_REFRESH_JOBS_PER_RUN = 25;
 // Demand-driven tier: explicit product override wins, otherwise signals decide.
 export function tierForProduct(product, wishlistCounts, orderCounts) {
   if (product.refresh_tier && product.refresh_tier !== "AUTO") return product.refresh_tier;
+  // New arrivals — flagship smartphones/laptops stay fresh: prices and stock
+  // move fast right after launch, so they refresh on the fastest tiers.
+  if (isNewArrival(product)) {
+    if (isPriorityBrand(product.brand) || isPriorityCategory(product.category)) return "POPULAR";
+    return "IMPORTANT";
+  }
   const wl = wishlistCounts[product.id] || 0;
   const orders = orderCounts[product.id] || 0;
   const ageMs = product.last_crawled_at ? Date.now() - new Date(product.last_crawled_at).getTime() : Infinity;

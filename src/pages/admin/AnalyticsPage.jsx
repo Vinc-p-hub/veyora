@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { useRegion } from "@/lib/RegionContext";
 import { useLang } from "@/lib/i18n";
 import AnalyticsPanel from "@/components/admin/AnalyticsPanel";
+import NewArrivalsStats from "@/components/admin/NewArrivalsStats";
 import { cn } from "@/lib/utils";
 
 // Sales, active orders, category performance and search analytics.
@@ -85,6 +86,12 @@ export default function AnalyticsPage() {
           </div>
         )}
       </div>
+
+      {/* New arrivals & catalog activity — discovery, price/stock movements */}
+      <section>
+        <h3 className="font-display font-bold text-base mb-3">New arrivals & catalog activity</h3>
+        <NewArrivalsStats />
+      </section>
 
       {/* Search analytics + audit */}
       <AnalyticsPanel />

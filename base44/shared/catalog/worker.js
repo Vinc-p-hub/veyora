@@ -6,7 +6,7 @@
 // admin = service-role client. actor = { id, email } | null.
 import {
   canonicalizeUrl, slugify, normalizeTitle, normalizePrice, normalizeCurrency,
-  normalizeStock, normalizeBrand, inferCategory,
+  normalizeStock, normalizeBrand, inferCategory, extractVariantInfo,
 } from "./normalize.js";
 import { validateProduct } from "./validate.js";
 import { matchProduct } from "./match.js";
@@ -232,13 +232,26 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
         specifications: raw.variant_sample && raw.variant_sample.length
           ? { options: raw.option_names || [], variants: raw.variant_sample }
           : undefined,
+        available_date: raw.available_date || raw.release_date || raw.availability_date || undefined,
+        variant_info: extractVariantInfo(raw) || undefined,
       };
 
       let productRecord = null;
       let action = null;
       if (match.decision === "AUTO_MATCH" && match.product) {
         const { update, changed } = diffUpdate(match.product, record);
-        if (changed) {
+        // Track real price / stock movements (feeds the New Arrivals analytics)
+        if (
+          record.customer_price != null && match.product.customer_price != null &&
+          record.customer_price !== match.product.customer_price
+        ) {
+          update.price_changed_at = now.toISOString();
+          update.previous_price = match.product.customer_price;
+        }
+        if (record.stock_status && record.stock_status !== match.product.stock_status) {
+          update.stock_changed_at = now.toISOString();
+        }
+        if (Object.keys(update).length) {
           await admin.entities.Product.update(match.product.id, update);
           action = "UPDATED";
         } else {
@@ -258,6 +271,7 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
           ...record,
           brand: record.brand || "Unknown",
           status: "PUBLISHED",
+          first_seen_at: now.toISOString(),
         });
         products.push(created);
         productRecord = created;

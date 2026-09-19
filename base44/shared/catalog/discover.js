@@ -2,6 +2,7 @@
 // automatic orchestrator. Loads a source adapter, discovers product pages,
 // enqueues FETCH_PRODUCT jobs, and updates source metrics.
 import { canonicalizeUrl } from "./normalize.js";
+import { discoveryPriority } from "./priority.js";
 
 const MAX_PER_RUN_CAP = 250;
 const MAX_FEED_PAGES = 20;
@@ -87,11 +88,16 @@ export async function runDiscovery({ admin, source, actor }) {
     for (const item of items) {
       if (jobs.length >= max) break;
       const raw = mapItem(item, source.field_map, source);
+      // Flagship smartphones / laptops from priority brands jump the queue.
+      const prio = discoveryPriority(
+        { title: raw.title || raw.name, brand: raw.brand, category: raw.category },
+        source.priority || 5
+      );
       jobs.push({
         type: "FETCH_PRODUCT",
         source_id: source.id,
         url: raw.url || null,
-        priority: source.priority || 5,
+        priority: prio,
         status: "QUEUED",
         scheduled_at: now.toISOString(),
         payload: raw,
