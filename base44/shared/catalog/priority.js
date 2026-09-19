@@ -13,6 +13,11 @@ const BRAND_TOKENS = [
   "ideapad", "dell", "xps", "inspiron", "hp", "asus", "zenbook", "vivobook",
   "rog", "acer", "predator", "msi", "razer", "lg", "microsoft", "surface",
   "alienware", "framework", "tcl", "tecno", "infinix",
+  // Extra phone/computer brand coverage — flagships discovered anywhere get
+  // the same accent as the flagship list.
+  "realme", "zte", "nubia", "nokia", "fairphone", "gigabyte", "omen",
+  "victus", "pavilion", "elitebook", "spectre", "zenfone", "legion",
+  "yoga", "thinkbook", "matebook", "mac", "notebook", "laptop", "gaming",
 ];
 
 // The brands whose new releases must reach the catalog first.
@@ -21,6 +26,7 @@ export const PRIORITY_BRANDS = new Set([
   "oppo", "vivo", "nothing", "motorola", "sony", "lenovo", "dell", "hp",
   "asus", "acer", "msi", "razer", "lg", "microsoft", "alienware", "tcl",
   "tecno", "infinix", "vaio", "framework",
+  "realme", "zte", "nubia", "nokia", "gigabyte",
 ]);
 
 // Flagship device / computer categories.

@@ -84,14 +84,14 @@ export default function SearchBar() {
           onChange={(e) => setQ(e.target.value)}
           onFocus={() => q.trim().length >= 1 && setOpen(true)}
           placeholder={t("header.searchPlaceholder")}
-          className="flex-1 min-w-0 bg-white border border-border-hairline border-r-0 rounded-l-lg px-4 py-2.5 text-sm placeholder:text-text-muted focus:outline-none"
+          className="flex-1 min-w-0 bg-white border border-border-hairline border-r-0 rounded-l-lg px-4 py-2.5 md:py-3 text-sm placeholder:text-text-muted focus:outline-none focus:border-noon-fg/40"
         />
         <button
           type="submit"
           aria-label="Search"
-          className="bg-noon px-4 md:px-6 rounded-r-lg flex items-center justify-center hover:bg-yellow-200 transition"
+          className="bg-noon-fg px-4 md:px-6 rounded-r-lg flex items-center justify-center hover:bg-black/80 transition"
         >
-          {loading ? <Loader2 className="w-5 h-5 text-noon-fg animate-spin" /> : <Search className="w-5 h-5 text-noon-fg" />}
+          {loading ? <Loader2 className="w-5 h-5 text-white animate-spin" /> : <Search className="w-5 h-5 text-white" />}
         </button>
       </form>
 
