@@ -1,7 +1,9 @@
 import React, { useState } from "react";
-import { Link, useNavigate, useLocation, Outlet } from "react-router-dom";
-import { Search, ShoppingBag, User, MapPin, Compass, LayoutGrid, Package, Shield } from "lucide-react";
+import { Link, useLocation, Outlet } from "react-router-dom";
+import { ShoppingBag, User, MapPin, Compass, LayoutGrid, Package, Shield } from "lucide-react";
 import { useCart } from "@/lib/CartContext";
+import { useAuth } from "@/lib/AuthContext";
+import SearchBar from "@/components/SearchBar";
 import { useRegion } from "@/lib/RegionContext";
 import { cn } from "@/lib/utils";
 
@@ -10,7 +12,6 @@ const NAV = [
   { to: "/", label: "Home", icon: Compass },
   { to: "/category", label: "Categories", icon: LayoutGrid },
   { to: "/orders", label: "Orders", icon: Package },
-  { to: "/admin", label: "Admin", icon: Shield },
 ];
 
 function CountryWidget() {
@@ -52,6 +53,7 @@ function CountryWidget() {
 }
 
 function Footer() {
+  const { user } = useAuth();
   return (
     <footer className="bg-noon text-noon-fg mt-10">
       <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-10 grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -83,7 +85,7 @@ function Footer() {
           <div className="space-y-2 text-xs opacity-80">
             <Link to="/orders" className="block hover:underline">Your orders</Link>
             <Link to="/cart" className="block hover:underline">Cart</Link>
-            <Link to="/admin" className="block hover:underline">Admin console</Link>
+            {user?.role === "admin" && <Link to="/admin" className="block hover:underline">Admin console</Link>}
           </div>
         </div>
       </div>
@@ -96,15 +98,10 @@ function Footer() {
 
 export default function Layout() {
   const { count } = useCart();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const location = useLocation();
-  const [q, setQ] = useState("");
+  const isAdmin = user?.role === "admin";
   const catParam = new URLSearchParams(location.search).get("cat");
-
-  const submitSearch = (e) => {
-    e.preventDefault();
-    navigate(`/category?q=${encodeURIComponent(q)}`);
-  };
 
   return (
     <div className="min-h-screen bg-surface-primary text-text-primary flex flex-col">
@@ -114,17 +111,7 @@ export default function Layout() {
           <Link to="/" className="shrink-0">
             <span className="bg-noon text-noon-fg font-display font-extrabold text-lg md:text-xl px-3 py-1 rounded-md inline-block leading-none">veyro</span>
           </Link>
-          <form onSubmit={submitSearch} className="flex-1 max-w-3xl flex min-w-0">
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="What are you looking for?"
-              className="flex-1 min-w-0 bg-white border border-border-hairline border-r-0 rounded-l-lg px-4 py-2.5 text-sm placeholder:text-text-muted focus:outline-none"
-            />
-            <button type="submit" aria-label="Search" className="bg-noon px-4 md:px-6 rounded-r-lg flex items-center justify-center hover:bg-yellow-200 transition">
-              <Search className="w-5 h-5 text-noon-fg" />
-            </button>
-          </form>
+          <SearchBar />
           <div className="hidden md:block shrink-0"><CountryWidget /></div>
           <div className="flex items-center gap-1 md:gap-2 shrink-0">
             <Link to="/orders" className="p-2 rounded-lg hover:bg-surface-secondary text-text-muted hover:text-text-primary transition"><User className="w-5 h-5" /></Link>
@@ -160,15 +147,17 @@ export default function Layout() {
               {c}
             </Link>
           ))}
-          <Link
-            to="/admin"
-            className={cn(
-              "whitespace-nowrap py-2.5 border-b-2 -mb-px ml-auto",
-              location.pathname === "/admin" ? "border-noon-fg font-semibold text-text-primary" : "border-transparent text-text-muted hover:text-text-primary"
-            )}
-          >
-            Admin
-          </Link>
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className={cn(
+                "whitespace-nowrap py-2.5 border-b-2 -mb-px ml-auto",
+                location.pathname === "/admin" ? "border-noon-fg font-semibold text-text-primary" : "border-transparent text-text-muted hover:text-text-primary"
+              )}
+            >
+              Admin
+            </Link>
+          )}
         </div>
       </header>
 
@@ -180,7 +169,7 @@ export default function Layout() {
 
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-border-hairline flex items-center justify-around h-16 px-2">
-        {NAV.map((item) => {
+        {[...NAV, ...(isAdmin ? [{ to: "/admin", label: "Admin", icon: Shield }] : [])].map((item) => {
           const active = location.pathname === item.to || (item.to === "/category" && location.pathname.startsWith("/category"));
           return (
             <Link

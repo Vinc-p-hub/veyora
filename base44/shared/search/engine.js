@@ -69,11 +69,14 @@ export function expandTokens(tokens, lexicon) {
     if (t.length < 3 || lexicon.has(t)) continue;
     const maxDist = t.length >= 7 ? 2 : 1;
     let best = null;
-    let bestDist = maxDist + 1;
+    let bestDist = 5;
     for (const l of lexicon) {
-      if (Math.abs(l.length - t.length) > maxDist) continue;
       const d = levenshtein(t, l);
-      if (d < bestDist) { bestDist = d; best = l; }
+      // same-prefix typo tolerance: "headfon" -> "headphones" (distance 4, shared "head" prefix)
+      const prefixOk =
+        (d <= 3 && t.length >= 4 && l.slice(0, 3) === t.slice(0, 3)) ||
+        (d <= 4 && t.length >= 6 && l.slice(0, 4) === t.slice(0, 4));
+      if ((d <= maxDist || prefixOk) && d < bestDist) { bestDist = d; best = l; }
     }
     if (best && !seen.has(best)) { seen.add(best); out.push(best); }
   }

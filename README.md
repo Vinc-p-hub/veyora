@@ -1,62 +1,47 @@
-# Base44 Project
+# VEYRO — Premium Electronics Marketplace
 
-Use this repository to run and edit the app locally, then publish changes back through Base44.
+An international premium electronics marketplace with a **real backend catalog pipeline**:
+source adapters → discovery → job queue → fetch worker → parser → validator → matcher →
+premium engine → pricing engine → catalog → search index → storefront.
 
-Any change pushed to the repo will also be reflected in the Base44 Builder.
+## Stack
 
-## Prerequisites
+- **Frontend**: React 18 + Vite + Tailwind CSS (noon.com-inspired design system, Poppins)
+- **Backend**: Base44 platform services — entities (RLS-secured), server-side functions (Deno runtime), service-role operations
+- **Data layer**: Base44 entities (schema-first, provider-agnostic — see `docs/ARCHITECTURE.md` for the Neon/PostgreSQL migration path)
 
-1. Clone the repository using the project's Git URL.
-2. Navigate to the project directory.
-3. Install dependencies: `npm install`.
-4. Install the Base44 CLI: `npm install -g base44@latest`.
-5. Install [Deno](https://docs.deno.com/runtime/getting_started/installation/) — the local Base44 backend runs on it.
+## Core systems
 
-Run `base44 --help` (or see the [CLI reference](https://docs.base44.com/developers/references/cli/commands/introduction)) for the full command surface.
+| System | Where | What it does |
+|---|---|---|
+| Crawler | `base44/functions/crawlerRunSource`, `crawlerProcessQueue` | Real HTTP ingestion: JSON merchant feeds, sitemaps + JSON-LD product pages, URL lists. Queue with job locking, crash recovery, exponential-backoff retry (1/5/15 min), source health monitoring (>30% fail = WARNING, >60% = ERROR pauses auto-publish) |
+| Catalog pipeline | `base44/shared/catalog/*` | URL canonicalization, normalization, validation (missing optional fields never reject a product — they lower the quality score), dedup/matching (GTIN/MPN/SKAN/slug/title, AUTO ≥0.9, manual review 0.6–0.9), premium scoring |
+| Offers | `Offer` entity + `selectBestOffer()` | PRODUCT vs OFFER separation; multi-source products; best eligible offer by price + shipping + supplier reliability + delivery + country eligibility |
+| Pricing | `base44/shared/commerce/pricing.js` | Server-side margin, shipping, tax, currency conversion (USD/EUR/AED/GBP/NGN/XOF/XAF/CAD/AUD), installment plans with the **total always visible** |
+| Search | `searchProducts` function + `base44/shared/search/engine.js` | Search-as-you-type, synonyms ("i phone"→"iphone"), typo tolerance (Levenshtein), ranking by relevance + premium + availability, zero-result fallback ("Maybe you meant…"), query analytics |
+| Checkout | `checkoutRevalidate` function | Server re-validation before payment: best offer, live price, availability, tax, plan; returns an immutable `OrderPriceSnapshot` — future source price changes never touch completed orders |
+| Admin | `/admin` | Role-gated operations console: overview, crawler control (run/pause/retry/ignore), review queue, product catalog, search analytics, audit log |
+| Security | RLS on all entities + `ensureStaffRoles` | Server-side role assignment only; a client-side email match is never sufficient. Crawler/admin functions verify `user.role === 'admin'` on every invocation |
 
-## Run Locally
-
-Three commands, from the project root:
-
-```bash
-base44 login   # one-time per machine
-base44 link    # one-time per clone
-base44 dev     # local backend + frontend together
-```
-
-Open the frontend URL that `base44 dev` prints (typically `http://localhost:5173`).
-
-Notes:
-
-- **Every fresh clone needs `base44 link`.** It writes `base44/.app.jsonc` (the app-id pointer), which is deliberately gitignored. Your app id is in the Builder URL (`app.base44.com/apps/<id>/...`); `base44 link --help` shows the non-interactive flags.
-- **`base44 dev` runs the frontend for you** (via `site.serveCommand` in this repo's `base44/config.jsonc`) — never run `npm run dev` yourself: alone it serves a UI with no backend behind it (`[base44] Proxy not enabled`, every `/api` call fails), and alongside `base44 dev` the second Vite silently takes the next port and you end up looking at the wrong one.
-- **The app must be published at least once for the UI to load under `base44 dev`.** The frontend boots by fetching app settings from the hosted app; before the first publish that fails and every page redirects to login. The local API works regardless.
-- Entities, functions, and auth run locally — entity data is **in-memory only**, wiped when `base44 dev` restarts. Everything else (Core integrations, OAuth login) is forwarded to your deployed app. Full breakdown: [Local development overview](https://docs.base44.com/developers/backend/overview/local-dev/local-development-overview).
-
-## Frontend Only, Hosted Backend
-
-To work on just the frontend against your app's live hosted backend:
+## Local development
 
 ```bash
-base44 dev --remote
+npm install
+npm run dev        # frontend against the Base44 hosted backend
+npm run build      # production build
+node --test tests/ # pipeline unit tests (normalizer, validator, matcher, premium, search, pricing)
 ```
 
-⚠️ In this mode writes go to your app's **production data** — plain `base44 dev` keeps everything local.
+Note: writes against the hosted backend affect production data.
 
-## Publish Your Changes
+## Repository hygiene (GitHub sync)
 
-After pushing your changes to git, open the Base44 dashboard and publish the app:
+- Project structure is kept compatible with the Base44 CLI / GitHub sync workflow.
+- `docs/ARCHITECTURE.md` documents the full pipeline and the Neon / Cloudflare migration path.
+- `.env.example` lists external provider credentials **for a future self-hosted deployment only** — production secrets live in the Base44 dashboard (Settings → Secrets), never in git.
 
-```bash
-base44 dashboard open
-```
+## Scheduled crawling
 
-This repo syncs to Base44 through git, so publish from the dashboard rather than `base44 deploy` — a CLI deploy ships your local tree directly, bypassing the sync, and the deployed state silently diverges from the repo.
-
-## Docs & Support
-
-GitHub integration: [https://docs.base44.com/developers/app-code/local-development/github](https://docs.base44.com/developers/app-code/local-development/github)
-
-Local development: [https://docs.base44.com/developers/backend/overview/local-dev/local-development-overview](https://docs.base44.com/developers/backend/overview/local-dev/local-development-overview)
-
-Support: [https://app.base44.com/support](https://app.base44.com/support)
+The queue worker (`crawlerProcessQueue`) is idempotent and lock-protected — it can be run on a
+schedule (Base44 scheduled task / external cron hitting the function endpoint) or manually from
+Admin → Crawlers → "Process queue now".

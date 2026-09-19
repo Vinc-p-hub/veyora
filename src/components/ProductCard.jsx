@@ -4,6 +4,13 @@ import { Star } from "lucide-react";
 import { formatPrice, buildInstallmentPlan } from "@/lib/pricing";
 import { useRegion } from "@/lib/RegionContext";
 
+const FALLBACK_IMG =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="#F0F0F3"/><text x="60" y="64" font-size="12" fill="#787C8D" text-anchor="middle" font-family="sans-serif">VEYRO</text></svg>'
+  );
+const STOCK_LABEL = { IN_STOCK: "In stock", LOW_STOCK: "Low stock", OUT_OF_STOCK: "Out of stock", PREORDER: "Preorder", UNKNOWN: "Available" };
+
 export default function ProductCard({ product, compact }) {
   const { currency } = useRegion();
   const price = product.customer_price;
@@ -19,7 +26,7 @@ export default function ProductCard({ product, compact }) {
     >
       <div className="relative aspect-square bg-surface-secondary overflow-hidden">
         <img
-          src={product.image_url}
+          src={product.image_url || FALLBACK_IMG}
           alt={product.name}
           loading="lazy"
           className="w-full h-full object-cover group-hover:scale-[1.02] transition duration-500"
@@ -48,6 +55,10 @@ export default function ProductCard({ product, compact }) {
           {discount > 0 && <div className="text-[11px] font-semibold text-accent-cyan">{discount}% off</div>}
           <div className="text-[10px] text-text-muted mt-0.5">
             {formatPrice(plan.downPayment, currency)} today · {plan.installmentCount}× {formatPrice(plan.installmentAmount, currency)}/mo
+          </div>
+          <div className="text-[10px] text-text-muted mt-0.5 flex items-center gap-1">
+            <span className={product.stock_status === "IN_STOCK" ? "text-emerald-600 font-medium" : ""}>{STOCK_LABEL[product.stock_status] || "Available"}</span>
+            <span>· {product.delivery_days || 5}-day delivery</span>
           </div>
         </div>
       </div>

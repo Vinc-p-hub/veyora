@@ -122,7 +122,11 @@ export default async function (req) {
       );
     }
     const queued = allJobs
-      .filter((j) => j.status === "QUEUED" && (!j.scheduled_at || new Date(j.scheduled_at) <= now))
+      .filter(
+        (j) =>
+          (j.status === "QUEUED" || j.status === "RETRYING") &&
+          (!j.scheduled_at || new Date(j.scheduled_at) <= now)
+      )
       .sort((a, b) => (a.priority || 5) - (b.priority || 5));
     const jobs = queued.slice(0, maxJobs);
     if (!jobs.length) {
@@ -167,6 +171,7 @@ export default async function (req) {
 
         // --- normalize ---
         raw.title = normalizeTitle(raw.title);
+        if (!raw.title) throw new Error("Missing product title");
         raw.price = normalizePrice(raw.price);
         raw.currency = normalizeCurrency(raw.currency) || normalizeCurrency(source.default_currency) || "USD";
         raw.stock_status = normalizeStock(raw.stock);
@@ -190,7 +195,7 @@ export default async function (req) {
         const record = {
           name: raw.title,
           slug: raw.slug,
-          brand: raw.brand,
+          brand: raw.brand || undefined,
           category: raw.category || "Accessories",
           source_price: raw.price,
           customer_price: customerPrice,
@@ -239,6 +244,7 @@ export default async function (req) {
             sourceHealthy;
           const created = await admin.entities.Product.create({
             ...record,
+            brand: record.brand || "Unknown",
             status: publishable ? "PUBLISHED" : "REVIEW",
           });
           products.push(created);

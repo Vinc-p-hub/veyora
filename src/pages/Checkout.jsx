@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { Check, Lock, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Lock, ShieldCheck } from "lucide-react";
 import { useCart } from "@/lib/CartContext";
 import { useRegion } from "@/lib/RegionContext";
-import { formatPrice, PLAN_OPTIONS, getPlanForOption, convertPrice } from "@/lib/pricing";
+import { getPlanForOption } from "@/lib/pricing";
 import { PAYMENT_PROVIDERS } from "@/lib/countries";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
@@ -12,18 +12,42 @@ export default function Checkout() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { items, clearCart } = useCart();
-  const { currency, country } = useRegion();
+  const { country } = useRegion();
 
   const [planId, setPlanId] = useState(params.get("plan") || "plan_5");
   const [provider, setProvider] = useState(country.providers[0]);
   const [form, setForm] = useState({ name: "", email: "", address: "", city: "", postal: "" });
   const [placing, setPlacing] = useState(false);
+  const [data, setData] = useState(null); // server-authoritative revalidation
+  const [revalidating, setRevalidating] = useState(true);
+  const [revalError, setRevalError] = useState(null);
 
-  const subtotal = items.reduce((s, i) => s + i.customer_price * i.qty, 0);
-  const shipping = country.shipping;
-  const tax = Math.round(subtotal * country.taxRate * 100) / 100;
-  const total = Math.round((subtotal + shipping + tax) * 100) / 100;
-  const plan = getPlanForOption(total, planId);
+  const cartKey = items.map((i) => `${i.id}:${i.qty}`).join("|");
+
+  // All pricing is computed SERVER-SIDE: best eligible offer, margin, shipping, tax,
+  // currency conversion and installment plan. The client only displays the result.
+  useEffect(() => {
+    if (!items.length) return;
+    setRevalidating(true);
+    base44.functions
+      .invoke("checkoutRevalidate", {
+        items: items.map((i) => ({ product_id: i.id, qty: i.qty })),
+        country_code: country.code,
+        plan_id: planId,
+      })
+      .then((res) => {
+        setData(res.data);
+        setRevalError(null);
+      })
+      .catch(() => setRevalError("We couldn't verify live prices. Please try again in a moment."))
+      .finally(() => setRevalidating(false));
+  }, [cartKey, country.code, planId]);
+
+  const money = (v) => `${data?.symbol || ""}${(v ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+  const totals = data?.totals || { subtotal: 0, shipping: 0, tax: 0, total: 0 };
+  const plan = data?.plan;
+  const warnings = data?.warnings || [];
+  const orderItems = (data?.items || []).filter((i) => i.available);
 
   if (items.length === 0) {
     return (
@@ -35,7 +59,7 @@ export default function Checkout() {
   }
 
   const placeOrder = async () => {
-    if (!form.name || !form.email || !form.address) return;
+    if (!form.name || !form.email || !form.address || !data) return;
     setPlacing(true);
     const orderNumber = "VYR-" + Date.now().toString(36).toUpperCase().slice(-8);
     try {
@@ -43,17 +67,18 @@ export default function Checkout() {
         order_number: orderNumber,
         customer_email: form.email,
         customer_name: form.name,
-        items: items.map((i) => ({ id: i.id, name: i.name, brand: i.brand, price: i.customer_price, qty: i.qty })),
-        subtotal,
-        shipping,
-        tax,
-        total,
-        currency: country.currency,
+        items: orderItems.map((i) => ({ id: i.product_id, name: i.name, brand: i.brand, price: i.unit_price, qty: i.qty })),
+        subtotal: totals.subtotal,
+        shipping: totals.shipping,
+        tax: totals.tax,
+        total: totals.total,
+        currency: data.currency,
         country: country.code,
         payment_provider: provider,
-        down_payment: plan.downPayment,
-        installment_count: plan.installmentCount,
-        installment_amount: plan.installmentAmount,
+        down_payment: plan?.downPayment || totals.total,
+        installment_count: plan?.installmentCount || 0,
+        installment_amount: plan?.installmentAmount || 0,
+        price_snapshot: data.snapshot, // immutable — future price changes never touch this order
         status: "PAID",
         address: { line: form.address, city: form.city, postal: form.postal },
         tracking_number: "TRK" + Math.random().toString(36).slice(2, 10).toUpperCase(),
@@ -68,10 +93,28 @@ export default function Checkout() {
 
   return (
     <div className="px-4 md:px-8 py-6 md:py-10 max-w-[1100px] mx-auto">
-      <h1 className="font-display font-bold text-2xl md:text-3xl mb-6">Checkout</h1>
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <h1 className="font-display font-bold text-2xl md:text-3xl">Checkout</h1>
+        {revalidating && <span className="text-xs text-text-muted animate-pulse">Re-checking live prices…</span>}
+      </div>
       <div className="grid md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
-          {/* Address */}
+          {warnings.length > 0 && (
+            <div className="bg-amber-50 border border-amber-300 rounded-lg p-4">
+              <div className="flex items-center gap-2 font-semibold text-sm text-amber-800">
+                <AlertTriangle className="w-4 h-4" /> Some details changed since you added these items
+              </div>
+              <ul className="mt-2 space-y-1 text-xs text-amber-800 list-disc list-inside">
+                {warnings.map((w, i) => <li key={i}>{w}</li>)}
+              </ul>
+            </div>
+          )}
+          {revalError && (
+            <div className="bg-red-50 border border-red-300 rounded-lg p-4 text-sm text-red-800 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0" /> {revalError}
+            </div>
+          )}
+
           <section className="bg-surface-card border border-border-hairline rounded-lg p-5">
             <h2 className="font-display font-semibold text-lg mb-4">Delivery to {country.flag} {country.name}</h2>
             <div className="grid grid-cols-2 gap-3">
@@ -83,39 +126,38 @@ export default function Checkout() {
             </div>
           </section>
 
-          {/* Payment plan */}
           <section className="bg-surface-card border border-border-hairline rounded-lg p-5">
             <h2 className="font-display font-semibold text-lg mb-4">Payment plan</h2>
             <div className="grid grid-cols-2 gap-2.5">
-              {PLAN_OPTIONS.map((opt) => {
-                const p = getPlanForOption(total, opt.id);
+              {["pay_now", "plan_2", "plan_3", "plan_5"].map((optId) => {
+                const p = data ? getPlanForOption(totals.total, optId) : null;
+                const label = { pay_now: "Pay in full", plan_2: "2 payments", plan_3: "3 payments", plan_5: "5 payments" }[optId];
                 return (
                   <button
-                    key={opt.id}
-                    onClick={() => setPlanId(opt.id)}
+                    key={optId}
+                    onClick={() => setPlanId(optId)}
                     className={cn(
                       "p-3.5 rounded-lg border text-left transition",
-                      planId === opt.id ? "border-accent-cyan bg-accent-cyan/5" : "border-border-hairline hover:border-accent-cyan/30"
+                      planId === optId ? "border-accent-cyan bg-accent-cyan/5" : "border-border-hairline hover:border-accent-cyan/30"
                     )}
                   >
-                    <div className="text-sm font-medium">{opt.label}</div>
+                    <div className="text-sm font-medium">{label}</div>
                     <div className="text-mono text-xs text-accent-cyan mt-1">
-                      {p.installmentCount === 0 ? formatPrice(p.totalPaid, currency) : `${formatPrice(p.downPayment, currency)} today`}
+                      {p ? (p.installmentCount === 0 ? money(p.totalPaid) : `${money(p.downPayment)} today`) : "…"}
                     </div>
                   </button>
                 );
               })}
             </div>
-            {plan.installmentCount > 0 && (
+            {plan && plan.installmentCount > 0 && (
               <div className="mt-3 rounded-lg bg-surface-primary p-3.5 text-sm space-y-1.5">
-                <div className="flex justify-between"><span className="text-text-muted">Today</span><span className="text-mono text-accent-cyan font-semibold">{formatPrice(plan.downPayment, currency)}</span></div>
-                <div className="flex justify-between"><span className="text-text-muted">{plan.installmentCount} × monthly</span><span className="text-mono">{formatPrice(plan.installmentAmount, currency)}</span></div>
-                <div className="flex justify-between border-t border-border-hairline pt-1.5 font-semibold"><span>Total</span><span className="text-mono">{formatPrice(plan.totalPaid, currency)}</span></div>
+                <div className="flex justify-between"><span className="text-text-muted">Pay today</span><span className="text-mono text-accent-cyan font-semibold">{money(plan.downPayment)}</span></div>
+                <div className="flex justify-between"><span className="text-text-muted">{plan.installmentCount} × monthly</span><span className="text-mono">{money(plan.installmentAmount)}</span></div>
+                <div className="flex justify-between border-t border-border-hairline pt-1.5 font-semibold"><span>Total</span><span className="text-mono">{money(plan.totalPaid)}</span></div>
               </div>
             )}
           </section>
 
-          {/* Payment provider */}
           <section className="bg-surface-card border border-border-hairline rounded-lg p-5">
             <h2 className="font-display font-semibold text-lg mb-1">Payment method</h2>
             <p className="text-xs text-text-muted mb-4">Available providers for {country.name}</p>
@@ -148,36 +190,35 @@ export default function Checkout() {
           </section>
         </div>
 
-        {/* Summary */}
         <div className="md:col-span-1">
           <div className="bg-surface-card border border-border-hairline rounded-lg p-5 sticky top-24">
             <h2 className="font-display font-semibold text-lg mb-4">Summary</h2>
             <div className="space-y-2.5 text-sm max-h-40 overflow-auto scrollbar-hide mb-3">
-              {items.map((i) => (
-                <div key={i.id} className="flex justify-between gap-2">
-                  <span className="text-text-muted truncate">{i.name} ×{i.qty}</span>
-                  <span className="text-mono shrink-0">{formatPrice(i.customer_price * i.qty, currency)}</span>
+              {(data?.items || items.map((i) => ({ product_id: i.id, name: i.name, qty: i.qty, available: true }))).map((i) => (
+                <div key={i.product_id} className="flex justify-between gap-2">
+                  <span className="text-text-muted truncate">{i.name} ×{i.qty}{i.available === false && <span className="text-red-500"> · unavailable</span>}</span>
+                  <span className="text-mono shrink-0">{i.line_total !== undefined ? money(i.line_total) : "…"}</span>
                 </div>
               ))}
             </div>
             <div className="border-t border-border-hairline pt-3 space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-text-muted">Subtotal</span><span className="text-mono">{formatPrice(subtotal, currency)}</span></div>
-              <div className="flex justify-between"><span className="text-text-muted">Shipping</span><span className="text-mono">{formatPrice(shipping, currency)}</span></div>
-              <div className="flex justify-between"><span className="text-text-muted">Tax ({(country.taxRate * 100).toFixed(0)}%)</span><span className="text-mono">{formatPrice(tax, currency)}</span></div>
-              <div className="flex justify-between font-semibold border-t border-border-hairline pt-2"><span>Total</span><span className="text-mono">{formatPrice(total, currency)}</span></div>
-              {plan.installmentCount > 0 && (
-                <div className="flex justify-between text-accent-cyan"><span>Today's payment</span><span className="text-mono">{formatPrice(plan.downPayment, currency)}</span></div>
+              <div className="flex justify-between"><span className="text-text-muted">Subtotal</span><span className="text-mono">{money(totals.subtotal)}</span></div>
+              <div className="flex justify-between"><span className="text-text-muted">Shipping</span><span className="text-mono">{money(totals.shipping)}</span></div>
+              <div className="flex justify-between"><span className="text-text-muted">Tax ({(country.taxRate * 100).toFixed(0)}%)</span><span className="text-mono">{money(totals.tax)}</span></div>
+              <div className="flex justify-between font-semibold border-t border-border-hairline pt-2"><span>Total</span><span className="text-mono">{money(totals.total)}</span></div>
+              {plan && plan.installmentCount > 0 && (
+                <div className="flex justify-between text-accent-cyan"><span>Pay today</span><span className="text-mono">{money(plan.downPayment)}</span></div>
               )}
             </div>
             <button
               onClick={placeOrder}
-              disabled={placing || !form.name || !form.email || !form.address}
+              disabled={placing || revalidating || !!revalError || !data || orderItems.length === 0 || !form.name || !form.email || !form.address}
               className="w-full mt-5 py-3.5 rounded-lg bg-noon text-noon-fg font-semibold text-sm hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {placing ? "Processing…" : <><Lock className="w-4 h-4" /> Place order · {formatPrice(plan.installmentCount === 0 ? total : plan.downPayment, currency)}</>}
+              {placing ? "Processing…" : <><Lock className="w-4 h-4" /> Place order · {money(plan && plan.installmentCount > 0 ? plan.downPayment : totals.total)}</>}
             </button>
             <div className="flex items-center justify-center gap-1.5 mt-3 text-[11px] text-text-muted">
-              <ShieldCheck className="w-3.5 h-3.5" /> Secure encrypted checkout
+              <ShieldCheck className="w-3.5 h-3.5" /> Prices verified server-side at checkout
             </div>
           </div>
         </div>

@@ -154,8 +154,7 @@
     "brand",
     "category",
     "customer_price",
-    "currency",
-    "image_url"
+    "currency"
   ],
   "rls": {
     "read": {},
