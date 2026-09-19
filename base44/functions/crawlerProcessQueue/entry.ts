@@ -81,21 +81,21 @@ export default async function (req) {
     const now = new Date();
 
     // --- queue: reclaim stale locks, claim due jobs by priority ---
-    const allJobs = await admin.entities.CrawlerJob.list(null, 500);
-    const stale = allJobs.filter(
-      (j) => j.status === "RUNNING" && j.locked_at && now - new Date(j.locked_at) > STALE_LOCK_MS
-    );
+    // Query by status: a plain list() is capped and hides queued jobs once
+    // enough COMPLETED/FAILED records accumulate.
+    const [runningJobs, queuedAll, retryingAll] = await Promise.all([
+      admin.entities.CrawlerJob.filter({ status: "RUNNING" }, null, 200),
+      admin.entities.CrawlerJob.filter({ status: "QUEUED" }, "priority", 500),
+      admin.entities.CrawlerJob.filter({ status: "RETRYING" }, "scheduled_at", 200),
+    ]);
+    const stale = runningJobs.filter((j) => j.locked_at && now - new Date(j.locked_at) > STALE_LOCK_MS);
     if (stale.length) {
       await admin.entities.CrawlerJob.bulkUpdate(
         stale.map((j) => ({ id: j.id, status: "QUEUED", locked_at: null, locked_by: null }))
       );
     }
-    const queued = allJobs
-      .filter(
-        (j) =>
-          (j.status === "QUEUED" || j.status === "RETRYING") &&
-          (!j.scheduled_at || new Date(j.scheduled_at) <= now)
-      )
+    const queued = [...queuedAll, ...retryingAll]
+      .filter((j) => !j.scheduled_at || new Date(j.scheduled_at) <= now)
       .sort((a, b) => (a.priority || 5) - (b.priority || 5));
     const jobs = queued.slice(0, maxJobs);
     if (!jobs.length) {
