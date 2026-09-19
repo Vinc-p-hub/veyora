@@ -2,9 +2,10 @@
 // email) to share their honest experience on a product. This NEVER creates
 // review content: it only unlocks review submission for the invited person,
 // who must have a VEYRO account and writes their own review.
+// Email sending to the buyer is disabled for now (will be set up later) —
+// customer service contacts the buyer directly in the meantime.
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
 
-const APP_URL = "https://veyro-tech-prime.base44.app";
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 export default async function(req) {
@@ -42,24 +43,8 @@ export default async function(req) {
         invited_by: user.email,
         status: "PENDING",
       });
-      let emailSent = true;
-      let emailError = null;
-      try {
-        await admin.integrations.Core.SendEmail({
-          to: email,
-          subject: `VEYRO — share your experience with ${product.name}`,
-          text:
-            "Hello,\n\n" +
-            "Our customer service team invites you to share your honest experience with:\n" +
-            `${product.name}\n${APP_URL}/product/${product.slug}\n\n` +
-            "Sign in with this email address (a free VEYRO account), open the product page and write your review. " +
-            "It will be published after moderation. Your opinion is entirely your own — VEYRO never writes or edits reviews.\n\n" +
-            "Thank you,\nThe VEYRO team",
-        });
-      } catch (e) {
-        emailSent = false;
-        emailError = e.message;
-      }
+      // Email sending is intentionally OFF for now — it will be enabled later.
+      // The invitation itself is what unlocks review submission for the buyer.
       await admin.entities.AuditLog.create({
         actor_email: user.email,
         actor_id: user.id,
@@ -68,7 +53,7 @@ export default async function(req) {
         target_id: invitation.id,
         details: `Invited ${email} to review product ${product.name} (${productId})`,
       });
-      results.push({ email, invitation_id: invitation.id, email_sent: emailSent, email_error: emailError });
+      results.push({ email, invitation_id: invitation.id });
     }
 
     return Response.json({ ok: true, invited: results.length, results });

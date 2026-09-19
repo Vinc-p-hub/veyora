@@ -51,12 +51,8 @@ export default function InviteBuyersPanel() {
     setMsg(null);
     try {
       const res = await base44.functions.invoke("reviewInvite", { product_id: productId, emails: list });
-      const failed = (res.data.results || []).filter((r) => !r.email_sent);
       setMsg(
-        `Invitation sent to ${res.data.invited} buyer(s).` +
-          (failed.length
-            ? ` Email not delivered to ${failed.map((f) => f.email).join(", ")} — the address must belong to a registered VEYRO user unless a custom domain is connected.`
-            : "")
+        `${res.data.invited} invitation(s) created. No email is sent yet — contact the buyer(s) directly with the product link for now.`
       );
       setEmails("");
       await load();
@@ -82,7 +78,8 @@ export default function InviteBuyersPanel() {
         <p className="text-xs text-text-muted mt-1">
           Real buyers invited by customer service can write their own honest review (no purchase needed). They must
           sign in with the invited email — VEYRO never writes, edits or generates review content, and invited reviews
-          never display the Verified Buyer badge.
+          never display the Verified Buyer badge. Email sending is not enabled yet: share the product link with the
+          buyer directly.
         </p>
         <div className="mt-4 grid md:grid-cols-2 gap-4">
           <div>
