@@ -12,6 +12,7 @@ import { validateProduct } from "./validate.js";
 import { matchProduct } from "./match.js";
 import { premiumScore } from "./premium.js";
 import { mergeConfig, resolveRules, computePriceChain } from "../commerce/rules.js";
+import { CURRENCIES, round2 } from "../commerce/pricing.js";
 import { parseProductPage, enrichFeedRaw, verifyImageAccessible, absolutizeImageUrl } from "./extract.js";
 
 const BACKOFFS = [60, 300, 900]; // seconds: 1min, 5min, 15min
@@ -92,6 +93,25 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
   const sources = await admin.entities.CrawlerSource.list(null, 200);
   let products = await admin.entities.Product.list("-premium_score", 2000);
   let offers = await admin.entities.Offer.list(null, 1000);
+  let sellers = await admin.entities.Seller.list(null, 200);
+  // One identified SELLER per authorized merchant source (PRODUCT / SELLER /
+  // OFFER separation) — created on first use, then reused for every offer.
+  const ensureSeller = async (source) => {
+    let seller = sellers.find((s) => s.source_id === source.id);
+    if (!seller) {
+      seller = await admin.entities.Seller.create({
+        name: source.name,
+        source_id: source.id,
+        website: source.base_url,
+        countries: source.available_countries || [],
+        supplier_score: source.supplier_score || 80,
+        verified: true,
+        active: true,
+      });
+      sellers.push(seller);
+    }
+    return seller;
+  };
 
   // --- central pricing rules (Super Admin Pricing & Business Rules module) ---
   const cfgDocs = await admin.entities.PricingConfig.filter({ active: true }, "-created_date", 5);
@@ -139,6 +159,13 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
       if (!raw.title) throw new Error("Rejected: no product title found on page");
       raw.price = normalizePrice(raw.price);
       raw.currency = normalizeCurrency(raw.currency) || normalizeCurrency(source.default_currency) || "USD";
+      // Supplier prices are stored in USD (the pricing engine's base currency).
+      // The original listing currency is kept on the offer as supplier_currency.
+      const cur = CURRENCIES[raw.currency] || CURRENCIES.USD;
+      const priceUsd =
+        raw.price == null ? null : cur.code === "USD" ? raw.price : cur.rate ? round2(raw.price / cur.rate) : raw.price;
+      let compareAt = normalizePrice(raw.compare_at_price);
+      if (compareAt != null && cur.code !== "USD" && cur.rate) compareAt = round2(compareAt / cur.rate);
       raw.brand = normalizeBrand(raw.brand, raw.title);
       raw.category = raw.category || inferCategory(`${raw.title} ${raw.brand || ""}`);
       raw.stock_status = normalizeStock(raw.stock);
@@ -196,10 +223,9 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
 
       // --- pricing via central rules / premium / dedupe ---
       const rules = resolveRules(pricingConfig, { category: raw.category, source_id: source.id });
-      const chain = computePriceChain(raw.price, rules, { installments: false });
+      const chain = computePriceChain(priceUsd, rules, { installments: false });
       const customerPrice = chain.customer_price;
-      const compareAt = normalizePrice(raw.compare_at_price);
-      const premium = premiumScore({ brand: raw.brand, priceUsd: raw.price, qualityScore: validation.qualityScore });
+      const premium = premiumScore({ brand: raw.brand, priceUsd, qualityScore: validation.qualityScore });
       const match = matchProduct(raw, products);
 
       const record = {
@@ -207,9 +233,9 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
         slug: raw.slug,
         brand: raw.brand || undefined,
         category: raw.category || "Accessories",
-        source_price: compareAt && compareAt > raw.price ? compareAt : raw.price,
+        source_price: compareAt != null && priceUsd != null && compareAt > priceUsd ? compareAt : priceUsd,
         customer_price: customerPrice,
-        currency: raw.currency,
+        currency: "USD",
         image_url: imageUrl,
         gallery: gallery.length ? gallery.slice(0, GALLERY_MAX) : undefined,
         description: raw.description || "",
@@ -279,11 +305,15 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
       }
       bump(source.id, "validated");
 
-      // --- offer upsert (PRODUCT vs OFFER separation) ---
-      if (productRecord && raw.price) {
+      // --- offer upsert (PRODUCT / SELLER / OFFER separation) ---
+      if (productRecord && priceUsd != null) {
+        const seller = await ensureSeller(source);
         const offerData = {
-          source_price: raw.price,
-          currency: raw.currency,
+          source_price: priceUsd,
+          currency: "USD",
+          supplier_currency: raw.currency,
+          seller_id: seller.id,
+          seller_name: seller.name,
           shipping_cost: 0,
           stock_status: raw.stock_status,
           countries: source.available_countries || [],

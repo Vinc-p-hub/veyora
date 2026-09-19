@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Check, ExternalLink, Play, Pause, RefreshCw, RotateCcw, XCircle, Activity, Cpu } from "lucide-react";
+import { AlertTriangle, Check, ExternalLink, Play, Pause, RefreshCw, RotateCcw, XCircle, Activity, Cpu, Plus } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import AddSourceDialog from "./AddSourceDialog";
 import { cn } from "@/lib/utils";
 
 const STATUS_COLOR = {
@@ -36,6 +37,7 @@ export default function CrawlerPanel({ onChanged }) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [showAdd, setShowAdd] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -137,6 +139,12 @@ export default function CrawlerPanel({ onChanged }) {
           </div>
           <div className="flex gap-2">
             <button
+              onClick={() => setShowAdd(true)}
+              className="px-4 py-2 rounded-lg border border-border-hairline text-sm font-semibold hover:border-accent-cyan/40 flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" /> Add source
+            </button>
+            <button
               onClick={runAll}
               disabled={busy || sources.filter((s) => s.enabled).length === 0}
               className="px-4 py-2 rounded-lg border border-border-hairline text-sm font-semibold hover:border-accent-cyan/40 disabled:opacity-40 flex items-center gap-2"
@@ -162,6 +170,13 @@ export default function CrawlerPanel({ onChanged }) {
         </div>
         {msg && <div className="mt-3 rounded-lg bg-surface-primary p-3 text-sm">{msg}</div>}
       </div>
+
+      {showAdd && (
+        <AddSourceDialog
+          onDone={(m) => { setShowAdd(false); setMsg(m || "Source added."); load(); }}
+          onCancel={() => setShowAdd(false)}
+        />
+      )}
 
       {/* Per-source diagnostic table */}
       <div className="bg-surface-card border border-border-hairline rounded-lg p-5 overflow-x-auto">

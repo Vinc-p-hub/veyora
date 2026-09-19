@@ -7,6 +7,8 @@ import { useCart } from "@/lib/CartContext";
 import { useLang } from "@/lib/i18n";
 import { formatPrice } from "@/lib/pricing";
 import { usePricing } from "@/lib/PricingContext";
+import { useSiteText } from "@/lib/useSiteText";
+import ProductOffers from "@/components/ProductOffers";
 import { cn } from "@/lib/utils";
 
 export default function ProductDetail() {
@@ -16,7 +18,9 @@ export default function ProductDetail() {
   const { addItem } = useCart();
   const { plans, buildPlan } = usePricing();
   const { t } = useLang();
+  const getText = useSiteText();
   const [product, setProduct] = useState(null);
+  const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [planId, setPlanId] = useState("plan_5");
   const [added, setAdded] = useState(false);
@@ -34,6 +38,10 @@ export default function ProductDetail() {
     base44.entities.WishlistItem.filter({ product_id: product.id })
       .then((items) => setWishlisted(items.length > 0))
       .catch(() => {});
+    // Real seller offers for this canonical product — multi-seller comparison.
+    base44.entities.Offer.filter({ product_id: product.id })
+      .then((rows) => setOffers(rows.filter((o) => !o.stale && o.stock_status !== "OUT_OF_STOCK")))
+      .catch(() => {});
   }, [product?.id]);
 
   if (loading) {
@@ -45,6 +53,8 @@ export default function ProductDetail() {
 
   const price = product.customer_price;
   const plan = buildPlan(price, planId);
+  const bestSellerName = offers[0]?.seller_name || product.source_name;
+  const multipleSellers = offers.length > 1;
   const sourcePriceFmt = formatPrice(product.source_price, currency);
   const todayFmt = formatPrice(plan.first_payment, currency);
   const monthlyFmt = formatPrice(plan.next_amount, currency);
@@ -53,7 +63,7 @@ export default function ProductDetail() {
   const tax = Math.round(price * country.taxRate * 100) / 100;
 
   const handleAdd = () => {
-    addItem(product, 1);
+    addItem({ ...product, seller_name: bestSellerName }, 1);
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
   };
@@ -74,7 +84,7 @@ export default function ProductDetail() {
   };
 
   const buyNow = () => {
-    addItem(product, 1);
+    addItem({ ...product, seller_name: bestSellerName }, 1);
     navigate(`/checkout?plan=${planId}`);
   };
 
@@ -243,9 +253,20 @@ export default function ProductDetail() {
             </div>
           </div>
 
-          <div className="text-xs text-text-muted border-t border-border-hairline pt-4">
-            Sourced from <span className="text-text-primary">{product.source_name}</span>. Stock status: <span className="text-text-primary">{product.stock_status.replace(/_/g, " ").toLowerCase()}</span>.
+          {/* Seller & marketplace transparency */}
+          <div className="rounded-lg bg-surface-card border border-border-hairline p-4 space-y-2">
+            <div className="text-xs">
+              Sold and shipped by <span className="text-text-primary font-semibold">{bestSellerName}</span>
+              {multipleSellers && <span className="text-accent-cyan font-semibold"> · Multiple sellers available</span>}
+            </div>
+            <p className="text-[11px] text-text-muted leading-snug">
+              {getText("marketplace_notice", "VEYRO Marketplace — you are buying via VEYRO from an identified partner seller.")}
+            </p>
+            <div className="text-xs text-text-muted pt-1">
+              Stock status: <span className="text-text-primary">{product.stock_status.replace(/_/g, " ").toLowerCase()}</span>.
+            </div>
           </div>
+          {multipleSellers && <ProductOffers product={product} offers={offers} />}
         </div>
       </div>
     </div>

@@ -3,6 +3,7 @@ import { Globe, Plus, Trash2, Pencil, Wallet, Check } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useToast } from "@/components/ui/use-toast";
 import { PAYMENT_PROVIDERS, listCountries } from "@/lib/countries";
+import MarketplaceCopy from "@/components/admin/MarketplaceCopy";
 import { cn } from "@/lib/utils";
 
 const EMPTY = { code: "", name: "", currency: "", flag: "", shipping: "", tax_rate: "", providers: [] };
@@ -119,6 +120,8 @@ export default function Settings() {
           ))}
         </div>
       </div>
+
+      <MarketplaceCopy />
 
       {/* Country override editor */}
       <div className="bg-surface-card border border-border-hairline rounded-lg p-4 space-y-3">

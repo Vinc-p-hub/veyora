@@ -130,7 +130,9 @@ export async function runDiscovery({ admin, source, actor }) {
         type: "FETCH_PRODUCT",
         source_id: source.id,
         url: canonical,
-        priority: source.priority || 5,
+        // Flagship smartphones / laptops (iphone, macbook, thinkpad…) jump the
+        // queue even for sitemap / URL-list sources, based on the URL slug.
+        priority: discoveryPriority({ title: u.replace(/[-_/?=&]+/g, " ") }, source.priority || 5),
         status: "QUEUED",
         scheduled_at: now.toISOString(),
       });
@@ -145,7 +147,9 @@ export async function runDiscovery({ admin, source, actor }) {
         type: "FETCH_PRODUCT",
         source_id: source.id,
         url: canonical,
-        priority: source.priority || 5,
+        // Flagship smartphones / laptops (iphone, macbook, thinkpad…) jump the
+        // queue even for sitemap / URL-list sources, based on the URL slug.
+        priority: discoveryPriority({ title: u.replace(/[-_/?=&]+/g, " ") }, source.priority || 5),
         status: "QUEUED",
         scheduled_at: now.toISOString(),
       });

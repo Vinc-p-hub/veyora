@@ -5,6 +5,14 @@
     "product_id": {
       "type": "string"
     },
+    "seller_id": {
+      "type": "string",
+      "description": "Identified seller making this offer"
+    },
+    "seller_name": {
+      "type": "string",
+      "description": "Seller display name (denormalized for the storefront)"
+    },
     "source_id": {
       "type": "string"
     },
@@ -15,11 +23,16 @@
       "type": "string"
     },
     "source_price": {
-      "type": "number"
+      "type": "number",
+      "description": "Supplier price in USD (pricing engine base currency)"
     },
     "currency": {
       "type": "string",
       "default": "USD"
+    },
+    "supplier_currency": {
+      "type": "string",
+      "description": "Original currency the supplier listed the product in"
     },
     "shipping_cost": {
       "type": "number",

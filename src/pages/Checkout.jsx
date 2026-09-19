@@ -7,6 +7,7 @@ import { usePricing } from "@/lib/PricingContext";
 import { useLang } from "@/lib/i18n";
 import { PAYMENT_PROVIDERS } from "@/lib/countries";
 import { base44 } from "@/api/base44Client";
+import { useSiteText } from "@/lib/useSiteText";
 import { cn } from "@/lib/utils";
 
 export default function Checkout() {
@@ -16,6 +17,7 @@ export default function Checkout() {
   const { country } = useRegion();
   const { plans, buildPlan } = usePricing();
   const { t } = useLang();
+  const getText = useSiteText();
 
   const [planId, setPlanId] = useState(params.get("plan") || "plan_5");
   const [provider, setProvider] = useState(country.providers[0]);
@@ -70,7 +72,16 @@ export default function Checkout() {
         order_number: orderNumber,
         customer_email: form.email,
         customer_name: form.name,
-        items: orderItems.map((i) => ({ id: i.product_id, name: i.name, brand: i.brand, price: i.unit_price, qty: i.qty })),
+        items: orderItems.map((i) => ({
+          id: i.product_id,
+          name: i.name,
+          brand: i.brand,
+          price: i.unit_price,
+          qty: i.qty,
+          seller_id: i.seller_id,
+          seller_name: i.seller_name,
+          delivery_days: i.delivery_days,
+        })),
         subtotal: totals.subtotal,
         shipping: totals.shipping,
         tax: totals.tax,
@@ -198,7 +209,14 @@ export default function Checkout() {
             <div className="space-y-2.5 text-sm max-h-40 overflow-auto scrollbar-hide mb-3">
               {(data?.items || items.map((i) => ({ product_id: i.id, name: i.name, qty: i.qty, available: true }))).map((i) => (
                 <div key={i.product_id} className="flex justify-between gap-2">
-                  <span className="text-text-muted truncate">{i.name} ×{i.qty}{i.available === false && <span className="text-red-500"> · unavailable</span>}</span>
+                  <span className="text-text-muted">
+                    <span className="block truncate">{i.name} ×{i.qty}{i.available === false && <span className="text-red-500"> · unavailable</span>}</span>
+                    {i.available !== false && (i.seller_name || i.delivery_days) && (
+                      <span className="block text-[10px] text-text-muted/80 truncate">
+                        {i.seller_name ? `Sold by ${i.seller_name}` : ""}{i.seller_name && i.delivery_days ? " · " : ""}{i.delivery_days ? `${i.delivery_days}-day delivery` : ""}
+                      </span>
+                    )}
+                  </span>
                   <span className="text-mono shrink-0">{i.line_total !== undefined ? money(i.line_total) : "…"}</span>
                 </div>
               ))}
@@ -222,6 +240,9 @@ export default function Checkout() {
             <div className="flex items-center justify-center gap-1.5 mt-3 text-[11px] text-text-muted">
               <ShieldCheck className="w-3.5 h-3.5" /> Prices verified server-side at checkout
             </div>
+            <p className="mt-3 rounded-lg bg-surface-primary p-2.5 text-[11px] text-text-muted leading-snug text-center">
+              {getText("marketplace_notice", "VEYRO Marketplace — you are buying via VEYRO from an identified partner seller.")}
+            </p>
           </div>
         </div>
       </div>

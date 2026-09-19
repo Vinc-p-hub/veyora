@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Handshake, Play, ExternalLink } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
+import SellersPanel from "@/components/admin/SellersPanel";
 
 // Partner / merchant-source view: sync state, last success and success rate.
 // Running a source here invokes the real discovery pipeline (crawlerRunSource).
@@ -41,6 +42,7 @@ export default function Partners() {
       <h1 className="font-display font-bold text-xl md:text-2xl flex items-center gap-2">
         <Handshake className="w-5 h-5 text-accent-cyan" /> Partners ({sources.length})
       </h1>
+      <SellersPanel />
       {msg && <div className="rounded-lg bg-surface-card border border-border-hairline p-3 text-sm">{msg}</div>}
 
       {loading ? (

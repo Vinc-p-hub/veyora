@@ -32,6 +32,7 @@ export function CartProvider({ children }) {
           image_url: product.image_url,
           customer_price: product.customer_price,
           currency: product.currency,
+          seller_name: product.seller_name,
           qty,
         },
       ];
