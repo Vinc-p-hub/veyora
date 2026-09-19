@@ -100,6 +100,11 @@
         "type": "string"
       }
     },
+    "reviews_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Opt-in: the source publishes public reviews AND their reuse is legally permitted. When on, the crawler imports only real existing reviews (JSON-LD) \u2014 nothing is ever generated, edited or invented. Always off by default."
+    },
     "last_run": {
       "type": "string"
     },

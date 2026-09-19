@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Check, ExternalLink, Play, Pause, RefreshCw, RotateCcw, XCircle, Activity, Cpu, Plus } from "lucide-react";
+import { AlertTriangle, Check, ExternalLink, Play, Pause, RefreshCw, RotateCcw, XCircle, Activity, Cpu, Plus, MessageSquare } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import AddSourceDialog from "./AddSourceDialog";
 import SourceDiscovery from "./SourceDiscovery";
@@ -116,6 +116,16 @@ export default function CrawlerPanel({ onChanged }) {
     load();
   };
 
+  // Opt-in per source: import its public reviews only when their reuse is
+  // legally permitted (real existing reviews, never generated).
+  const toggleReviews = async (s) => {
+    if (!s.reviews_enabled && !window.confirm(
+      `Enable public review import for ${s.name}?\n\nOnly do this if the merchant publishes public reviews AND their reuse is permitted (check their terms / robots.txt). Only real existing reviews will be imported, verbatim.`
+    )) return;
+    await base44.entities.CrawlerSource.update(s.id, { reviews_enabled: !s.reviews_enabled });
+    load();
+  };
+
   const retryJob = async (j) => {
     await base44.entities.CrawlerJob.update(j.id, { status: "QUEUED", scheduled_at: new Date().toISOString(), attempts: 0, last_error: null });
     load();
@@ -224,6 +234,16 @@ export default function CrawlerPanel({ onChanged }) {
                   })}
                   <td className="py-2.5 pr-0 text-right whitespace-nowrap">
                     <div className="inline-flex gap-1.5">
+                      <button
+                        onClick={() => toggleReviews(s)}
+                        title={s.reviews_enabled ? "Review import enabled — click to disable" : "Enable public review import (reuse must be permitted)"}
+                        className={cn(
+                          "px-2.5 py-1.5 rounded-md border flex items-center gap-1",
+                          s.reviews_enabled ? "border-accent-cyan text-accent-cyan" : "border-border-hairline text-text-muted hover:border-accent-cyan/40"
+                        )}
+                      >
+                        <MessageSquare className="w-3 h-3" />
+                      </button>
                       <button
                         onClick={() => runSource(s.id)}
                         disabled={busy || !s.enabled}

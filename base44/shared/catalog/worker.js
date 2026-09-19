@@ -15,6 +15,7 @@ import { mergeConfig, resolveRules, computePriceChain } from "../commerce/rules.
 import { getAllocationDefault, applyStockAllocation } from "../commerce/stock.js";
 import { CURRENCIES, round2 } from "../commerce/pricing.js";
 import { parseProductPage, enrichFeedRaw, verifyImageAccessible, absolutizeImageUrl } from "./extract.js";
+import { importSourceReviews } from "./reviews.js";
 
 const BACKOFFS = [60, 300, 900]; // seconds: 1min, 5min, 15min
 const STALE_LOCK_MS = 10 * 60 * 1000;
@@ -147,6 +148,7 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
 
       let raw = null;
       let pageImageCandidates = [];
+      let pageReviews = [];
       if (job.payload && (job.payload.title || job.payload.name)) {
         raw = enrichFeedRaw(job.payload);
       } else {
@@ -156,6 +158,7 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
         const parsed = parseProductPage(await res.text(), job.url);
         raw = enrichFeedRaw(parsed.raw);
         pageImageCandidates = parsed.imageCandidates;
+        pageReviews = parsed.sourceReviews || [];
       }
 
       raw.title = normalizeTitle(raw.title);
@@ -354,6 +357,12 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
           });
           offers.push(createdOffer);
         }
+      }
+
+      // --- real source reviews (opt-in per source: public reviews whose reuse
+      // is permitted). Only verbatim imported reviews — nothing generated. ---
+      if (source.reviews_enabled && productRecord && pageReviews.length) {
+        await importSourceReviews({ admin, source, productId: productRecord.id, pageReviews, nowIso: now.toISOString() });
       }
 
       jobUpdates.push({

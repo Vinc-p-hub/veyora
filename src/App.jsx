@@ -35,6 +35,7 @@ import PricingRules from '@/pages/admin/PricingRules';
 import CurrencySettings from '@/pages/admin/CurrencySettings';
 import Settings from '@/pages/admin/Settings';
 import Cms from '@/pages/admin/Cms';
+import ReviewsAdmin from '@/pages/admin/ReviewsAdmin';
 import Users from '@/pages/admin/Users';
 import SupportAdmin from '@/pages/admin/SupportAdmin';
 import Logs from '@/pages/admin/Logs';
@@ -103,6 +104,7 @@ const AuthenticatedApp = () => {
                 <Route path="currency-settings" element={<CurrencySettings />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="cms" element={<Cms />} />
+                <Route path="reviews" element={<ReviewsAdmin />} />
                 <Route path="users" element={<Users />} />
                 <Route path="support" element={<SupportAdmin />} />
                 <Route path="logs" element={<Logs />} />

@@ -1,0 +1,88 @@
+{
+  "name": "SourceReview",
+  "type": "object",
+  "properties": {
+    "product_id": {
+      "type": "string"
+    },
+    "source_id": {
+      "type": "string",
+      "description": "Crawler source the review was imported from"
+    },
+    "source_name": {
+      "type": "string"
+    },
+    "author": {
+      "type": "string",
+      "description": "Original author name from the source \u2014 kept only when its reuse is legally permitted; 'Anonymous' otherwise"
+    },
+    "rating": {
+      "type": "number",
+      "description": "Original rating, normalized to a 1-5 scale"
+    },
+    "text": {
+      "type": "string",
+      "description": "Original review text as published on the source \u2014 imported verbatim, never edited, generated or invented"
+    },
+    "review_date": {
+      "type": "string",
+      "description": "Original publication date on the source"
+    },
+    "votes": {
+      "type": "number",
+      "default": 0,
+      "description": "Helpfulness votes count when the source exposes it"
+    },
+    "review_url": {
+      "type": "string",
+      "description": "URL / origin of the review on the source site"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ACTIVE",
+        "HIDDEN",
+        "REJECTED"
+      ],
+      "default": "ACTIVE"
+    },
+    "imported_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "product_id",
+    "rating",
+    "text",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "data.status": "ACTIVE"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

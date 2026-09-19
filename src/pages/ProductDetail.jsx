@@ -9,6 +9,8 @@ import { formatPrice } from "@/lib/pricing";
 import { usePricing } from "@/lib/PricingContext";
 import { useSiteText } from "@/lib/useSiteText";
 import ProductOffers from "@/components/ProductOffers";
+import CustomerReviews from "@/components/reviews/CustomerReviews";
+import SourceReviews from "@/components/reviews/SourceReviews";
 import { cn } from "@/lib/utils";
 
 export default function ProductDetail() {
@@ -268,6 +270,13 @@ export default function ProductDetail() {
           </div>
           {multipleSellers && <ProductOffers product={product} offers={offers} />}
         </div>
+      </div>
+
+      {/* Reviews — customer reviews (verified buyers) and imported source
+          reviews are displayed in two fully separate sections */}
+      <div className="mt-10 space-y-6">
+        <CustomerReviews product={product} />
+        <SourceReviews product={product} />
       </div>
     </div>
   );

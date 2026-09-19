@@ -211,6 +211,38 @@ export function extractEmbeddedJson(html) {
   return raws;
 }
 
+const MAX_SOURCE_REVIEWS = 10;
+
+// Real reviews embedded in the product's JSON-LD (`review` nodes) — kept
+// verbatim (author, rating, text, date, URL). Never generated or edited.
+export function extractJsonLdReviews(doc) {
+  if (!doc || typeof doc !== "object") return [];
+  const raw = Array.isArray(doc.review) ? doc.review : doc.review ? [doc.review] : [];
+  const out = [];
+  for (const r of raw) {
+    if (!r || typeof r !== "object") continue;
+    const body = stripHtml(r.reviewBody || r.description || "");
+    if (!body) continue;
+    const ratingNode = r.reviewRating || {};
+    let rating = Number(ratingNode.ratingValue);
+    if (!isFinite(rating)) continue;
+    // Normalize non-5 scales when the source declares bestRating.
+    const best = Number(ratingNode.bestRating);
+    if (isFinite(best) && best > 0 && best !== 5) rating = (rating / best) * 5;
+    rating = Math.max(1, Math.min(5, Math.round(rating * 10) / 10));
+    const author = typeof r.author === "object" ? r.author && r.author.name : r.author;
+    out.push({
+      author: String(author || "Anonymous").slice(0, 80),
+      rating,
+      text: body.slice(0, 1500),
+      review_date: r.datePublished || null,
+      review_url: typeof r.url === "string" ? r.url : null,
+    });
+    if (out.length >= MAX_SOURCE_REVIEWS) break;
+  }
+  return out;
+}
+
 // Full page parse: JSON-LD first, then og:/meta tags, then embedded JSON state.
 export function parseProductPage(html, url) {
   let baseUrl = null;
@@ -221,6 +253,9 @@ export function parseProductPage(html, url) {
   }
   const docs = extractJsonLd(html);
   let raw = docs.length ? jsonLdToRaw(docs[0], url) : {};
+  // Verbatim source reviews from the product's JSON-LD — imported by the worker
+  // only when the source opted in (CrawlerSource.reviews_enabled).
+  const sourceReviews = docs.length ? extractJsonLdReviews(docs[0]) : [];
   const meta = extractMeta(html);
   if (!raw.title) raw.title = normalizeTitle(meta.title);
   if (!raw.description && meta.description) raw.description = meta.description;
@@ -243,7 +278,7 @@ export function parseProductPage(html, url) {
       if (raw.title && raw.price != null) break;
     }
   }
-  return { raw, imageCandidates };
+  return { raw, imageCandidates, sourceReviews };
 }
 
 // Enriches mapped feed items (Shopify-style shape) into a normalized raw product:
