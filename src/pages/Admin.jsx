@@ -92,7 +92,7 @@ export default function Admin() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
-            <div className="bg-surface-card border border-border-hairline rounded-2xl p-5">
+            <div className="bg-surface-card border border-border-hairline rounded-lg p-5">
               <h3 className="font-display font-semibold mb-4">Crawler health</h3>
               <div className="space-y-3">
                 {SOURCES.map((s) => (
@@ -103,7 +103,7 @@ export default function Admin() {
                 ))}
               </div>
             </div>
-            <div className="bg-surface-card border border-border-hairline rounded-2xl p-5">
+            <div className="bg-surface-card border border-border-hairline rounded-lg p-5">
               <h3 className="font-display font-semibold mb-4">Pipeline throughput</h3>
               <div className="space-y-3 text-sm">
                 <Row label="Products discovered / hr" value={SOURCES.reduce((s, x) => s + x.discovered, 0).toLocaleString()} />
@@ -119,7 +119,7 @@ export default function Admin() {
       {tab === "review" && (
         <div className="space-y-3">
           {loading ? (
-            <div className="h-32 bg-surface-card rounded-2xl animate-pulse" />
+            <div className="h-32 bg-surface-card rounded-lg animate-pulse" />
           ) : review.length === 0 ? (
             <div className="text-center py-16 text-text-muted text-sm">
               <Check className="w-8 h-8 mx-auto mb-2 text-emerald-400" />
@@ -127,8 +127,8 @@ export default function Admin() {
             </div>
           ) : (
             review.map((p) => (
-              <div key={p.id} className="flex items-center gap-4 bg-surface-card border border-amber-400/20 rounded-2xl p-3">
-                <img src={p.image_url} alt="" className="w-16 h-16 rounded-xl object-cover bg-surface-secondary" />
+              <div key={p.id} className="flex items-center gap-4 bg-surface-card border border-amber-400/20 rounded-lg p-3">
+                <img src={p.image_url} alt="" className="w-16 h-16 rounded-lg object-cover bg-surface-secondary" />
                 <div className="flex-1 min-w-0">
                   <div className="text-[10px] uppercase tracking-widest text-text-muted">{p.brand} · score {p.premium_score} · match {Math.round(p.match_confidence * 100)}%</div>
                   <div className="text-sm font-medium truncate">{p.name}</div>
@@ -148,7 +148,7 @@ export default function Admin() {
         <div className="space-y-6">
           <div className="grid gap-3">
             {SOURCES.map((s) => (
-              <div key={s.id} className="bg-surface-card border border-border-hairline rounded-2xl p-4">
+              <div key={s.id} className="bg-surface-card border border-border-hairline rounded-lg p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
                   <div>
                     <div className="flex items-center gap-2">
@@ -173,7 +173,7 @@ export default function Admin() {
             ))}
           </div>
 
-          <div className="bg-surface-card border border-border-hairline rounded-2xl p-5">
+          <div className="bg-surface-card border border-border-hairline rounded-lg p-5">
             <div className="flex items-center gap-2 mb-4"><AlertTriangle className="w-4 h-4 text-amber-400" /><h3 className="font-display font-semibold">Crawler errors</h3></div>
             <div className="space-y-2">
               {ERROR_LOG.map((e, i) => (
@@ -192,7 +192,7 @@ export default function Admin() {
       {tab === "products" && (
         <div className="space-y-2">
           {products.map((p) => (
-            <Link key={p.id} to={`/product/${p.slug}`} className="flex items-center gap-3 bg-surface-card border border-border-hairline rounded-xl p-3 hover:border-accent-cyan/40 transition">
+            <Link key={p.id} to={`/product/${p.slug}`} className="flex items-center gap-3 bg-surface-card border border-border-hairline rounded-lg p-3 hover:border-accent-cyan/40 transition">
               <img src={p.image_url} alt="" className="w-12 h-12 rounded-lg object-cover" />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium truncate">{p.name}</div>
@@ -210,7 +210,7 @@ export default function Admin() {
 
 function Stat({ label, value, icon: Icon, accent }) {
   return (
-    <div className="bg-surface-card border border-border-hairline rounded-2xl p-4">
+    <div className="bg-surface-card border border-border-hairline rounded-lg p-4">
       <div className="flex items-center justify-between mb-2">
         <span className="text-[10px] uppercase tracking-widest text-text-muted">{label}</span>
         <Icon className={cn("w-4 h-4", accent === "red" ? "text-red-400" : accent === "amber" ? "text-amber-400" : "text-accent-cyan")} />

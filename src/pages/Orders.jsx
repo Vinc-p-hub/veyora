@@ -43,7 +43,7 @@ export default function Orders() {
   return (
     <div className="px-4 md:px-8 py-6 md:py-10 max-w-[1000px] mx-auto">
       {placed && (
-        <div className="mb-6 p-4 rounded-2xl border border-emerald-400/30 bg-emerald-400/5 flex items-center gap-3">
+        <div className="mb-6 p-4 rounded-lg border border-emerald-400/30 bg-emerald-400/5 flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-emerald-400/20 flex items-center justify-center"><Check className="w-5 h-5 text-emerald-400" /></div>
           <div>
             <div className="font-medium text-sm">Order {placed} confirmed</div>
@@ -63,13 +63,13 @@ export default function Orders() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && loadOrders(email)}
-              className="flex-1 bg-surface-card border border-border-hairline rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent-cyan/50"
+              className="flex-1 bg-surface-card border border-border-hairline rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent-cyan/50"
             />
-            <button onClick={() => loadOrders(email)} className="px-5 rounded-xl bg-accent-cyan text-surface-primary font-medium text-sm">View</button>
+            <button onClick={() => loadOrders(email)} className="px-5 rounded-lg bg-noon text-noon-fg font-medium text-sm">View</button>
           </div>
         </div>
       ) : loading ? (
-        <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-40 bg-surface-card rounded-2xl animate-pulse" />)}</div>
+        <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-40 bg-surface-card rounded-lg animate-pulse" />)}</div>
       ) : orders.length === 0 ? (
         <div className="text-center py-16">
           <Package className="w-10 h-10 text-text-muted mx-auto mb-3" />
@@ -81,7 +81,7 @@ export default function Orders() {
           {orders.map((order) => {
             const stepIdx = STATUS_FLOW.indexOf(order.status);
             return (
-              <div key={order.id} className="bg-surface-card border border-border-hairline rounded-2xl overflow-hidden">
+              <div key={order.id} className="bg-surface-card border border-border-hairline rounded-lg overflow-hidden">
                 <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-b border-border-hairline">
                   <div>
                     <div className="text-mono text-xs text-text-muted">{order.order_number}</div>
@@ -111,12 +111,12 @@ export default function Orders() {
                     {STATUS_FLOW.slice(0, 6).map((s, i) => (
                       <React.Fragment key={s}>
                         <div className={`flex flex-col items-center gap-1 shrink-0`}>
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${i <= stepIdx ? "bg-accent-cyan text-surface-primary" : "bg-surface-secondary text-text-muted"}`}>
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${i <= stepIdx ? "bg-noon text-noon-fg" : "bg-surface-secondary text-text-muted"}`}>
                             {i < stepIdx ? <Check className="w-3.5 h-3.5" /> : i + 1}
                           </div>
                           <span className={`text-[9px] whitespace-nowrap ${i <= stepIdx ? "text-text-primary" : "text-text-muted"}`}>{STATUS_LABEL[s]}</span>
                         </div>
-                        {i < 5 && <div className={`h-0.5 w-6 md:w-10 ${i < stepIdx ? "bg-accent-cyan" : "bg-border-hairline"}`} />}
+                        {i < 5 && <div className={`h-0.5 w-6 md:w-10 ${i < stepIdx ? "bg-noon" : "bg-border-hairline"}`} />}
                       </React.Fragment>
                     ))}
                   </div>

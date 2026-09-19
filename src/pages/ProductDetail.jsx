@@ -25,7 +25,7 @@ export default function ProductDetail() {
   }, [slug]);
 
   if (loading) {
-    return <div className="p-10 max-w-[1400px] mx-auto"><div className="aspect-[3/4] bg-surface-card rounded-2xl animate-pulse max-w-md" /></div>;
+    return <div className="p-10 max-w-[1400px] mx-auto"><div className="aspect-[3/4] bg-surface-card rounded-lg animate-pulse max-w-md" /></div>;
   }
   if (!product) {
     return <div className="p-10 text-center text-text-muted">Product not found. <Link to="/category" className="text-accent-cyan">Browse catalog</Link></div>;
@@ -65,7 +65,7 @@ export default function ProductDetail() {
       <div className="grid md:grid-cols-2 gap-6 md:gap-10">
         {/* Gallery */}
         <div className="space-y-3">
-          <div className="relative aspect-square rounded-3xl overflow-hidden bg-surface-card border border-border-hairline">
+          <div className="relative aspect-square rounded-lg overflow-hidden bg-surface-card border border-border-hairline">
             <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
             <div className="absolute top-4 left-4 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-primary/80 backdrop-blur border border-badge-premium/30 text-xs text-mono text-badge-premium">
               <ShieldCheck className="w-3.5 h-3.5" /> Premium {product.premium_score}%
@@ -73,7 +73,7 @@ export default function ProductDetail() {
           </div>
           <div className="grid grid-cols-4 gap-2">
             {[product.image_url, product.image_url, product.image_url, product.image_url].map((img, i) => (
-              <div key={i} className="aspect-square rounded-xl overflow-hidden bg-surface-card border border-border-hairline opacity-70 hover:opacity-100 cursor-pointer transition">
+              <div key={i} className="aspect-square rounded-lg overflow-hidden bg-surface-card border border-border-hairline opacity-70 hover:opacity-100 cursor-pointer transition">
                 <img src={img} alt="" className="w-full h-full object-cover" />
               </div>
             ))}
@@ -83,7 +83,7 @@ export default function ProductDetail() {
         {/* Info */}
         <div className="space-y-6">
           <div>
-            <div className="text-xs uppercase tracking-widest text-accent-cyan">{product.brand}</div>
+            <div className="text-xs uppercase tracking-widest text-text-muted">{product.brand}</div>
             <h1 className="font-display font-bold text-2xl md:text-4xl mt-1.5 leading-tight">{product.name}</h1>
             <div className="flex items-center gap-3 mt-3 text-sm text-text-muted">
               <span className="flex items-center gap-1"><Star className="w-4 h-4 fill-badge-premium text-badge-premium" /> {product.rating}</span>
@@ -95,7 +95,7 @@ export default function ProductDetail() {
           <p className="text-sm text-text-muted leading-relaxed">{product.description}</p>
 
           {/* Price + installment panel */}
-          <div className="bg-surface-card border border-border-hairline rounded-2xl p-5 space-y-4">
+          <div className="bg-surface-card border border-border-hairline rounded-lg p-5 space-y-4">
             <div className="flex items-end justify-between">
               <div>
                 <div className="text-[10px] uppercase tracking-widest text-text-muted">Total price</div>
@@ -116,7 +116,7 @@ export default function ProductDetail() {
                     key={opt.id}
                     onClick={() => setPlanId(opt.id)}
                     className={cn(
-                      "px-3 py-2.5 rounded-xl border text-sm transition text-left",
+                      "px-3 py-2.5 rounded-lg border text-sm transition text-left",
                       planId === opt.id ? "border-accent-cyan bg-accent-cyan/5 text-text-primary" : "border-border-hairline text-text-muted hover:text-text-primary"
                     )}
                   >
@@ -127,7 +127,7 @@ export default function ProductDetail() {
             </div>
 
             {/* Breakdown */}
-            <div className="rounded-xl bg-surface-primary p-4 space-y-2.5">
+            <div className="rounded-lg bg-surface-primary p-4 space-y-2.5">
               {plan.installmentCount === 0 ? (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-text-muted">Pay today</span>
@@ -158,14 +158,14 @@ export default function ProductDetail() {
             <div className="flex gap-2.5">
               <button
                 onClick={buyNow}
-                className="flex-1 py-3.5 rounded-xl bg-accent-cyan text-surface-primary font-semibold text-sm hover:opacity-90 transition"
+                className="flex-1 py-3.5 rounded-lg bg-noon text-noon-fg font-semibold text-sm hover:opacity-90 transition"
               >
                 {plan.installmentCount === 0 ? `Buy now · ${todayFmt}` : `Prequalify · ${todayFmt} today`}
               </button>
               <button
                 onClick={handleAdd}
                 className={cn(
-                  "px-5 py-3.5 rounded-xl border text-sm font-medium transition flex items-center gap-2",
+                  "px-5 py-3.5 rounded-lg border text-sm font-medium transition flex items-center gap-2",
                   added ? "border-emerald-400 text-emerald-400" : "border-border-hairline hover:border-accent-cyan/40"
                 )}
               >
@@ -176,17 +176,17 @@ export default function ProductDetail() {
 
           {/* Trust row */}
           <div className="grid grid-cols-3 gap-3">
-            <div className="flex flex-col items-center text-center gap-1.5 p-3 rounded-xl border border-border-hairline">
+            <div className="flex flex-col items-center text-center gap-1.5 p-3 rounded-lg border border-border-hairline">
               <Truck className="w-5 h-5 text-accent-cyan" />
               <div className="text-xs">{product.delivery_days} day delivery</div>
               <div className="text-[10px] text-text-muted">{shipping} shipping</div>
             </div>
-            <div className="flex flex-col items-center text-center gap-1.5 p-3 rounded-xl border border-border-hairline">
+            <div className="flex flex-col items-center text-center gap-1.5 p-3 rounded-lg border border-border-hairline">
               <ShieldCheck className="w-5 h-5 text-accent-cyan" />
               <div className="text-xs">2-year warranty</div>
               <div className="text-[10px] text-text-muted">VEYRO verified</div>
             </div>
-            <div className="flex flex-col items-center text-center gap-1.5 p-3 rounded-xl border border-border-hairline">
+            <div className="flex flex-col items-center text-center gap-1.5 p-3 rounded-lg border border-border-hairline">
               <RefreshCw className="w-5 h-5 text-accent-cyan" />
               <div className="text-xs">30-day returns</div>
               <div className="text-[10px] text-text-muted">No questions</div>
@@ -196,7 +196,7 @@ export default function ProductDetail() {
           {/* Specs */}
           <div>
             <h3 className="font-display font-semibold text-lg mb-3">Specifications</h3>
-            <div className="rounded-2xl border border-border-hairline overflow-hidden">
+            <div className="rounded-lg border border-border-hairline overflow-hidden">
               {Object.entries(product.specifications || {}).map(([k, v], i) => (
                 <div key={k} className={cn("flex justify-between px-4 py-3 text-sm", i % 2 === 0 ? "bg-surface-card" : "bg-surface-secondary")}>
                   <span className="text-text-muted">{k}</span>

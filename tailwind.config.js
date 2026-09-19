@@ -69,14 +69,16 @@ module.exports = {
   			mono: ['var(--font-mono)']
   		},
   		colors: {
-  			'surface-primary': '#07080A',
-  			'surface-secondary': '#12141A',
-  			'surface-card': '#1A1D26',
-  			'border-hairline': '#2A2E3D',
-  			'text-primary': '#F3F4F6',
-  			'text-muted': '#8A8F9E',
-  			'accent-cyan': '#00F0FF',
-  			'badge-premium': '#FFD700',
+  			'surface-primary': '#F5F5F7',
+  			'surface-secondary': '#F0F0F3',
+  			'surface-card': '#FFFFFF',
+  			'border-hairline': '#E4E5EE',
+  			'text-primary': '#404553',
+  			'text-muted': '#787C8D',
+  			'accent-cyan': '#009CA3',
+  			'badge-premium': '#FFB400',
+  			'noon': '#FEEE00',
+  			'noon-fg': '#1A1A1A',
   		},
   		keyframes: {
   			'accordion-down': {

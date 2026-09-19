@@ -4,30 +4,30 @@
 
 @layer base {
   :root {
-    --background: 0 0% 3%;
-    --foreground: 220 10% 95%;
-    --card: 222 16% 11%;
-    --card-foreground: 220 10% 95%;
-    --popover: 222 18% 9%;
-    --popover-foreground: 220 10% 95%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 222 16% 8%;
-    --secondary: 222 14% 14%;
-    --secondary-foreground: 220 10% 95%;
-    --muted: 222 14% 14%;
-    --muted-foreground: 220 8% 55%;
-    --accent: 188 100% 50%;
-    --accent-foreground: 222 16% 8%;
-    --destructive: 0 72% 51%;
+    --background: 240 20% 97%;
+    --foreground: 222 13% 30%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 13% 30%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 13% 30%;
+    --primary: 0 0% 10%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 16% 95%;
+    --secondary-foreground: 222 13% 30%;
+    --muted: 240 16% 95%;
+    --muted-foreground: 226 8% 52%;
+    --accent: 57 100% 50%;
+    --accent-foreground: 0 0% 10%;
+    --destructive: 0 72% 45%;
     --destructive-foreground: 0 0% 98%;
-    --border: 225 18% 20%;
-    --input: 225 18% 20%;
-    --ring: 188 100% 50%;
-    --radius: 0.75rem;
-    --font-heading: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-    --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
-    --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
-    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+    --border: 228 14% 90%;
+    --input: 228 14% 90%;
+    --ring: 0 0% 10%;
+    --radius: 0.5rem;
+    --font-heading: "Poppins", ui-sans-serif, system-ui, sans-serif;
+    --font-body: "Poppins", ui-sans-serif, system-ui, sans-serif;
+    --font-display: "Poppins", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "Poppins", ui-sans-serif, system-ui, sans-serif;
   }
 }
 
@@ -37,7 +37,7 @@
   }
 
   body {
-    background-color: #07080A;
+    background-color: #F5F5F7;
     color: hsl(var(--foreground));
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
@@ -48,17 +48,11 @@
   .text-display {
     font-family: var(--font-display);
     font-weight: 700;
-    letter-spacing: -0.02em;
-    line-height: 0.95;
+    letter-spacing: -0.01em;
+    line-height: 1.1;
   }
   .text-mono {
     font-family: var(--font-mono);
-  }
-  .glow-cyan {
-    box-shadow: 0 0 0 1px rgba(0, 240, 255, 0.15), 0 0 40px -8px rgba(0, 240, 255, 0.35);
-  }
-  .radial-cyan {
-    background: radial-gradient(circle at 50% 35%, rgba(0, 240, 255, 0.14), transparent 60%);
   }
   .scrollbar-hide::-webkit-scrollbar { display: none; }
   .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }

@@ -29,7 +29,7 @@ export default function Checkout() {
     return (
       <div className="px-4 md:px-8 py-16 max-w-2xl mx-auto text-center">
         <h1 className="font-display font-bold text-2xl">Nothing to check out</h1>
-        <Link to="/category" className="inline-flex mt-4 px-5 py-3 rounded-xl bg-accent-cyan text-surface-primary text-sm font-medium">Browse catalog</Link>
+        <Link to="/category" className="inline-flex mt-4 px-5 py-3 rounded-lg bg-noon text-noon-fg text-sm font-medium">Browse catalog</Link>
       </div>
     );
   }
@@ -72,19 +72,19 @@ export default function Checkout() {
       <div className="grid md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
           {/* Address */}
-          <section className="bg-surface-card border border-border-hairline rounded-2xl p-5">
+          <section className="bg-surface-card border border-border-hairline rounded-lg p-5">
             <h2 className="font-display font-semibold text-lg mb-4">Delivery to {country.flag} {country.name}</h2>
             <div className="grid grid-cols-2 gap-3">
-              <input placeholder="Full name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="col-span-2 bg-surface-primary border border-border-hairline rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent-cyan/50" />
-              <input placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="col-span-2 bg-surface-primary border border-border-hairline rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent-cyan/50" />
-              <input placeholder="Address line" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="col-span-2 bg-surface-primary border border-border-hairline rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent-cyan/50" />
-              <input placeholder="City" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="bg-surface-primary border border-border-hairline rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent-cyan/50" />
-              <input placeholder="Postal code" value={form.postal} onChange={(e) => setForm({ ...form, postal: e.target.value })} className="bg-surface-primary border border-border-hairline rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent-cyan/50" />
+              <input placeholder="Full name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="col-span-2 bg-surface-primary border border-border-hairline rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent-cyan/50" />
+              <input placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="col-span-2 bg-surface-primary border border-border-hairline rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent-cyan/50" />
+              <input placeholder="Address line" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} className="col-span-2 bg-surface-primary border border-border-hairline rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent-cyan/50" />
+              <input placeholder="City" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} className="bg-surface-primary border border-border-hairline rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent-cyan/50" />
+              <input placeholder="Postal code" value={form.postal} onChange={(e) => setForm({ ...form, postal: e.target.value })} className="bg-surface-primary border border-border-hairline rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent-cyan/50" />
             </div>
           </section>
 
           {/* Payment plan */}
-          <section className="bg-surface-card border border-border-hairline rounded-2xl p-5">
+          <section className="bg-surface-card border border-border-hairline rounded-lg p-5">
             <h2 className="font-display font-semibold text-lg mb-4">Payment plan</h2>
             <div className="grid grid-cols-2 gap-2.5">
               {PLAN_OPTIONS.map((opt) => {
@@ -94,7 +94,7 @@ export default function Checkout() {
                     key={opt.id}
                     onClick={() => setPlanId(opt.id)}
                     className={cn(
-                      "p-3.5 rounded-xl border text-left transition",
+                      "p-3.5 rounded-lg border text-left transition",
                       planId === opt.id ? "border-accent-cyan bg-accent-cyan/5" : "border-border-hairline hover:border-accent-cyan/30"
                     )}
                   >
@@ -107,7 +107,7 @@ export default function Checkout() {
               })}
             </div>
             {plan.installmentCount > 0 && (
-              <div className="mt-3 rounded-xl bg-surface-primary p-3.5 text-sm space-y-1.5">
+              <div className="mt-3 rounded-lg bg-surface-primary p-3.5 text-sm space-y-1.5">
                 <div className="flex justify-between"><span className="text-text-muted">Today</span><span className="text-mono text-accent-cyan font-semibold">{formatPrice(plan.downPayment, currency)}</span></div>
                 <div className="flex justify-between"><span className="text-text-muted">{plan.installmentCount} × monthly</span><span className="text-mono">{formatPrice(plan.installmentAmount, currency)}</span></div>
                 <div className="flex justify-between border-t border-border-hairline pt-1.5 font-semibold"><span>Total</span><span className="text-mono">{formatPrice(plan.totalPaid, currency)}</span></div>
@@ -116,7 +116,7 @@ export default function Checkout() {
           </section>
 
           {/* Payment provider */}
-          <section className="bg-surface-card border border-border-hairline rounded-2xl p-5">
+          <section className="bg-surface-card border border-border-hairline rounded-lg p-5">
             <h2 className="font-display font-semibold text-lg mb-1">Payment method</h2>
             <p className="text-xs text-text-muted mb-4">Available providers for {country.name}</p>
             <div className="space-y-2.5">
@@ -127,7 +127,7 @@ export default function Checkout() {
                     key={pid}
                     onClick={() => setProvider(pid)}
                     className={cn(
-                      "w-full flex items-center justify-between p-3.5 rounded-xl border transition",
+                      "w-full flex items-center justify-between p-3.5 rounded-lg border transition",
                       provider === pid ? "border-accent-cyan bg-accent-cyan/5" : "border-border-hairline hover:border-accent-cyan/30"
                     )}
                   >
@@ -150,7 +150,7 @@ export default function Checkout() {
 
         {/* Summary */}
         <div className="md:col-span-1">
-          <div className="bg-surface-card border border-border-hairline rounded-2xl p-5 sticky top-24">
+          <div className="bg-surface-card border border-border-hairline rounded-lg p-5 sticky top-24">
             <h2 className="font-display font-semibold text-lg mb-4">Summary</h2>
             <div className="space-y-2.5 text-sm max-h-40 overflow-auto scrollbar-hide mb-3">
               {items.map((i) => (
@@ -172,7 +172,7 @@ export default function Checkout() {
             <button
               onClick={placeOrder}
               disabled={placing || !form.name || !form.email || !form.address}
-              className="w-full mt-5 py-3.5 rounded-xl bg-accent-cyan text-surface-primary font-semibold text-sm hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full mt-5 py-3.5 rounded-lg bg-noon text-noon-fg font-semibold text-sm hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {placing ? "Processing…" : <><Lock className="w-4 h-4" /> Place order · {formatPrice(plan.installmentCount === 0 ? total : plan.downPayment, currency)}</>}
             </button>

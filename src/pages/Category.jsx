@@ -58,7 +58,7 @@ export default function Category() {
           <select
             value={sort}
             onChange={(e) => setParam("sort", e.target.value)}
-            className="bg-surface-card border border-border-hairline rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-accent-cyan/50"
+            className="bg-surface-card border border-border-hairline rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent-cyan/50"
           >
             <option value="premium">Premium score</option>
             <option value="price_low">Price: low to high</option>
@@ -66,7 +66,7 @@ export default function Category() {
           </select>
           <button
             onClick={() => setShowFilters((s) => !s)}
-            className="md:hidden p-2.5 rounded-xl border border-border-hairline"
+            className="md:hidden p-2.5 rounded-lg border border-border-hairline"
           >
             <SlidersHorizontal className="w-4 h-4" />
           </button>
@@ -100,7 +100,7 @@ export default function Category() {
         <div className="flex-1 min-w-0">
           {loading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-              {Array.from({ length: 8 }).map((_, i) => <div key={i} className="aspect-[3/4] bg-surface-card rounded-2xl animate-pulse" />)}
+              {Array.from({ length: 8 }).map((_, i) => <div key={i} className="aspect-[3/4] bg-surface-card rounded-lg animate-pulse" />)}
             </div>
           ) : products.length === 0 ? (
             <div className="text-center py-20 text-text-muted">
