@@ -6,7 +6,7 @@ import React, { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import {
   Shield, LayoutDashboard, AlertTriangle, Database, Package, Handshake, Cpu,
-  BarChart3, Coins, Globe, Users, Headphones, ScrollText, Lock, LogOut,
+  BarChart3, Coins, Globe, Users, Headphones, ScrollText, Lock, LogOut, Percent,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -20,6 +20,7 @@ const MENU = [
   { to: "/admin/partners", label: "Partners", icon: Handshake },
   { to: "/admin/sources", label: "Crawler sources", icon: Cpu },
   { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { to: "/admin/pricing", label: "Pricing & rules", icon: Percent },
   { to: "/admin/currency-settings", label: "Currencies", icon: Coins },
   { to: "/admin/settings", label: "Countries", icon: Globe },
   { to: "/admin/users", label: "Users & roles", icon: Users },

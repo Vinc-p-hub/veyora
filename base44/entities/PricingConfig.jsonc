@@ -1,0 +1,91 @@
+{
+  "name": "PricingConfig",
+  "type": "object",
+  "properties": {
+    "margin_percent": {
+      "type": "number",
+      "default": 30,
+      "description": "VEYRO margin applied on top of the supplier price"
+    },
+    "payment_fee_percent": {
+      "type": "number",
+      "default": 0
+    },
+    "financing_fee_percent": {
+      "type": "number",
+      "default": 0,
+      "description": "Extra fee applied only when an installment plan is chosen"
+    },
+    "shipping_fee_default": {
+      "type": "number",
+      "default": 0
+    },
+    "partner_commission_percent": {
+      "type": "number",
+      "default": 10
+    },
+    "first_installment_percent": {
+      "type": "number",
+      "default": 15
+    },
+    "default_plan_id": {
+      "type": "string",
+      "default": "plan_5"
+    },
+    "rounding": {
+      "type": "string",
+      "enum": [
+        "cent",
+        "integer",
+        "ten"
+      ],
+      "default": "cent"
+    },
+    "installment_plans": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "category_rules": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "country_rules": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "supplier_rules": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "active": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "required": [],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

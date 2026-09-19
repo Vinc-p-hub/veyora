@@ -4,7 +4,9 @@ import { Star, ShieldCheck, Truck, RefreshCw, Check, ChevronRight, Heart } from 
 import { base44 } from "@/api/base44Client";
 import { useRegion } from "@/lib/RegionContext";
 import { useCart } from "@/lib/CartContext";
-import { formatPrice, PLAN_OPTIONS, getPlanForOption, buildInstallmentPlan } from "@/lib/pricing";
+import { useLang } from "@/lib/i18n";
+import { formatPrice } from "@/lib/pricing";
+import { usePricing } from "@/lib/PricingContext";
 import { cn } from "@/lib/utils";
 
 export default function ProductDetail() {
@@ -12,6 +14,8 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const { currency, country } = useRegion();
   const { addItem } = useCart();
+  const { plans, buildPlan } = usePricing();
+  const { t } = useLang();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [planId, setPlanId] = useState("plan_5");
@@ -40,11 +44,11 @@ export default function ProductDetail() {
   }
 
   const price = product.customer_price;
-  const plan = getPlanForOption(price, planId);
+  const plan = buildPlan(price, planId);
   const sourcePriceFmt = formatPrice(product.source_price, currency);
-  const todayFmt = formatPrice(plan.downPayment, currency);
-  const monthlyFmt = formatPrice(plan.installmentAmount, currency);
-  const totalFmt = formatPrice(plan.totalPaid, currency);
+  const todayFmt = formatPrice(plan.first_payment, currency);
+  const monthlyFmt = formatPrice(plan.next_amount, currency);
+  const totalFmt = formatPrice(plan.total, currency);
   const shipping = country.shipping ? formatPrice(country.shipping, currency) : "Free";
   const tax = Math.round(price * country.taxRate * 100) / 100;
 
@@ -134,7 +138,7 @@ export default function ProductDetail() {
             <div>
               <div className="text-[10px] uppercase tracking-widest text-text-muted mb-2">Payment plan</div>
               <div className="grid grid-cols-2 gap-2">
-                {PLAN_OPTIONS.map((opt) => (
+                {plans.map((opt) => (
                   <button
                     key={opt.id}
                     onClick={() => setPlanId(opt.id)}
@@ -151,29 +155,28 @@ export default function ProductDetail() {
 
             {/* Breakdown */}
             <div className="rounded-lg bg-surface-primary p-4 space-y-2.5">
-              {plan.installmentCount === 0 ? (
+              {plan.count === 0 ? (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-text-muted">Pay today</span>
+                  <span className="text-text-muted">{t("detail.payToday", { p: totalFmt })}</span>
                   <span className="text-mono font-semibold text-accent-cyan">{totalFmt}</span>
                 </div>
               ) : (
                 <>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-text-muted">Pay today (down payment)</span>
-                    <span className="text-mono font-semibold text-accent-cyan">{todayFmt}</span>
+                    <span className="text-text-muted">{t("detail.payToday", { p: todayFmt })}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-text-muted">Then {plan.installmentCount} monthly payments</span>
+                    <span className="text-text-muted">{t("detail.thenPayments", { n: plan.count, p: monthlyFmt })}</span>
                     <span className="text-mono font-semibold">{monthlyFmt} / mo</span>
                   </div>
                   <div className="border-t border-border-hairline pt-2.5 flex items-center justify-between">
-                    <span className="text-xs uppercase tracking-widest text-text-muted">Total paid</span>
+                    <span className="text-xs uppercase tracking-widest text-text-muted">{t("detail.total", { p: totalFmt })}</span>
                     <span className="text-mono font-bold">{totalFmt}</span>
                   </div>
                 </>
               )}
               <p className="text-[11px] text-text-muted leading-relaxed pt-1">
-                No hidden costs. The total above is the full amount you pay across all installments.
+                {t("detail.noHidden")}
               </p>
             </div>
 
@@ -183,7 +186,7 @@ export default function ProductDetail() {
                 onClick={buyNow}
                 className="flex-1 py-3.5 rounded-lg bg-noon text-noon-fg font-semibold text-sm hover:opacity-90 transition"
               >
-                {plan.installmentCount === 0 ? `Buy now · ${todayFmt}` : `Prequalify · ${todayFmt} today`}
+                {plan.count === 0 ? `Buy now · ${todayFmt}` : `Prequalify · ${todayFmt} today`}
               </button>
               <button
                 onClick={handleAdd}

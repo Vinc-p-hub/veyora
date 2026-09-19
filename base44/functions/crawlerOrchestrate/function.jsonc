@@ -1,0 +1,16 @@
+{
+  "name": "crawlerOrchestrate",
+  "entry": "entry.ts",
+  "automations": [
+    {
+      "type": "scheduled",
+      "name": "crawler_auto_orchestrate",
+      "description": "Runs the automatic crawler every 5 minutes: due sources, tiered product refreshes, paced queue processing",
+      "function_args": { "automation_key": "veyro-orchestrate-9f4c2a71-8e3b-4d16-b5a0-2c7e91d84f03", "max_jobs": 25 },
+      "is_active": true,
+      "schedule_mode": "recurring",
+      "schedule_type": "cron",
+      "cron_expression": "*/5 * * * ?"
+    }
+  ]
+}

@@ -30,6 +30,7 @@ import OrdersAdmin from '@/pages/admin/Orders';
 import Partners from '@/pages/admin/Partners';
 import SourcesPage from '@/pages/admin/SourcesPage';
 import AnalyticsPage from '@/pages/admin/AnalyticsPage';
+import PricingRules from '@/pages/admin/PricingRules';
 import CurrencySettings from '@/pages/admin/CurrencySettings';
 import Settings from '@/pages/admin/Settings';
 import Users from '@/pages/admin/Users';
@@ -38,6 +39,7 @@ import Logs from '@/pages/admin/Logs';
 import { CartProvider } from '@/lib/CartContext';
 import { RegionProvider } from '@/lib/RegionContext';
 import { LanguageProvider } from '@/lib/i18n';
+import { PricingProvider } from '@/lib/PricingContext';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -66,42 +68,45 @@ const AuthenticatedApp = () => {
   return (
     <LanguageProvider>
       <RegionProvider>
-        <CartProvider>
-          <Routes>
-            {/* Add your page Route elements here */}
-            <Route element={<Layout />}>
-              <Route path="/" element={<Home />} />
-              <Route path="/category" element={<Category />} />
-              <Route path="/product/:slug" element={<ProductDetail />} />
-              <Route path="/cart" element={<Cart />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/orders" element={<Orders />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/payment-methods" element={<PaymentMethods />} />
-              <Route path="/wishlist" element={<Wishlist />} />
-              <Route path="/support" element={<Support />} />
-              <Route path="/financing-info" element={<FinancingInfo />} />
-              <Route path="/financing-calculator" element={<FinancingCalculator />} />
-              <Route path="/compare" element={<Compare />} />
-            </Route>
-            {/* Super Admin console — completely separated from the public marketplace */}
-            <Route path="/admin" element={<Admin />}>
-              <Route index element={<Overview />} />
-              <Route path="approval-queue" element={<ApprovalQueue />} />
-              <Route path="products" element={<Products />} />
-              <Route path="orders" element={<OrdersAdmin />} />
-              <Route path="partners" element={<Partners />} />
-              <Route path="sources" element={<SourcesPage />} />
-              <Route path="analytics" element={<AnalyticsPage />} />
-              <Route path="currency-settings" element={<CurrencySettings />} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="users" element={<Users />} />
-              <Route path="support" element={<SupportAdmin />} />
-              <Route path="logs" element={<Logs />} />
-            </Route>
-            <Route path="*" element={<PageNotFound />} />
-          </Routes>
-        </CartProvider>
+        <PricingProvider>
+          <CartProvider>
+            <Routes>
+              {/* Add your page Route elements here */}
+              <Route element={<Layout />}>
+                <Route path="/" element={<Home />} />
+                <Route path="/category" element={<Category />} />
+                <Route path="/product/:slug" element={<ProductDetail />} />
+                <Route path="/cart" element={<Cart />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/orders" element={<Orders />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/payment-methods" element={<PaymentMethods />} />
+                <Route path="/wishlist" element={<Wishlist />} />
+                <Route path="/support" element={<Support />} />
+                <Route path="/financing-info" element={<FinancingInfo />} />
+                <Route path="/financing-calculator" element={<FinancingCalculator />} />
+                <Route path="/compare" element={<Compare />} />
+              </Route>
+              {/* Super Admin console — completely separated from the public marketplace */}
+              <Route path="/admin" element={<Admin />}>
+                <Route index element={<Overview />} />
+                <Route path="approval-queue" element={<ApprovalQueue />} />
+                <Route path="products" element={<Products />} />
+                <Route path="orders" element={<OrdersAdmin />} />
+                <Route path="partners" element={<Partners />} />
+                <Route path="sources" element={<SourcesPage />} />
+                <Route path="analytics" element={<AnalyticsPage />} />
+                <Route path="pricing" element={<PricingRules />} />
+                <Route path="currency-settings" element={<CurrencySettings />} />
+                <Route path="settings" element={<Settings />} />
+                <Route path="users" element={<Users />} />
+                <Route path="support" element={<SupportAdmin />} />
+                <Route path="logs" element={<Logs />} />
+              </Route>
+              <Route path="*" element={<PageNotFound />} />
+            </Routes>
+          </CartProvider>
+        </PricingProvider>
       </RegionProvider>
     </LanguageProvider>
   );

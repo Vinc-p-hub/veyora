@@ -4,7 +4,8 @@ import { ArrowRight } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useRegion } from "@/lib/RegionContext";
 import { useLang } from "@/lib/i18n";
-import { formatPrice, buildInstallmentPlan } from "@/lib/pricing";
+import { formatPrice } from "@/lib/pricing";
+import { usePricing } from "@/lib/PricingContext";
 import ProductCard from "@/components/ProductCard";
 
 // The 13 storefront categories — all connected to the real crawled catalog
@@ -34,6 +35,7 @@ const BRANDS = [
 export default function Home() {
   const { currency } = useRegion();
   const { t, tCat } = useLang();
+  const { buildPlan } = usePricing();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,7 +46,7 @@ export default function Home() {
   }, []);
 
   const hero = products.find((p) => p.slug === "sony-wh-1000xm6-veyro-edition") || products[0];
-  const heroPlan = hero ? buildInstallmentPlan(hero.customer_price, 5, 0.15) : null;
+  const heroPlan = hero ? buildPlan(hero.customer_price) : null;
   const trending = products.slice(0, 8);
 
   return (
@@ -72,7 +74,13 @@ export default function Home() {
                 <div className="text-[10px] uppercase text-text-muted">{hero.brand}</div>
                 <div className="text-sm font-semibold truncate">{hero.name}</div>
                 <div className="text-xs text-accent-cyan font-medium">
-                  {formatPrice(heroPlan.downPayment, currency)} {t("card.today")} · {heroPlan.installmentCount}× {formatPrice(heroPlan.installmentAmount, currency)}{t("card.perMonth")}
+                  {heroPlan.count > 0 ? (
+                    <>
+                      {formatPrice(heroPlan.first_payment, currency)}{t("card.perMonth")} · {t("card.paymentsTotal", { n: heroPlan.count, total: formatPrice(heroPlan.total, currency) })}
+                    </>
+                  ) : (
+                    t("detail.total", { p: formatPrice(heroPlan.total, currency) })
+                  )}
                 </div>
               </div>
               <div className="font-display font-bold text-sm md:text-base shrink-0">{formatPrice(hero.customer_price, currency)}</div>

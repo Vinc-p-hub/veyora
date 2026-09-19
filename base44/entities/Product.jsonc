@@ -130,6 +130,18 @@
       ],
       "default": "REVIEW"
     },
+    "refresh_tier": {
+      "type": "string",
+      "enum": [
+        "AUTO",
+        "POPULAR",
+        "IMPORTANT",
+        "NORMAL",
+        "LOW"
+      ],
+      "default": "AUTO",
+      "description": "AUTO derives the tier from demand signals (orders, wishlist, premium); explicit values override it"
+    },
     "source_id": {
       "type": "string"
     },

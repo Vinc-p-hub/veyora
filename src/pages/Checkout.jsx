@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { AlertTriangle, Lock, ShieldCheck } from "lucide-react";
 import { useCart } from "@/lib/CartContext";
 import { useRegion } from "@/lib/RegionContext";
-import { getPlanForOption } from "@/lib/pricing";
+import { usePricing } from "@/lib/PricingContext";
+import { useLang } from "@/lib/i18n";
 import { PAYMENT_PROVIDERS } from "@/lib/countries";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,8 @@ export default function Checkout() {
   const navigate = useNavigate();
   const { items, clearCart } = useCart();
   const { country } = useRegion();
+  const { plans, buildPlan } = usePricing();
+  const { t } = useLang();
 
   const [planId, setPlanId] = useState(params.get("plan") || "plan_5");
   const [provider, setProvider] = useState(country.providers[0]);
@@ -129,31 +132,30 @@ export default function Checkout() {
           <section className="bg-surface-card border border-border-hairline rounded-lg p-5">
             <h2 className="font-display font-semibold text-lg mb-4">Payment plan</h2>
             <div className="grid grid-cols-2 gap-2.5">
-              {["pay_now", "plan_2", "plan_3", "plan_5"].map((optId) => {
-                const p = data ? getPlanForOption(totals.total, optId) : null;
-                const label = { pay_now: "Pay in full", plan_2: "2 payments", plan_3: "3 payments", plan_5: "5 payments" }[optId];
+              {plans.map((opt) => {
+                const p = data ? buildPlan(totals.total, opt.id) : null;
                 return (
                   <button
-                    key={optId}
-                    onClick={() => setPlanId(optId)}
+                    key={opt.id}
+                    onClick={() => setPlanId(opt.id)}
                     className={cn(
                       "p-3.5 rounded-lg border text-left transition",
-                      planId === optId ? "border-accent-cyan bg-accent-cyan/5" : "border-border-hairline hover:border-accent-cyan/30"
+                      planId === opt.id ? "border-accent-cyan bg-accent-cyan/5" : "border-border-hairline hover:border-accent-cyan/30"
                     )}
                   >
-                    <div className="text-sm font-medium">{label}</div>
+                    <div className="text-sm font-medium">{opt.label}</div>
                     <div className="text-mono text-xs text-accent-cyan mt-1">
-                      {p ? (p.installmentCount === 0 ? money(p.totalPaid) : `${money(p.downPayment)} today`) : "…"}
+                      {p ? (p.count === 0 ? money(p.total) : `${money(p.first_payment)} today · ${t("card.paymentsTotal", { n: p.count, total: money(p.total) })}`) : "…"}
                     </div>
                   </button>
                 );
               })}
             </div>
-            {plan && plan.installmentCount > 0 && (
+            {plan && plan.count > 0 && (
               <div className="mt-3 rounded-lg bg-surface-primary p-3.5 text-sm space-y-1.5">
-                <div className="flex justify-between"><span className="text-text-muted">Pay today</span><span className="text-mono text-accent-cyan font-semibold">{money(plan.downPayment)}</span></div>
-                <div className="flex justify-between"><span className="text-text-muted">{plan.installmentCount} × monthly</span><span className="text-mono">{money(plan.installmentAmount)}</span></div>
-                <div className="flex justify-between border-t border-border-hairline pt-1.5 font-semibold"><span>Total</span><span className="text-mono">{money(plan.totalPaid)}</span></div>
+                <div className="flex justify-between"><span className="text-text-muted">{t("detail.payToday", { p: money(plan.first_payment ?? plan.downPayment) })}</span></div>
+                <div className="flex justify-between"><span className="text-text-muted">{t("detail.thenPayments", { n: plan.count ?? plan.installmentCount, p: money(plan.next_amount ?? plan.installmentAmount) })}</span><span className="text-mono">{money(plan.next_amount ?? plan.installmentAmount)}</span></div>
+                <div className="flex justify-between border-t border-border-hairline pt-1.5 font-semibold"><span>{t("detail.total", { p: money(plan.total ?? plan.totalPaid) })}</span><span className="text-mono">{money(plan.total ?? plan.totalPaid)}</span></div>
               </div>
             )}
           </section>

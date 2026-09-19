@@ -1,9 +1,10 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Star } from "lucide-react";
-import { formatPrice, buildInstallmentPlan } from "@/lib/pricing";
+import { formatPrice } from "@/lib/pricing";
 import { useRegion } from "@/lib/RegionContext";
 import { useLang } from "@/lib/i18n";
+import { usePricing } from "@/lib/PricingContext";
 
 const FALLBACK_IMG =
   "data:image/svg+xml;utf8," +
@@ -14,8 +15,9 @@ const FALLBACK_IMG =
 export default function ProductCard({ product, compact }) {
   const { currency } = useRegion();
   const { t } = useLang();
+  const { buildPlan } = usePricing();
   const price = product.customer_price;
-  const plan = buildInstallmentPlan(price, 5, 0.15);
+  const plan = buildPlan(price);
   const discount = product.source_price && product.source_price > price
     ? Math.round((1 - price / product.source_price) * 100)
     : 0;
@@ -47,16 +49,26 @@ export default function ProductCard({ product, compact }) {
           </div>
         )}
         <div className="mt-auto pt-2">
-          <div className="flex items-baseline gap-1.5 flex-wrap">
-            <span className="font-display font-bold text-sm">{formatPrice(price, currency)}</span>
-            {discount > 0 && (
+          {/* First installment prominent, total ALWAYS visible right below —
+              never let the first installment read as the product's full price. */}
+          {plan.count > 0 ? (
+            <>
+              <div className="font-display font-bold text-sm text-accent-cyan">
+                {formatPrice(plan.first_payment, currency)}{t("card.perMonth")}
+              </div>
+              <div className="text-[10px] text-text-muted mt-0.5">
+                {t("card.paymentsTotal", { n: plan.count, total: formatPrice(plan.total, currency) })}
+              </div>
+            </>
+          ) : (
+            <div className="font-display font-bold text-sm">{formatPrice(plan.total, currency)}</div>
+          )}
+          {discount > 0 && (
+            <div className="flex items-baseline gap-1.5 flex-wrap mt-0.5">
               <span className="text-[11px] text-text-muted line-through">{formatPrice(product.source_price, currency)}</span>
-            )}
-          </div>
-          {discount > 0 && <div className="text-[11px] font-semibold text-accent-cyan">{t("card.off", { n: discount })}</div>}
-          <div className="text-[10px] text-text-muted mt-0.5">
-            {formatPrice(plan.downPayment, currency)} {t("card.today")} · {plan.installmentCount}× {formatPrice(plan.installmentAmount, currency)}{t("card.perMonth")}
-          </div>
+              <span className="text-[11px] font-semibold text-accent-cyan">{t("card.off", { n: discount })}</span>
+            </div>
+          )}
           <div className="text-[10px] text-text-muted mt-0.5 flex items-center gap-1">
             <span className={product.stock_status === "IN_STOCK" ? "text-emerald-600 font-medium" : ""}>{t(`stock.${product.stock_status || "UNKNOWN"}`)}</span>
             <span>· {t("card.deliveryDays", { n: product.delivery_days || 5 })}</span>
