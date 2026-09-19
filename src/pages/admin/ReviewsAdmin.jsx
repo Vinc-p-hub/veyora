@@ -4,10 +4,12 @@ import ReviewsSettings from "@/components/admin/reviews/ReviewsSettings";
 import CustomerReviewsModeration from "@/components/admin/reviews/CustomerReviewsModeration";
 import SourceReviewsAdmin from "@/components/admin/reviews/SourceReviewsAdmin";
 import ModerationLogPanel from "@/components/admin/reviews/ModerationLogPanel";
+import InviteBuyersPanel from "@/components/admin/reviews/InviteBuyersPanel";
 import { cn } from "@/lib/utils";
 
 const TABS = [
   { id: "customer", label: "Customer reviews" },
+  { id: "invite", label: "Invite buyers" },
   { id: "source", label: "Source reviews" },
   { id: "log", label: "Moderation log" },
 ];
@@ -42,6 +44,7 @@ export default function ReviewsAdmin() {
         ))}
       </div>
       {tab === "customer" && <CustomerReviewsModeration />}
+      {tab === "invite" && <InviteBuyersPanel />}
       {tab === "source" && <SourceReviewsAdmin />}
       {tab === "log" && <ModerationLogPanel />}
     </div>

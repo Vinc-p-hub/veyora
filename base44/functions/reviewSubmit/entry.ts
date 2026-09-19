@@ -1,6 +1,7 @@
 // Customer review submission & edit — server-authoritative.
-// ABSOLUTE RULE: a review can only be created for a product the customer
-// actually bought (paid order containing it). verified_buyer is set here,
+// ABSOLUTE RULE: a review can only be created by a customer who actually
+// bought the product (paid order containing it) or was explicitly invited by
+// the VEYRO customer service team (invitation on file). verified_buyer is set here,
 // server-side only — the client can never grant it. No review content is ever
 // generated or altered by VEYRO.
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.44';
@@ -70,8 +71,27 @@ export default async function(req) {
         ELIGIBLE_ORDER_STATUS.includes(o.status) &&
         (Array.isArray(o.items) ? o.items : []).some((it) => it.id === productId || it.product_id === productId)
     );
+    // No purchase: a customer-service invitation also unlocks submission — the
+    // review is real (written by the invited person) but is NOT a Verified Buyer.
+    let invited = false;
     if (!purchase) {
-      return Response.json({ error: "Purchase required: only customers who bought this product can review it." }, { status: 403 });
+      const email = String(user.email || "").toLowerCase();
+      const invitations = await admin.entities.ReviewInvitation.filter(
+        { product_id: productId, email, status: "PENDING" },
+        "-created_date",
+        20
+      );
+      invited = invitations.length > 0;
+      if (!invited) {
+        // Editing one's own existing review stays allowed even when the
+        // invitation has already been used.
+        const own = (await admin.entities.Review.filter({ product_id: productId }, "-created_date", 100)).find(
+          (r) => r.created_by_id === user.id
+        );
+        if (!own) {
+          return Response.json({ error: "Purchase required: only customers who bought this product or invited buyers can review it." }, { status: 403 });
+        }
+      }
     }
 
     const flagReason = screenReview(`${title} ${text}`);
@@ -113,12 +133,24 @@ export default async function(req) {
       title,
       text,
       photos,
-      verified_buyer: true,
-      order_id: purchase.id,
-      order_number: purchase.order_number,
+      verified_buyer: !!purchase,
+      invited_buyer: !purchase,
+      order_id: purchase ? purchase.id : null,
+      order_number: purchase ? purchase.order_number : null,
       status: "PENDING",
       flag_reason: flagReason,
     });
+    if (invited) {
+      const email = String(user.email || "").toLowerCase();
+      const invitations = await admin.entities.ReviewInvitation.filter(
+        { product_id: productId, email, status: "PENDING" },
+        null,
+        20
+      );
+      for (const inv of invitations) {
+        await admin.entities.ReviewInvitation.update(inv.id, { status: "USED", used_at: new Date().toISOString() });
+      }
+    }
     return Response.json({ ok: true, status: "PENDING" });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { BadgeCheck, Flag, Pencil, PenLine } from "lucide-react";
+import { BadgeCheck, Flag, Pencil, PenLine, UserCheck } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { useLang } from "@/lib/i18n";
@@ -53,6 +53,10 @@ export default function CustomerReviews({ product }) {
           )
         );
       })
+      .catch(() => {});
+    // Customer-service invitation also unlocks review writing (no purchase needed).
+    base44.entities.ReviewInvitation.filter({ email: (user.email || "").toLowerCase(), product_id: product.id, status: "PENDING" })
+      .then((rows) => live && rows.length > 0 && setEligible(true))
       .catch(() => {});
     // Own review in any status (PENDING / PUBLISHED / HIDDEN…) — read rule allows the author.
     base44.entities.Review.filter({ product_id: product.id }, "-created_date", 50)
@@ -140,6 +144,11 @@ export default function CustomerReviews({ product }) {
               {settings.verified && r.verified_buyer && (
                 <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-accent-cyan">
                   <BadgeCheck className="w-3.5 h-3.5" /> {t("reviews.verified")}
+                </span>
+              )}
+              {!r.verified_buyer && r.invited_buyer && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-text-muted">
+                  <UserCheck className="w-3.5 h-3.5" /> {t("reviews.invited")}
                 </span>
               )}
               <span className="text-[11px] text-text-muted ms-auto">

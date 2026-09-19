@@ -12,6 +12,7 @@ export default function Products() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [only, setOnly] = useState("PUBLISHED");
+  const [alloc, setAlloc] = useState(null); // { id, value }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -32,6 +33,19 @@ export default function Products() {
   const setStatus = async (p, status) => {
     await base44.entities.Product.update(p.id, { status });
     setProducts((list) => list.map((x) => (x.id === p.id ? { ...x, status } : x)));
+  };
+
+  // Internal VEYRO sellable allocation — a commercial ceiling chosen by VEYRO,
+  // never a claim about the supplier's real (crawled) stock status.
+  const saveAlloc = async (p) => {
+    const n = Math.max(0, Math.floor(Number(alloc.value) || 0));
+    setAlloc(null);
+    await base44.entities.Product.update(p.id, {
+      veyro_allocated_stock: n,
+      available_to_sell: n,
+      stock_changed_at: new Date().toISOString(),
+    });
+    setProducts((list) => list.map((x) => (x.id === p.id ? { ...x, veyro_allocated_stock: n, available_to_sell: n } : x)));
   };
 
   return (
@@ -60,10 +74,30 @@ export default function Products() {
               <div className="flex-1 min-w-0">
                 <Link to={`/product/${p.slug}`} className="text-sm font-medium hover:text-accent-cyan">{p.name}</Link>
                 <div className="text-xs text-text-muted">{p.brand} · {p.category} · score {p.premium_score} · via {p.source_name}</div>
-                <div className="text-[10px] text-text-muted flex flex-wrap gap-x-2">
+                <div className="text-[10px] text-text-muted flex flex-wrap gap-x-2 items-center">
                   <span>Supplier stock: {(p.stock_status || "UNKNOWN").replace(/_/g, " ").toLowerCase()}</span>
-                  <span>· VEYRO alloc: {p.veyro_allocated_stock ?? "—"}</span>
-                  <span>· Sellable: {p.available_to_sell ?? "—"}</span>
+                  {alloc?.id === p.id ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <span>· Allocation:</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={alloc.value}
+                        onChange={(e) => setAlloc({ id: p.id, value: e.target.value })}
+                        className="w-16 px-1.5 py-0.5 border border-border-hairline rounded text-[10px]"
+                      />
+                      <button onClick={() => saveAlloc(p)} className="text-emerald-600 font-semibold hover:underline">Save</button>
+                      <button onClick={() => setAlloc(null)} className="hover:underline">Cancel</button>
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => setAlloc({ id: p.id, value: String(p.veyro_allocated_stock ?? 0) })}
+                      className="underline decoration-dotted hover:text-accent-cyan"
+                      title="Adjust the internal VEYRO sellable allocation (does not change supplier stock)"
+                    >
+                      · VEYRO alloc: {p.veyro_allocated_stock ?? "—"} · Sellable: {p.available_to_sell ?? "—"} (adjust)
+                    </button>
+                  )}
                 </div>
               </div>
               <div className="text-mono text-sm shrink-0">{formatPrice(p.customer_price, currency)}</div>

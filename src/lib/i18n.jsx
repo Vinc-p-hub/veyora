@@ -114,6 +114,7 @@ const DICT = {
     "reviews.sourceNote": "Reviews published by our authorized merchant sources and imported verbatim, with their permission. They are not VEYRO customer reviews.",
     "reviews.sourceNone": "No reviews imported from our sources for this product.",
     "reviews.viewOriginal": "View original",
+    "reviews.invited": "Invited buyer",
   },
   fr: {
     "common.loading": "Chargement…", "common.save": "Enregistrer", "common.saved": "Enregistré", "common.add": "Ajouter",
@@ -217,6 +218,7 @@ const DICT = {
     "reviews.sourceNote": "Avis publiés par nos marchands sources autorisés et importés tels quels, avec leur autorisation. Ce ne sont pas des avis clients VEYRO.",
     "reviews.sourceNone": "Aucun avis importé de nos sources pour ce produit.",
     "reviews.viewOriginal": "Voir l'original",
+    "reviews.invited": "Acheteur invité",
   },
   pt: {
     "common.loading": "A carregar…", "common.save": "Guardar", "common.saved": "Guardado", "common.add": "Adicionar",
@@ -320,6 +322,7 @@ const DICT = {
     "reviews.sourceNote": "Avaliações publicadas pelos nossos comerciantes parceiros autorizados e importadas na íntegra, com a sua permissão. Não são avaliações de clientes VEYRO.",
     "reviews.sourceNone": "Sem avaliações importadas das nossas fontes para este produto.",
     "reviews.viewOriginal": "Ver original",
+    "reviews.invited": "Comprador convidado",
   },
   es: {
     "common.loading": "Cargando…", "common.save": "Guardar", "common.saved": "Guardado", "common.add": "Añadir",
@@ -423,6 +426,7 @@ const DICT = {
     "reviews.sourceNote": "Opiniones publicadas por nuestros comerciantes autorizados e importadas íntegramente, con su permiso. No son opiniones de clientes VEYRO.",
     "reviews.sourceNone": "No hay opiniones importadas de nuestras fuentes para este producto.",
     "reviews.viewOriginal": "Ver original",
+    "reviews.invited": "Comprador invitado",
   },
   ar: {
     "common.loading": "جارٍ التحميل…", "common.save": "حفظ", "common.saved": "تم الحفظ", "common.add": "إضافة",
@@ -526,6 +530,7 @@ const DICT = {
     "reviews.sourceNote": "تقييمات نشرها تجّارنا المعتمدون واستوردناها كما هي، بإذنهم. وهي ليست تقييمات عملاء فيرو.",
     "reviews.sourceNone": "لا تقييمات مستوردة من مصادرنا لهذا المنتج.",
     "reviews.viewOriginal": "عرض الأصل",
+    "reviews.invited": "مشترٍ مدعو",
   },
 };
 

@@ -32,6 +32,11 @@
       "default": false,
       "description": "Server-set only: true when the backend confirms a matching paid order for this customer. Never settable by the client."
     },
+    "invited_buyer": {
+      "type": "boolean",
+      "default": false,
+      "description": "Server-set only: true when the reviewer had no purchase but was invited by the VEYRO customer service team (ReviewInvitation on file). Never displays the Verified Buyer badge."
+    },
     "order_id": {
       "type": "string",
       "description": "Matching order that validated the review eligibility"
