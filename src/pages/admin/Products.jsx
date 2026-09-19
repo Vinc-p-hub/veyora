@@ -60,6 +60,11 @@ export default function Products() {
               <div className="flex-1 min-w-0">
                 <Link to={`/product/${p.slug}`} className="text-sm font-medium hover:text-accent-cyan">{p.name}</Link>
                 <div className="text-xs text-text-muted">{p.brand} · {p.category} · score {p.premium_score} · via {p.source_name}</div>
+                <div className="text-[10px] text-text-muted flex flex-wrap gap-x-2">
+                  <span>Supplier stock: {(p.stock_status || "UNKNOWN").replace(/_/g, " ").toLowerCase()}</span>
+                  <span>· VEYRO alloc: {p.veyro_allocated_stock ?? "—"}</span>
+                  <span>· Sellable: {p.available_to_sell ?? "—"}</span>
+                </div>
               </div>
               <div className="text-mono text-sm shrink-0">{formatPrice(p.customer_price, currency)}</div>
               <span className={cn("text-[10px] px-2 py-0.5 rounded shrink-0",

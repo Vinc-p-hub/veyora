@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X } from "lucide-react";
+import { X, Sparkles } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +36,77 @@ export default function AddSourceDialog({ onDone, onCancel }) {
   const [f, setF] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState(null);
+  const [bulk, setBulk] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+
+  // Bulk add: auto-detect robots.txt + sitemap per merchant site (10 per
+  // batch). Allowed sites become SITEMAP sources immediately; sites that
+  // disallow automated crawling are marked unavailable (DISABLED), never
+  // crawled; sites without a sitemap are reported for manual setup.
+  const bulkAdd = async () => {
+    const urls = bulk.split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 10);
+    if (!urls.length) {
+      setErr("Add at least one merchant base URL.");
+      return;
+    }
+    setBulkBusy(true);
+    setErr(null);
+    try {
+      const res = await base44.functions.invoke("sourceAutodetect", { base_urls: urls });
+      const results = res.data?.results || [];
+      let added = 0;
+      let blocked = 0;
+      const manual = [];
+      for (const r of results) {
+        let name = "";
+        try {
+          name = new URL(r.base_url).hostname.replace(/^www\./, "");
+        } catch (_e) {
+          manual.push(`${r.base_url || "invalid URL"}: ${r.note}`);
+          continue;
+        }
+        if (r.status === "ok") {
+          await base44.entities.CrawlerSource.create({
+            name,
+            base_url: r.base_url,
+            adapter: "SITEMAP_JSONLD",
+            feed_url: r.feed_url,
+            priority: 5,
+            crawl_interval_minutes: 720,
+            requests_per_minute: 10,
+            max_products_per_run: 30,
+            default_currency: "USD",
+            supplier_score: 80,
+            enabled: true,
+            status: "ACTIVE",
+          });
+          added++;
+        } else if (r.status === "not_allowed") {
+          await base44.entities.CrawlerSource.create({
+            name,
+            base_url: r.base_url,
+            adapter: "SITEMAP_JSONLD",
+            feed_url: r.robots_url,
+            enabled: false,
+            status: "DISABLED",
+            last_error: r.note,
+          });
+          blocked++;
+        } else {
+          manual.push(`${name}: ${r.note}`);
+        }
+      }
+      onDone(
+        `Bulk add: ${added} source(s) added · ${blocked} marked unavailable (robots.txt) · ${manual.length} need manual setup` +
+          (manual.length ? ` — ${manual.join(" · ")}` : "")
+      );
+    } catch (e) {
+      setErr(e.response?.data?.error || e.message || "Detection failed.");
+    } finally {
+      setBulkBusy(false);
+    }
+  };
 
   const save = async () => {
     setErr(null);
@@ -152,6 +222,34 @@ export default function AddSourceDialog({ onDone, onCancel }) {
           />
         </div>
       )}
+
+      {/* Bulk add — auto-detect configuration for many merchant sites at once.
+          robots.txt is respected: sites that disallow automated crawling are
+          marked unavailable (DISABLED), never crawled. */}
+      <div className="border-t border-border-hairline pt-4 space-y-2">
+        <h3 className="font-display font-semibold text-sm flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-accent-cyan" /> Bulk add — auto-detect
+        </h3>
+        <p className="text-[11px] text-text-muted">
+          Paste up to 10 merchant base URLs (one per line). Each is checked against robots.txt and its sitemap is
+          detected automatically; allowed sites become sitemap sources ready to crawl, disallowed sites are marked
+          unavailable, and sites without a sitemap are reported for manual setup.
+        </p>
+        <textarea
+          value={bulk}
+          onChange={(e) => setBulk(e.target.value)}
+          rows={4}
+          placeholder={"https://www.samsung.com\nhttps://www.mi.com\nhttps://www.notebookbilliger.de"}
+          className={cn(inputCls, "w-full font-mono text-xs")}
+        />
+        <button
+          onClick={bulkAdd}
+          disabled={bulkBusy || saving}
+          className="px-4 py-2 rounded-lg border border-border-hairline text-sm font-semibold hover:border-accent-cyan/40 disabled:opacity-40 flex items-center gap-2"
+        >
+          <Sparkles className="w-4 h-4" /> {bulkBusy ? "Detecting…" : "Detect & add sources"}
+        </button>
+      </div>
 
       {err && <p className="text-xs text-red-600">{err}</p>}
       <div className="flex justify-end gap-2">

@@ -28,6 +28,7 @@ import ApprovalQueue from '@/pages/admin/ApprovalQueue';
 import Products from '@/pages/admin/Products';
 import OrdersAdmin from '@/pages/admin/Orders';
 import Partners from '@/pages/admin/Partners';
+import Offers from '@/pages/admin/Offers';
 import SourcesPage from '@/pages/admin/SourcesPage';
 import AnalyticsPage from '@/pages/admin/AnalyticsPage';
 import PricingRules from '@/pages/admin/PricingRules';
@@ -94,6 +95,7 @@ const AuthenticatedApp = () => {
                 <Route path="products" element={<Products />} />
                 <Route path="orders" element={<OrdersAdmin />} />
                 <Route path="partners" element={<Partners />} />
+                <Route path="offers" element={<Offers />} />
                 <Route path="sources" element={<SourcesPage />} />
                 <Route path="analytics" element={<AnalyticsPage />} />
                 <Route path="pricing" element={<PricingRules />} />

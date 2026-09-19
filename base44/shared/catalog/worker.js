@@ -12,6 +12,7 @@ import { validateProduct } from "./validate.js";
 import { matchProduct } from "./match.js";
 import { premiumScore } from "./premium.js";
 import { mergeConfig, resolveRules, computePriceChain } from "../commerce/rules.js";
+import { getAllocationDefault, applyStockAllocation } from "../commerce/stock.js";
 import { CURRENCIES, round2 } from "../commerce/pricing.js";
 import { parseProductPage, enrichFeedRaw, verifyImageAccessible, absolutizeImageUrl } from "./extract.js";
 
@@ -116,6 +117,8 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
   // --- central pricing rules (Super Admin Pricing & Business Rules module) ---
   const cfgDocs = await admin.entities.PricingConfig.filter({ active: true }, "-created_date", 5);
   const pricingConfig = mergeConfig(cfgDocs[0] || {});
+  // Internal VEYRO allocation default (Super Admin SiteSetting, fallback +10).
+  const allocationDefault = await getAllocationDefault(admin);
 
   const perSource = {};
   const bump = (sourceId, key, by = 1) => {
@@ -277,6 +280,18 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
         if (record.stock_status && record.stock_status !== match.product.stock_status) {
           update.stock_changed_at = now.toISOString();
         }
+        // VEYRO allocation follows supplier confirmations: granted on first
+        // availability, ceiling restored when the supplier is available again,
+        // sellable zeroed when the supplier goes out of stock. The real
+        // supplier stock status is never altered — internal rule only.
+        if (
+          !match.product.veyro_allocated_stock ||
+          (update.stock_changed_at && record.stock_status !== "OUT_OF_STOCK")
+        ) {
+          Object.assign(update, applyStockAllocation(record.stock_status, match.product, allocationDefault));
+        } else if (record.stock_status === "OUT_OF_STOCK") {
+          update.available_to_sell = 0;
+        }
         if (Object.keys(update).length) {
           await admin.entities.Product.update(match.product.id, update);
           action = "UPDATED";
@@ -295,6 +310,9 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
       } else {
         const created = await admin.entities.Product.create({
           ...record,
+          // Internal VEYRO commercial allocation (default from Super Admin) —
+          // a sellable ceiling, never a claim about the supplier's real stock.
+          ...applyStockAllocation(record.stock_status, null, allocationDefault),
           brand: record.brand || "Unknown",
           status: "PUBLISHED",
           first_seen_at: now.toISOString(),

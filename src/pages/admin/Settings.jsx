@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Globe, Plus, Trash2, Pencil, Wallet, Check } from "lucide-react";
+import { Globe, Plus, Trash2, Pencil, Wallet, Check, Package } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useToast } from "@/components/ui/use-toast";
 import { PAYMENT_PROVIDERS, listCountries } from "@/lib/countries";
@@ -18,6 +18,34 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
+  const [allocDefault, setAllocDefault] = useState("10");
+  const [allocSaving, setAllocSaving] = useState(false);
+
+  // Internal VEYRO stock allocation default (SiteSetting) — commercial ceiling
+  // granted per product when the supplier confirms availability. Never a claim
+  // about the supplier's real stock.
+  useEffect(() => {
+    base44.entities.SiteSetting.filter({ key: "stock_allocation_default" }, null, 1)
+      .then((rows) => setAllocDefault(String(rows[0]?.value ?? "10")))
+      .catch(() => {});
+  }, []);
+
+  const saveAlloc = async () => {
+    const v = String(Math.max(0, parseInt(allocDefault) || 0));
+    setAllocSaving(true);
+    try {
+      const rows = await base44.entities.SiteSetting.filter({ key: "stock_allocation_default" }, null, 1);
+      if (rows[0]) await base44.entities.SiteSetting.update(rows[0].id, { value: v });
+      else await base44.entities.SiteSetting.create({
+        key: "stock_allocation_default",
+        value: v,
+        description: "Internal VEYRO sellable allocation granted per product when the supplier confirms availability (commercial ceiling — never real supplier stock)",
+      });
+      toast({ description: `Allocation default set to ${v} units per product.` });
+    } finally {
+      setAllocSaving(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -118,6 +146,30 @@ export default function Settings() {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* VEYRO internal stock allocation */}
+      <div className="bg-surface-card border border-border-hairline rounded-lg p-4">
+        <h3 className="font-display font-semibold text-sm flex items-center gap-2">
+          <Package className="w-4 h-4 text-accent-cyan" /> VEYRO stock allocation
+        </h3>
+        <p className="text-xs text-text-muted mt-1">
+          Internal sellable units granted per product when a supplier confirms availability (default +10). This is
+          VEYRO's own commercial ceiling — the real supplier stock status is always kept as-is and never falsified.
+          Orders are automatically blocked when the supplier is unavailable or the allocation is exhausted.
+        </p>
+        <div className="flex items-center gap-2 mt-3">
+          <input
+            value={allocDefault}
+            onChange={(e) => setAllocDefault(e.target.value)}
+            placeholder="10"
+            className="bg-surface-primary border border-border-hairline rounded-lg px-3 py-2 text-sm w-28"
+          />
+          <button onClick={saveAlloc} disabled={allocSaving}
+            className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40">
+            {allocSaving ? "Saving…" : "Save allocation"}
+          </button>
         </div>
       </div>
 

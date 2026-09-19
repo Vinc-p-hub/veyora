@@ -53,6 +53,7 @@ export default function Checkout() {
   const plan = data?.plan;
   const warnings = data?.warnings || [];
   const orderItems = (data?.items || []).filter((i) => i.available);
+  const anyUnavailable = (data?.items || []).some((i) => i.available === false);
 
   if (items.length === 0) {
     return (
@@ -66,13 +67,34 @@ export default function Checkout() {
   const placeOrder = async () => {
     if (!form.name || !form.email || !form.address || !data) return;
     setPlacing(true);
+    // Final server-side gate — offer, price, supplier availability and the
+    // internal VEYRO allocation are re-verified live and the allocation is
+    // decremented atomically before the order is written. If the supplier is
+    // unavailable, the order is refused.
+    let d = data;
+    try {
+      const res = await base44.functions.invoke("checkoutRevalidate", {
+        items: items.map((i) => ({ product_id: i.id, qty: i.qty })),
+        country_code: country.code,
+        plan_id: planId,
+        commit: true,
+      });
+      d = res.data;
+      setData(d);
+    } catch (e) {
+      setPlacing(false);
+      setRevalError(e.response?.data?.error || "Final supplier verification failed — the order was not placed.");
+      return;
+    }
+    const finalItems = (d.items || []).filter((i) => i.available);
+    const finalTotals = d.totals || { subtotal: 0, shipping: 0, tax: 0, total: 0 };
     const orderNumber = "VYR-" + Date.now().toString(36).toUpperCase().slice(-8);
     try {
       await base44.entities.Order.create({
         order_number: orderNumber,
         customer_email: form.email,
         customer_name: form.name,
-        items: orderItems.map((i) => ({
+        items: finalItems.map((i) => ({
           id: i.product_id,
           name: i.name,
           brand: i.brand,
@@ -82,17 +104,17 @@ export default function Checkout() {
           seller_name: i.seller_name,
           delivery_days: i.delivery_days,
         })),
-        subtotal: totals.subtotal,
-        shipping: totals.shipping,
-        tax: totals.tax,
-        total: totals.total,
-        currency: data.currency,
+        subtotal: finalTotals.subtotal,
+        shipping: finalTotals.shipping,
+        tax: finalTotals.tax,
+        total: finalTotals.total,
+        currency: d.currency,
         country: country.code,
         payment_provider: provider,
-        down_payment: plan?.downPayment || totals.total,
-        installment_count: plan?.installmentCount || 0,
-        installment_amount: plan?.installmentAmount || 0,
-        price_snapshot: data.snapshot, // immutable — future price changes never touch this order
+        down_payment: d.plan?.downPayment || finalTotals.total,
+        installment_count: d.plan?.installmentCount || 0,
+        installment_amount: d.plan?.installmentAmount || 0,
+        price_snapshot: d.snapshot, // immutable — future price changes never touch this order
         status: "PAID",
         address: { line: form.address, city: form.city, postal: form.postal },
         tracking_number: "TRK" + Math.random().toString(36).slice(2, 10).toUpperCase(),
@@ -126,6 +148,13 @@ export default function Checkout() {
           {revalError && (
             <div className="bg-red-50 border border-red-300 rounded-lg p-4 text-sm text-red-800 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 shrink-0" /> {revalError}
+            </div>
+          )}
+          {anyUnavailable && !revalError && (
+            <div className="bg-red-50 border border-red-300 rounded-lg p-4 text-sm text-red-800 flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              One or more items cannot be ordered right now — the supplier is unavailable or the sellable allocation is
+              exhausted. Remove them from the cart to continue.
             </div>
           )}
 
@@ -232,7 +261,7 @@ export default function Checkout() {
             </div>
             <button
               onClick={placeOrder}
-              disabled={placing || revalidating || !!revalError || !data || orderItems.length === 0 || !form.name || !form.email || !form.address}
+              disabled={placing || revalidating || !!revalError || anyUnavailable || !data || orderItems.length === 0 || !form.name || !form.email || !form.address}
               className="w-full mt-5 py-3.5 rounded-lg bg-noon text-noon-fg font-semibold text-sm hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {placing ? "Processing…" : <><Lock className="w-4 h-4" /> Place order · {money(plan && plan.installmentCount > 0 ? plan.downPayment : totals.total)}</>}

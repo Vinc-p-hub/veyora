@@ -88,7 +88,18 @@
         "PREORDER",
         "UNKNOWN"
       ],
-      "default": "IN_STOCK"
+      "default": "IN_STOCK",
+      "description": "Real supplier stock status as crawled \u2014 never altered by VEYRO's internal allocation"
+    },
+    "veyro_allocated_stock": {
+      "type": "number",
+      "default": 0,
+      "description": "Internal VEYRO commercial sellable allocation \u2014 NOT real supplier stock. Granted when the supplier confirms availability (+10 default, configurable in Super Admin)"
+    },
+    "available_to_sell": {
+      "type": "number",
+      "default": 0,
+      "description": "Units VEYRO can still sell under its internal allocation \u2014 decremented at order, zeroed when the supplier is unavailable"
     },
     "premium_score": {
       "type": "number",

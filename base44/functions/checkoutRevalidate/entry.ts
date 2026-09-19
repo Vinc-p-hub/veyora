@@ -23,6 +23,10 @@ export default async function (req) {
     const cartItems = Array.isArray(body.items) ? body.items.slice(0, 20) : [];
     const countryCode = String(body.country_code || "US").toUpperCase().slice(0, 2);
     const planId = String(body.plan_id || "plan_5");
+    // commit: final gate before the order is written — refuses the order when a
+    // supplier is unavailable, otherwise decrements the internal VEYRO allocation.
+    const commit = body.commit === true;
+    const blockedLines = [];
     const admin = base44.asServiceRole;
     const now = new Date();
 
@@ -91,11 +95,22 @@ export default async function (req) {
       if (Math.abs(unitUsd - listedUsd) > 0.01) {
         warnings.push(`The price of ${product.name} changed since you added it — updated below.`);
       }
-      if (best && best.stock_status === "OUT_OF_STOCK") {
-        warnings.push(`${product.name} is currently out of stock at the supplier.`);
-      } else if (product.stock_status === "OUT_OF_STOCK") {
-        warnings.push(`${product.name} is currently out of stock.`);
+      // --- supplier availability gate + internal VEYRO allocation gate ---
+      // Supplier stock is the real crawled status (never falsified); the VEYRO
+      // allocation is an internal commercial ceiling. Either failing blocks
+      // the line: no order is accepted on an unavailable supplier.
+      const supplierStock = best ? best.stock_status : product.stock_status;
+      const allocated = Number(product.veyro_allocated_stock) || 0;
+      const sellable = typeof product.available_to_sell === "number" ? product.available_to_sell : null;
+      let canSell = true;
+      if (supplierStock === "OUT_OF_STOCK") {
+        canSell = false;
+        warnings.push(`${product.name}: the supplier is currently out of stock — orders are blocked until availability is re-confirmed.`);
+      } else if (allocated > 0 && sellable !== null && sellable < qty) {
+        canSell = false;
+        warnings.push(`${product.name}: VEYRO sellable allocation for this quantity is exhausted right now.`);
       }
+      if (!canSell) blockedLines.push(product.name);
       const lineTotalUsd = round2(unitUsd * qty);
       subtotalUsd = round2(subtotalUsd + lineTotalUsd);
       items.push({
@@ -112,7 +127,7 @@ export default async function (req) {
         seller_id: best ? best.seller_id : null,
         seller_name: best ? best.seller_name || product.source_name : product.source_name,
         changed: Math.abs(unitUsd - listedUsd) > 0.01,
-        available: true,
+        available: canSell,
         supplier_fresh: supplierFresh,
       });
       snapshotItems.push({
@@ -157,6 +172,38 @@ export default async function (req) {
     // Trigger the priority supplier re-checks without blocking the response.
     if (supplierRecheckJobs.length) {
       waitUntil(admin.entities.CrawlerJob.bulkCreate(supplierRecheckJobs).catch(() => {}));
+    }
+
+    // Final gate (commit): refuse the whole order if any supplier is
+    // unavailable, otherwise decrement the internal VEYRO sellable allocation
+    // before the order is written. The real supplier stock is never touched.
+    if (commit) {
+      if (blockedLines.length) {
+        return Response.json(
+          {
+            ok: false,
+            blocked: true,
+            error: `Order blocked — supplier unavailable or allocation exhausted for: ${blockedLines.join(", ")}`,
+            items,
+            warnings,
+          },
+          { status: 409 }
+        );
+      }
+      for (const it of items) {
+        const product = products.find((p) => p.id === it.product_id);
+        if (!product) continue;
+        const allocated = Number(product.veyro_allocated_stock) || 0;
+        if (allocated <= 0) continue; // product without internal allocation configured
+        const current = typeof product.available_to_sell === "number" ? product.available_to_sell : allocated;
+        if (current < it.qty) {
+          return Response.json(
+            { ok: false, blocked: true, error: `${it.name}: sold out during checkout.`, items, warnings },
+            { status: 409 }
+          );
+        }
+        await admin.entities.Product.update(product.id, { available_to_sell: Math.max(0, current - it.qty) });
+      }
     }
 
     const snapshot = {
