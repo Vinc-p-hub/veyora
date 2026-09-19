@@ -68,6 +68,16 @@ module.exports = {
   			display: ['var(--font-display)'],
   			mono: ['var(--font-mono)']
   		},
+  		colors: {
+  			'surface-primary': '#07080A',
+  			'surface-secondary': '#12141A',
+  			'surface-card': '#1A1D26',
+  			'border-hairline': '#2A2E3D',
+  			'text-primary': '#F3F4F6',
+  			'text-muted': '#8A8F9E',
+  			'accent-cyan': '#00F0FF',
+  			'badge-premium': '#FFD700',
+  		},
   		keyframes: {
   			'accordion-down': {
   				from: {

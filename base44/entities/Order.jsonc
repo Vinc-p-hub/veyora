@@ -1,0 +1,87 @@
+{
+  "name": "Order",
+  "type": "object",
+  "properties": {
+    "order_number": {
+      "type": "string"
+    },
+    "customer_email": {
+      "type": "string"
+    },
+    "customer_name": {
+      "type": "string"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "subtotal": {
+      "type": "number"
+    },
+    "shipping": {
+      "type": "number",
+      "default": 0
+    },
+    "tax": {
+      "type": "number",
+      "default": 0
+    },
+    "total": {
+      "type": "number"
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD"
+    },
+    "country": {
+      "type": "string"
+    },
+    "payment_provider": {
+      "type": "string"
+    },
+    "down_payment": {
+      "type": "number"
+    },
+    "installment_count": {
+      "type": "number",
+      "default": 0
+    },
+    "installment_amount": {
+      "type": "number",
+      "default": 0
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PENDING_PAYMENT",
+        "PAID",
+        "VERIFYING_SUPPLIER",
+        "PROCESSING",
+        "SHIPPED",
+        "IN_TRANSIT",
+        "DELIVERED",
+        "COMPLETED",
+        "CANCELLED",
+        "PAYMENT_FAILED"
+      ],
+      "default": "PAID"
+    },
+    "address": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "tracking_number": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "order_number",
+    "customer_email",
+    "items",
+    "total",
+    "currency"
+  ]
+}

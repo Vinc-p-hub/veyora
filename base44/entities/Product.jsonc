@@ -1,0 +1,107 @@
+{
+  "name": "Product",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "slug": {
+      "type": "string"
+    },
+    "brand": {
+      "type": "string"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "Phones",
+        "Computers",
+        "Gaming",
+        "Audio",
+        "Cameras",
+        "TV",
+        "Smart Home",
+        "Wearables",
+        "Accessories"
+      ]
+    },
+    "source_price": {
+      "type": "number"
+    },
+    "customer_price": {
+      "type": "number"
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD"
+    },
+    "image_url": {
+      "type": "string"
+    },
+    "gallery": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "description": {
+      "type": "string"
+    },
+    "specifications": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "rating": {
+      "type": "number",
+      "default": 4.8
+    },
+    "reviews_count": {
+      "type": "number",
+      "default": 0
+    },
+    "stock_status": {
+      "type": "string",
+      "enum": [
+        "IN_STOCK",
+        "LOW_STOCK",
+        "OUT_OF_STOCK",
+        "PREORDER"
+      ],
+      "default": "IN_STOCK"
+    },
+    "premium_score": {
+      "type": "number",
+      "default": 95
+    },
+    "match_confidence": {
+      "type": "number",
+      "default": 0.97
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PUBLISHED",
+        "REVIEW",
+        "REJECTED"
+      ],
+      "default": "PUBLISHED"
+    },
+    "source_name": {
+      "type": "string",
+      "default": "Authorized Merchant"
+    },
+    "delivery_days": {
+      "type": "number",
+      "default": 5
+    }
+  },
+  "required": [
+    "name",
+    "slug",
+    "brand",
+    "category",
+    "customer_price",
+    "currency",
+    "image_url"
+  ]
+}
