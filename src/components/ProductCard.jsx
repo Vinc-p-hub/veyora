@@ -38,6 +38,9 @@ export default function ProductCard({ product, compact }) {
         {product.stock_status === "LOW_STOCK" && (
           <span className="absolute top-2 end-2 text-[10px] bg-white border border-border-hairline px-1.5 py-0.5 rounded text-text-muted">{t("stock.LOW_STOCK")}</span>
         )}
+        {product.badge && (
+          <span className="absolute top-2 start-2 text-[10px] font-bold bg-noon text-noon-fg px-1.5 py-0.5 rounded">{product.badge}</span>
+        )}
       </div>
       <div className="flex flex-col p-2.5 flex-1">
         <div className="text-[10px] uppercase text-text-muted">{product.brand}</div>

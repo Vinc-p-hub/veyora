@@ -23,6 +23,10 @@
     "mpn": {
       "type": "string"
     },
+    "badge": {
+      "type": "string",
+      "description": "Display badge on product cards, e.g. NEW / PROMO / EXCLUSIVE"
+    },
     "category": {
       "type": "string",
       "enum": [
@@ -130,6 +134,7 @@
     "status": {
       "type": "string",
       "enum": [
+        "DRAFT",
         "DISCOVERED",
         "VALIDATED",
         "APPROVED",

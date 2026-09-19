@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Check, ExternalLink, Play, Pause, RefreshCw, RotateCcw, XCircle, Activity, Cpu, Plus } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import AddSourceDialog from "./AddSourceDialog";
+import SourceDiscovery from "./SourceDiscovery";
 import { cn } from "@/lib/utils";
 
 const STATUS_COLOR = {
@@ -170,6 +171,9 @@ export default function CrawlerPanel({ onChanged }) {
         </div>
         {msg && <div className="mt-3 rounded-lg bg-surface-primary p-3 text-sm">{msg}</div>}
       </div>
+
+      {/* Source discovery & review — scan candidates before activation */}
+      <SourceDiscovery onAdded={load} />
 
       {showAdd && (
         <AddSourceDialog

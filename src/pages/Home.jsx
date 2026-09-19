@@ -66,7 +66,13 @@ export default function Home() {
       .then(([top, latest, cmsSlides]) => {
         setProducts(top);
         setNewest(latest);
-        setSlides(cmsSlides);
+        // Scheduled slides only show inside their active date window.
+        const now = Date.now();
+        setSlides(cmsSlides.filter((s) => {
+          if (s.active_from && now < new Date(s.active_from).getTime()) return false;
+          if (s.active_to && now > new Date(s.active_to).getTime()) return false;
+          return true;
+        }));
       })
       .finally(() => setLoading(false));
   }, []);
@@ -198,9 +204,15 @@ export default function Home() {
             className="relative rounded-xl overflow-hidden min-h-[240px] md:min-h-[340px] bg-surface-secondary group"
           >
             <Link to={flagshipSlide?.link_url || "/category?cat=Smartphones"} className="absolute inset-0" aria-label={flagshipSlide?.title || "Shop smartphones"}>
+              {flagshipSlide?.image_mobile_url && (
+                <Image
+                  src={flagshipSlide.image_mobile_url}
+                  className="w-full h-full group-hover:scale-105 transition duration-700 md:hidden"
+                />
+              )}
               <Image
                 src={flagshipSlide?.image_url || HERO_IPHONES}
-                className="w-full h-full group-hover:scale-105 transition duration-700"
+                className={`w-full h-full group-hover:scale-105 transition duration-700 ${flagshipSlide?.image_mobile_url ? "hidden md:block" : ""}`}
               />
             </Link>
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent pointer-events-none" />

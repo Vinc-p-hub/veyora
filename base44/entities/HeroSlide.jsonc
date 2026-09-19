@@ -20,7 +20,11 @@
     },
     "image_url": {
       "type": "string",
-      "description": "Uploaded hero image (public storage URL)"
+      "description": "Uploaded hero image (public storage URL) \u2014 desktop"
+    },
+    "image_mobile_url": {
+      "type": "string",
+      "description": "Optional dedicated mobile hero image (portrait-friendly); desktop image is used when absent"
     },
     "link_url": {
       "type": "string",
@@ -39,6 +43,16 @@
     "active": {
       "type": "boolean",
       "default": true
+    },
+    "active_from": {
+      "type": "string",
+      "format": "date",
+      "description": "Optional start date \u2014 the slide is hidden before this date (scheduling)"
+    },
+    "active_to": {
+      "type": "string",
+      "format": "date",
+      "description": "Optional end date \u2014 the slide is hidden after this date (scheduling)"
     }
   },
   "required": [
