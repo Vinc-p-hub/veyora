@@ -11,6 +11,18 @@
     "brand": {
       "type": "string"
     },
+    "model": {
+      "type": "string"
+    },
+    "sku": {
+      "type": "string"
+    },
+    "gtin": {
+      "type": "string"
+    },
+    "mpn": {
+      "type": "string"
+    },
     "category": {
       "type": "string",
       "enum": [
@@ -65,7 +77,8 @@
         "IN_STOCK",
         "LOW_STOCK",
         "OUT_OF_STOCK",
-        "PREORDER"
+        "PREORDER",
+        "UNKNOWN"
       ],
       "default": "IN_STOCK"
     },
@@ -73,22 +86,62 @@
       "type": "number",
       "default": 95
     },
+    "premium_status": {
+      "type": "string",
+      "enum": [
+        "PREMIUM",
+        "APPROVED",
+        "REVIEW",
+        "REJECTED"
+      ],
+      "default": "REVIEW"
+    },
     "match_confidence": {
       "type": "number",
       "default": 0.97
     },
+    "data_quality_score": {
+      "type": "number",
+      "default": 0
+    },
     "status": {
       "type": "string",
       "enum": [
+        "DISCOVERED",
+        "VALIDATED",
+        "APPROVED",
         "PUBLISHED",
         "REVIEW",
-        "REJECTED"
+        "STALE",
+        "REJECTED",
+        "DISABLED"
       ],
-      "default": "PUBLISHED"
+      "default": "REVIEW"
+    },
+    "source_id": {
+      "type": "string"
     },
     "source_name": {
       "type": "string",
       "default": "Authorized Merchant"
+    },
+    "source_product_id": {
+      "type": "string"
+    },
+    "source_url": {
+      "type": "string"
+    },
+    "canonical_url": {
+      "type": "string"
+    },
+    "last_crawled_at": {
+      "type": "string"
+    },
+    "available_countries": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     },
     "delivery_days": {
       "type": "number",
@@ -103,5 +156,23 @@
     "customer_price",
     "currency",
     "image_url"
-  ]
+  ],
+  "rls": {
+    "read": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }

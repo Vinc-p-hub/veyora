@@ -1,0 +1,103 @@
+{
+  "name": "CrawlerJob",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "DISCOVER",
+        "FETCH_PRODUCT",
+        "UPDATE_PRICE",
+        "UPDATE_STOCK",
+        "UPDATE_VARIANTS",
+        "UPDATE_SHIPPING",
+        "UPDATE_PRODUCT",
+        "REINDEX_PRODUCT"
+      ]
+    },
+    "source_id": {
+      "type": "string"
+    },
+    "product_id": {
+      "type": "string"
+    },
+    "url": {
+      "type": "string"
+    },
+    "priority": {
+      "type": "number",
+      "default": 5
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "QUEUED",
+        "RUNNING",
+        "COMPLETED",
+        "FAILED",
+        "RETRYING",
+        "CANCELLED"
+      ],
+      "default": "QUEUED"
+    },
+    "attempts": {
+      "type": "number",
+      "default": 0
+    },
+    "max_attempts": {
+      "type": "number",
+      "default": 3
+    },
+    "scheduled_at": {
+      "type": "string"
+    },
+    "started_at": {
+      "type": "string"
+    },
+    "completed_at": {
+      "type": "string"
+    },
+    "last_error": {
+      "type": "string"
+    },
+    "locked_at": {
+      "type": "string"
+    },
+    "locked_by": {
+      "type": "string"
+    },
+    "result": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "type",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

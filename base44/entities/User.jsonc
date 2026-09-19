@@ -1,4 +1,6 @@
 {
+  "name": "User",
+  "type": "object",
   "properties": {
     "role": {
       "type": "string",
@@ -7,11 +9,22 @@
         "admin",
         "user"
       ]
+    },
+    "staff_role": {
+      "type": "string",
+      "description": "VEYRO staff role \u2014 assigned server-side only, never client-editable",
+      "enum": [
+        "SUPER_ADMIN",
+        "ADMIN",
+        "CATALOG_MANAGER",
+        "CRAWLER_MANAGER",
+        "FINANCE",
+        "OPERATIONS",
+        "SUPPORT"
+      ]
     }
   },
   "required": [
     "role"
-  ],
-  "name": "User",
-  "type": "object"
+  ]
 }

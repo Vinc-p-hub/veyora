@@ -53,6 +53,10 @@
       "type": "number",
       "default": 0
     },
+    "price_snapshot": {
+      "type": "object",
+      "additionalProperties": true
+    },
     "status": {
       "type": "string",
       "enum": [
@@ -65,7 +69,8 @@
         "DELIVERED",
         "COMPLETED",
         "CANCELLED",
-        "PAYMENT_FAILED"
+        "PAYMENT_FAILED",
+        "SUPPLIER_FAILURE"
       ],
       "default": "PAID"
     },
@@ -83,5 +88,33 @@
     "items",
     "total",
     "currency"
-  ]
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "data.customer_email": "{{user.email}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {},
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
 }

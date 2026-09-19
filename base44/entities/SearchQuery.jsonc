@@ -1,0 +1,49 @@
+{
+  "name": "SearchQuery",
+  "type": "object",
+  "properties": {
+    "query": {
+      "type": "string"
+    },
+    "country": {
+      "type": "string"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "suggest",
+        "search"
+      ],
+      "default": "suggest"
+    },
+    "results_count": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "query"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "name": "Offer",
+  "type": "object",
+  "properties": {
+    "product_id": {
+      "type": "string"
+    },
+    "source_id": {
+      "type": "string"
+    },
+    "source_product_id": {
+      "type": "string"
+    },
+    "source_url": {
+      "type": "string"
+    },
+    "source_price": {
+      "type": "number"
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD"
+    },
+    "shipping_cost": {
+      "type": "number",
+      "default": 0
+    },
+    "stock_status": {
+      "type": "string",
+      "enum": [
+        "IN_STOCK",
+        "LOW_STOCK",
+        "OUT_OF_STOCK",
+        "PREORDER",
+        "UNKNOWN"
+      ],
+      "default": "UNKNOWN"
+    },
+    "delivery_days": {
+      "type": "number",
+      "default": 7
+    },
+    "countries": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "supplier_score": {
+      "type": "number",
+      "default": 80
+    },
+    "last_checked": {
+      "type": "string"
+    },
+    "stale": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "product_id",
+    "source_id",
+    "source_price",
+    "currency"
+  ],
+  "rls": {
+    "read": {},
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
