@@ -166,7 +166,7 @@ export default function Compare() {
                         {specKeys.map((k) => (
                           <div key={k} className="text-xs">
                             <span className="text-text-muted">{k}: </span>
-                            <span className="text-mono">{(p.specifications || {})[k] ?? "—"}</span>
+                            <span className="text-mono">{typeof (p.specifications || {})[k] === "object" ? JSON.stringify((p.specifications || {})[k]) : ((p.specifications || {})[k] ?? "—")}</span>
                           </div>
                         ))}
                       </div>

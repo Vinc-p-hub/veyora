@@ -53,6 +53,15 @@ export default function ProductDetail() {
     return <div className="p-10 text-center text-text-muted">Product not found. <Link to="/category" className="text-accent-cyan">Browse catalog</Link></div>;
   }
 
+  // Crawled specs can carry nested objects/arrays (e.g. Shopify variants) —
+  // flatten them to a display string so React never gets an object as a child.
+  const specText = (v) => {
+    if (v === null || v === undefined) return "—";
+    if (typeof v !== "object") return String(v);
+    if (Array.isArray(v)) return v.map(specText).join(", ");
+    return Object.entries(v).map(([k, x]) => `${k}: ${specText(x)}`).join(" · ");
+  };
+
   const price = product.customer_price;
   const plan = buildPlan(price, planId);
   const bestSellerName = offers[0]?.seller_name || product.source_name;
@@ -249,7 +258,7 @@ export default function ProductDetail() {
               {Object.entries(product.specifications || {}).map(([k, v], i) => (
                 <div key={k} className={cn("flex justify-between px-4 py-3 text-sm", i % 2 === 0 ? "bg-surface-card" : "bg-surface-secondary")}>
                   <span className="text-text-muted">{k}</span>
-                  <span className="text-mono">{v}</span>
+                  <span className="text-mono">{specText(v)}</span>
                 </div>
               ))}
             </div>
