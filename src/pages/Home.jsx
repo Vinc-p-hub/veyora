@@ -54,16 +54,19 @@ export default function Home() {
   const { buildPlan } = usePricing();
   const [products, setProducts] = useState([]);
   const [newest, setNewest] = useState([]);
+  const [slides, setSlides] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       base44.entities.Product.filter({ status: "PUBLISHED" }, "-premium_score", 20),
       base44.entities.Product.filter({ status: "PUBLISHED" }, "-created_date", 100),
+      base44.entities.HeroSlide.filter({ active: true }, "sort_order", 10).catch(() => []),
     ])
-      .then(([top, latest]) => {
+      .then(([top, latest, cmsSlides]) => {
         setProducts(top);
         setNewest(latest);
+        setSlides(cmsSlides);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -83,6 +86,13 @@ export default function Home() {
     products.find((p) => p.category === "Laptops") ||
     products[0];
   const heroPlan = hero ? buildPlan(hero.customer_price) : null;
+
+  // CMS hero slides (uploaded in Super Admin) — slide 1 replaces the flagship
+  // card, slides 2–5 replace the hero tiles. Falls back to the static hero.
+  const flagshipSlide = slides[0];
+  const tiles = slides.length > 1
+    ? slides.slice(1, 5).map((s) => ({ src: s.image_url, to: s.link_url || "/category", optimized: true }))
+    : HERO_TILES;
 
   // Recommended grid: phones & laptops first, then premium score.
   const trending = [...products].sort((a, b) => {
@@ -150,7 +160,7 @@ export default function Home() {
             </div>
             {/* Clickable flagship tiles — animated */}
             <div className="hidden sm:grid grid-cols-2 gap-2 md:gap-3 w-[180px] md:w-64 shrink-0 self-center">
-              {HERO_TILES.map((tile, i) => (
+              {tiles.map((tile, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0, y: 12 }}
@@ -187,19 +197,32 @@ export default function Home() {
             transition={{ duration: 0.45 }}
             className="relative rounded-xl overflow-hidden min-h-[240px] md:min-h-[340px] bg-surface-secondary group"
           >
-            <Link to="/category?cat=Smartphones" className="absolute inset-0" aria-label="Shop smartphones">
+            <Link to={flagshipSlide?.link_url || "/category?cat=Smartphones"} className="absolute inset-0" aria-label={flagshipSlide?.title || "Shop smartphones"}>
               <Image
-                src={HERO_IPHONES}
+                src={flagshipSlide?.image_url || HERO_IPHONES}
                 className="w-full h-full group-hover:scale-105 transition duration-700"
               />
             </Link>
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent pointer-events-none" />
             <div className="absolute top-4 start-4 bg-noon text-noon-fg text-[10px] font-bold px-2.5 py-1 rounded uppercase pointer-events-none">
-              {t("home.heroBadge")}
+              {flagshipSlide?.badge || t("home.heroBadge")}
             </div>
+            {(flagshipSlide?.title || flagshipSlide?.subtitle || flagshipSlide?.stock_label) && (
+              <div className="absolute bottom-14 inset-x-0 px-4 pointer-events-none">
+                {flagshipSlide.title && (
+                  <div className="text-white font-display font-bold text-lg md:text-xl leading-tight">{flagshipSlide.title}</div>
+                )}
+                {flagshipSlide.subtitle && (
+                  <div className="text-white/85 text-xs mt-1">{flagshipSlide.subtitle}</div>
+                )}
+                {flagshipSlide.stock_label && (
+                  <div className="text-white/80 text-[11px] mt-1 font-medium">{flagshipSlide.stock_label}</div>
+                )}
+              </div>
+            )}
             <div className="absolute bottom-0 inset-x-0 p-4 flex gap-2">
-              <Link to="/category?cat=Smartphones" className="flex-1 text-center px-4 py-2.5 rounded-lg bg-white text-noon-fg text-xs md:text-sm font-semibold hover:bg-white/90 transition">
-                {t("home.shopNow")}
+              <Link to={flagshipSlide?.link_url || "/category?cat=Smartphones"} className="flex-1 text-center px-4 py-2.5 rounded-lg bg-white text-noon-fg text-xs md:text-sm font-semibold hover:bg-white/90 transition">
+                {flagshipSlide?.cta_label || t("home.shopNow")}
               </Link>
               <Link to="/financing-info" className="flex-1 text-center px-4 py-2.5 rounded-lg bg-white text-noon-fg text-xs md:text-sm font-semibold hover:bg-white/90 transition">
                 {t("nav.financing")}

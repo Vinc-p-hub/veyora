@@ -4,6 +4,7 @@ import { ShoppingBag, User, Compass, LayoutGrid, Package, Search as SearchIcon, 
 import { useCart } from "@/lib/CartContext";
 import SearchBar from "@/components/SearchBar";
 import RegionLangMenu from "@/components/RegionLangMenu";
+import CategoryNav from "@/components/CategoryNav";
 import { useRegion } from "@/lib/RegionContext";
 import { useLang } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -119,32 +120,8 @@ export default function Layout() {
             <SearchBar />
           </div>
         </div>
-        {/* Category strip */}
-        <div className="bg-white border-b border-border-hairline text-noon-fg">
-          <div className="max-w-[1400px] mx-auto px-3 md:px-8 flex items-center gap-4 md:gap-6 h-11 overflow-x-auto scrollbar-hide text-[13px]">
-            <Link
-              to="/category"
-              className={cn(
-                "whitespace-nowrap py-2.5 border-b-2 -mb-px",
-                !catParam && location.pathname === "/category" ? "border-noon-fg font-semibold" : "border-transparent text-text-muted hover:text-text-primary"
-              )}
-            >
-              {t("header.allProducts")}
-            </Link>
-            {CATS.map((c) => (
-              <Link
-                key={c}
-                to={`/category?cat=${encodeURIComponent(c)}`}
-                className={cn(
-                  "whitespace-nowrap py-2.5 border-b-2 -mb-px",
-                  catParam === c ? "border-noon-fg font-semibold" : "border-transparent text-text-muted hover:text-text-primary"
-                )}
-              >
-                {tCat(c)}
-              </Link>
-            ))}
-          </div>
-        </div>
+        {/* Category navigation — dropdown + tidy contained strip */}
+        <CategoryNav />
       </header>
 
       <main className="flex-1 min-w-0 pb-16 md:pb-0">

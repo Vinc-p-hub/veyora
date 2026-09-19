@@ -36,6 +36,11 @@
     border-color: hsl(var(--border));
   }
 
+  html, body {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
   body {
     background-color: #F5F5F7;
     color: hsl(var(--foreground));
