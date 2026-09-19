@@ -118,6 +118,7 @@ export default async function (req) {
     let completed = 0;
     let failed = 0;
     let retried = 0;
+    const jobUpdates = []; // job status changes flushed in one bulk op to stay under API rate limits
 
     for (const job of jobs) {
       await admin.entities.CrawlerJob.update(job.id, {
@@ -176,13 +177,16 @@ export default async function (req) {
           if (!mainCandidates.includes(c)) mainCandidates.push(c);
         });
         let imageUrl = null;
-        for (const c of mainCandidates.slice(0, IMG_MAIN_ATTEMPTS)) {
-          if (await verifyImageAccessible(c)) {
-            imageUrl = c;
+        const mainChecks = await Promise.all(
+          mainCandidates.slice(0, IMG_MAIN_ATTEMPTS).map((c) => verifyImageAccessible(c).then((ok) => ({ c, ok })))
+        );
+        for (const { c, ok } of mainChecks) {
+          if (ok) {
+            if (!imageUrl) imageUrl = c;
             bump(source.id, "imgFound");
-            break;
+          } else {
+            bump(source.id, "imgFail");
           }
-          bump(source.id, "imgFail");
         }
         // Never swap a real source image for a placeholder: if all checks failed
         // (e.g. HEAD blocked) keep the original source image anyway.
@@ -192,9 +196,11 @@ export default async function (req) {
         if (Array.isArray(raw.gallery)) {
           const uniq = [...new Set(raw.gallery.map((g) => absolutizeImageUrl(g, source.base_url)).filter(Boolean))]
             .filter((u) => u !== imageUrl);
-          for (const g of uniq) {
-            if (gallery.length >= IMG_GALLERY_VERIFY) break;
-            if (await verifyImageAccessible(g)) {
+          const galleryChecks = await Promise.all(
+            uniq.slice(0, IMG_GALLERY_VERIFY).map((g) => verifyImageAccessible(g).then((ok) => ({ g, ok })))
+          );
+          for (const { g, ok } of galleryChecks) {
+            if (ok) {
               gallery.push(g);
               bump(source.id, "imgFound");
             } else {
@@ -302,7 +308,8 @@ export default async function (req) {
           }
         }
 
-        await admin.entities.CrawlerJob.update(job.id, {
+        jobUpdates.push({
+          id: job.id,
           status: "COMPLETED",
           completed_at: now.toISOString(),
           locked_at: null,
@@ -320,7 +327,8 @@ export default async function (req) {
         const deterministic = msg.startsWith("Rejected:");
         const attempts = (job.attempts || 0) + 1;
         if (!deterministic && attempts < (job.max_attempts || 3)) {
-          await admin.entities.CrawlerJob.update(job.id, {
+          jobUpdates.push({
+            id: job.id,
             status: "RETRYING",
             attempts,
             last_error: msg,
@@ -329,7 +337,8 @@ export default async function (req) {
           });
           retried++;
         } else {
-          await admin.entities.CrawlerJob.update(job.id, {
+          jobUpdates.push({
+            id: job.id,
             status: "FAILED",
             attempts,
             last_error: msg,
@@ -339,6 +348,11 @@ export default async function (req) {
         }
         if (job.source_id) bump(job.source_id, "failed");
       }
+    }
+
+    // --- flush all job status changes in one bulk op ---
+    if (jobUpdates.length) {
+      await admin.entities.CrawlerJob.bulkUpdate(jobUpdates);
     }
 
     // --- flush per-source metrics + health (>30% fail = WARNING, >60% = ERROR) ---
