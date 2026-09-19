@@ -19,7 +19,12 @@
     },
     "feed_url": {
       "type": "string",
-      "description": "JSON feed URL (FEED_JSON) or sitemap URL (SITEMAP_JSONLD)"
+      "description": "JSON feed URL (FEED_JSON) or sitemap URL (SITEMAP_JSONLD). Supports a {page} placeholder for paginated feeds"
+    },
+    "feed_pagination": {
+      "type": "boolean",
+      "default": false,
+      "description": "Fetch successive feed pages (page=2,3\u2026) until a page comes back empty"
     },
     "items_path": {
       "type": "string",
@@ -107,7 +112,31 @@
     "last_error": {
       "type": "string"
     },
+    "urls_discovered": {
+      "type": "number",
+      "default": 0
+    },
     "products_discovered": {
+      "type": "number",
+      "default": 0
+    },
+    "products_found": {
+      "type": "number",
+      "default": 0
+    },
+    "products_validated": {
+      "type": "number",
+      "default": 0
+    },
+    "products_rejected": {
+      "type": "number",
+      "default": 0
+    },
+    "images_found": {
+      "type": "number",
+      "default": 0
+    },
+    "images_failed": {
       "type": "number",
       "default": 0
     },

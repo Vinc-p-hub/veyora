@@ -22,7 +22,7 @@ export default function SearchBar() {
 
   // Debounced search-as-you-type — server-side engine with synonyms + typo tolerance
   useEffect(() => {
-    if (q.trim().length < 2) {
+    if (q.trim().length < 1) {
       setData(null);
       setLoading(false);
       return;
@@ -43,7 +43,7 @@ export default function SearchBar() {
       } finally {
         setLoading(false);
       }
-    }, 250);
+    }, 120);
     return () => clearTimeout(t);
   }, [q, country.code]);
 
@@ -80,7 +80,7 @@ export default function SearchBar() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          onFocus={() => q.trim().length >= 2 && setOpen(true)}
+          onFocus={() => q.trim().length >= 1 && setOpen(true)}
           placeholder="What are you looking for? (iphone, sony, macbook…)"
           className="flex-1 min-w-0 bg-white border border-border-hairline border-r-0 rounded-l-lg px-4 py-2.5 text-sm placeholder:text-text-muted focus:outline-none"
         />
@@ -93,7 +93,7 @@ export default function SearchBar() {
         </button>
       </form>
 
-      {open && q.trim().length >= 2 && (
+      {open && q.trim().length >= 1 && (
         <div className="absolute left-0 right-0 top-full mt-1.5 bg-surface-card border border-border-hairline rounded-lg shadow-2xl z-50 max-h-[70vh] overflow-auto">
           {loading && !data && (
             <div className="flex items-center gap-2 px-4 py-3 text-sm text-text-muted">

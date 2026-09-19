@@ -185,6 +185,7 @@ export default function Admin() {
                   <div className="text-xs text-text-muted truncate">
                     Source: {p.source_name} · {p.source_price} {p.currency} → VEYRO {formatPrice(p.customer_price, currency)}
                   </div>
+                  {p.review_reason && <div className="text-xs text-amber-600">Reason: {p.review_reason}</div>}
                 </div>
                 <div className="flex gap-2 shrink-0">
                   <button onClick={() => approve(p.id)} className="px-3 py-2 rounded-lg bg-emerald-500/10 text-emerald-600 text-sm flex items-center gap-1.5 hover:bg-emerald-500/20"><Check className="w-4 h-4" /> Approve</button>

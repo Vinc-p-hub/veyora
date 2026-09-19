@@ -7,6 +7,7 @@ import {
 } from "../base44/shared/catalog/normalize.js";
 import { validateProduct } from "../base44/shared/catalog/validate.js";
 import { matchProduct } from "../base44/shared/catalog/match.js";
+import { enrichFeedRaw, parseProductPage, absolutizeImageUrl, stripHtml } from "../base44/shared/catalog/extract.js";
 import { premiumScore } from "../base44/shared/catalog/premium.js";
 import { searchCatalog, normalizeQuery, levenshtein } from "../base44/shared/search/engine.js";
 import {
@@ -49,6 +50,56 @@ test("validator: missing stock never rejects a good product", () => {
   const noPrice = validateProduct({ ...goodProduct, price: null });
   assert.equal(noPrice.status, "REVIEW");
   assert.ok(noPrice.missing.includes("price"));
+
+  // brand/category/image/stock are optional — never block publication
+  const minimal = { title: "Widget", price: 10, currency: "USD", url: "https://x.com/p/1" };
+  const vmin = validateProduct(minimal);
+  assert.equal(vmin.status, "APPROVED");
+  assert.equal(vmin.missing.length, 0);
+});
+
+test("extract: Shopify-style feed enrichment + image absolutizing", () => {
+  const raw = enrichFeedRaw({
+    title: "Test Keyboard",
+    vendor: "Acme",
+    body_html: "<p>Great <b>keyboard</b> for pros.</p>",
+    price: "99.00",
+    variants: [
+      { title: "Black", price: "99.00", available: false, compare_at_price: "129.00" },
+      { title: "White", price: "109.00", available: true, sku: "T-W" },
+    ],
+    images: [{ src: "https://cdn.example.com/a.jpg" }, { src: "https://cdn.example.com/b.jpg" }],
+  });
+  assert.equal(raw.price, "109.00"); // best AVAILABLE variant wins
+  assert.equal(raw.stock, "true");
+  assert.equal(raw.image, "https://cdn.example.com/a.jpg");
+  assert.equal(raw.gallery[0], "https://cdn.example.com/a.jpg");
+  assert.ok(!raw.description.includes("<"));
+  assert.ok(raw.description.includes("keyboard"));
+  assert.equal(raw.compare_at_price, 129);
+  assert.equal(absolutizeImageUrl("/img/x.png", "https://shop.example.com"), "https://shop.example.com/img/x.png");
+  assert.equal(absolutizeImageUrl("data:image/png;base64,xx", "https://x.com"), null);
+  assert.equal(stripHtml("<p>Hello <b>world</b>!</p>"), "Hello world!");
+});
+
+test("extract: parseProductPage reads JSON-LD, og:image and relative images", () => {
+  const html = `<html><head>
+    <meta property="og:image" content="/static/og-hero.jpg">
+    <meta property="og:title" content="Test Headphones">
+    </head><body>
+    <img src="/img/one.jpg">
+    <img data-src="https://cdn.example.com/two.webp">
+    <img class="logo" src="/img/logo.png">
+    <script type="application/ld+json">{"@type":"Product","name":"LD Name","offers":{"price":"50","priceCurrency":"USD","availability":"https://schema.org/InStock"}}</script>
+    </body></html>`;
+  const { raw, imageCandidates } = parseProductPage(html, "https://shop.example.com/product/1");
+  assert.equal(raw.title, "LD Name");
+  assert.equal(raw.price, 50);
+  assert.equal(raw.currency, "USD");
+  assert.equal(raw.stock_status ?? raw.stock, "https://schema.org/InStock");
+  assert.ok(imageCandidates.includes("https://shop.example.com/static/og-hero.jpg"));
+  assert.ok(imageCandidates.includes("https://cdn.example.com/two.webp"));
+  assert.ok(!imageCandidates.some((u) => u.includes("logo")));
 });
 
 test("matcher: GTIN auto-matches, unrelated products stay separate", () => {

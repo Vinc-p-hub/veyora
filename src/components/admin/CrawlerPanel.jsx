@@ -19,6 +19,17 @@ const JOB_STATUS_COLOR = {
   CANCELLED: "text-text-muted",
 };
 
+const DIAGNOSTIC_COLS = [
+  { key: "urls_discovered", label: "URLs disc." },
+  { key: "products_discovered", label: "Enqueued" },
+  { key: "products_found", label: "Found" },
+  { key: "products_validated", label: "Validated" },
+  { key: "products_rejected", label: "Rejected", warn: true },
+  { key: "images_found", label: "Images ok" },
+  { key: "images_failed", label: "Images KO", warn: true },
+  { key: "products_failed", label: "Errors", warn: true },
+];
+
 export default function CrawlerPanel({ onChanged }) {
   const [sources, setSources] = useState([]);
   const [jobs, setJobs] = useState([]);
@@ -49,10 +60,30 @@ export default function CrawlerPanel({ onChanged }) {
     setMsg(null);
     try {
       const disc = await base44.functions.invoke("crawlerRunSource", { source_id: id });
-      const proc = await base44.functions.invoke("crawlerProcessQueue", { max_jobs: 25 });
+      const proc = await base44.functions.invoke("crawlerProcessQueue", { max_jobs: 40 });
       setMsg(
-        `Discovered ${disc.data.discovered} · processed ${proc.data.processed} (completed ${proc.data.completed}, retried ${proc.data.retried}, failed ${proc.data.failed})`
+        `Discovered ${disc.data.discovered} (enqueued ${disc.data.enqueued}) · processed ${proc.data.processed} (completed ${proc.data.completed}, retried ${proc.data.retried}, failed ${proc.data.failed})`
       );
+      await load();
+      if (onChanged) await onChanged();
+    } catch (e) {
+      setMsg(e.response?.data?.error || e.message || "Crawl failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const runAll = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      let totalDiscovered = 0;
+      for (const s of sources.filter((x) => x.enabled)) {
+        const disc = await base44.functions.invoke("crawlerRunSource", { source_id: s.id });
+        totalDiscovered += disc.data.enqueued || 0;
+      }
+      const proc = await base44.functions.invoke("crawlerProcessQueue", { max_jobs: 40 });
+      setMsg(`Enqueued ${totalDiscovered} · processed ${proc.data.processed} (completed ${proc.data.completed}, failed ${proc.data.failed})`);
       await load();
       if (onChanged) await onChanged();
     } catch (e) {
@@ -66,7 +97,7 @@ export default function CrawlerPanel({ onChanged }) {
     setBusy(true);
     setMsg(null);
     try {
-      const res = await base44.functions.invoke("crawlerProcessQueue", { max_jobs: 25 });
+      const res = await base44.functions.invoke("crawlerProcessQueue", { max_jobs: 40 });
       setMsg(`Processed ${res.data.processed} · completed ${res.data.completed} · retried ${res.data.retried} · failed ${res.data.failed}`);
       await load();
       if (onChanged) await onChanged();
@@ -104,13 +135,22 @@ export default function CrawlerPanel({ onChanged }) {
             <h3 className="font-display font-semibold flex items-center gap-2"><Activity className="w-4 h-4 text-accent-cyan" /> Queue status</h3>
             <p className="text-xs text-text-muted mt-1">Retry backoff: 1 min → 5 min → 15 min, then FAILED. Stale locks auto-recovered.</p>
           </div>
-          <button
-            onClick={processQueue}
-            disabled={busy}
-            className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center gap-2"
-          >
-            <RefreshCw className={cn("w-4 h-4", busy && "animate-spin")} /> Process queue now
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={runAll}
+              disabled={busy || sources.filter((s) => s.enabled).length === 0}
+              className="px-4 py-2 rounded-lg border border-border-hairline text-sm font-semibold hover:border-accent-cyan/40 disabled:opacity-40 flex items-center gap-2"
+            >
+              <Cpu className="w-4 h-4" /> Run all sources
+            </button>
+            <button
+              onClick={processQueue}
+              disabled={busy}
+              className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center gap-2"
+            >
+              <RefreshCw className={cn("w-4 h-4", busy && "animate-spin")} /> Process queue now
+            </button>
+          </div>
         </div>
         <div className="grid grid-cols-3 md:grid-cols-6 gap-2 text-center text-xs">
           {["QUEUED", "RUNNING", "RETRYING", "FAILED", "COMPLETED", "CANCELLED"].map((s) => (
@@ -123,69 +163,85 @@ export default function CrawlerPanel({ onChanged }) {
         {msg && <div className="mt-3 rounded-lg bg-surface-primary p-3 text-sm">{msg}</div>}
       </div>
 
-      {/* Sources */}
-      <div className="space-y-3">
-        <h3 className="font-display font-semibold flex items-center gap-2"><Cpu className="w-4 h-4 text-accent-cyan" /> Sources ({sources.length})</h3>
+      {/* Per-source diagnostic table */}
+      <div className="bg-surface-card border border-border-hairline rounded-lg p-5 overflow-x-auto">
+        <h3 className="font-display font-semibold flex items-center gap-2 mb-4">
+          <Cpu className="w-4 h-4 text-accent-cyan" /> Source diagnostics ({sources.length})
+        </h3>
         {loading ? (
-          <div className="h-20 bg-surface-card rounded-lg animate-pulse" />
+          <div className="h-20 rounded-lg animate-pulse bg-surface-primary" />
         ) : sources.length === 0 ? (
           <p className="text-sm text-text-muted">No sources configured yet.</p>
         ) : (
-          sources.map((s) => (
-            <div key={s.id} className="bg-surface-card border border-border-hairline rounded-lg p-4">
-              <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm">{s.name}</span>
-                    <span className={cn("text-[10px] px-2 py-0.5 rounded-md border", STATUS_COLOR[s.status], "border-current/30")}>{s.status}</span>
-                  </div>
-                  <div className="text-xs text-text-muted mt-0.5">
-                    {s.adapter} · every {s.crawl_interval_minutes} min · {s.enabled ? "enabled" : "disabled"}
-                    {s.last_run && ` · last run ${new Date(s.last_run).toLocaleString()}`}
-                    {s.last_error && ` · last error: ${s.last_error}`}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => runSource(s.id)}
-                    disabled={busy || !s.enabled}
-                    className="px-3 py-1.5 rounded-lg border border-border-hairline text-xs flex items-center gap-1.5 hover:border-accent-cyan/40 disabled:opacity-40"
-                  >
-                    <Play className="w-3.5 h-3.5" /> Run now
-                  </button>
-                  <button
-                    onClick={() => toggleSource(s)}
-                    className="px-3 py-1.5 rounded-lg border border-border-hairline text-xs flex items-center gap-1.5 hover:border-accent-cyan/40"
-                  >
-                    {s.enabled ? <><Pause className="w-3.5 h-3.5" /> Pause</> : <><Play className="w-3.5 h-3.5" /> Resume</>}
-                  </button>
-                  <a
-                    href={s.feed_url || s.base_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="px-3 py-1.5 rounded-lg border border-border-hairline text-xs flex items-center gap-1.5 hover:border-accent-cyan/40"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" /> Open
-                  </a>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center text-xs">
-                <Mini label="Discovered" value={s.products_discovered || 0} />
-                <Mini label="Updated" value={s.products_updated || 0} />
-                <Mini label="Failed" value={s.products_failed || 0} accent={(s.products_failed || 0) > 0 ? "red" : "default"} />
-                <Mini label="Next run" value={s.next_run ? new Date(s.next_run).toLocaleTimeString() : "—"} />
-              </div>
-            </div>
-          ))
+          <table className="w-full text-xs min-w-[900px]">
+            <thead>
+              <tr className="text-left text-text-muted border-b border-border-hairline">
+                <th className="py-2 pr-3 font-medium">Source</th>
+                <th className="py-2 pr-3 font-medium">Status</th>
+                {DIAGNOSTIC_COLS.map((c) => (
+                  <th key={c.key} className="py-2 pr-3 font-medium text-right">{c.label}</th>
+                ))}
+                <th className="py-2 pr-3 font-medium text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sources.map((s) => (
+                <tr key={s.id} className="border-b border-border-hairline last:border-0">
+                  <td className="py-2.5 pr-3">
+                    <div className="font-medium">{s.name}</div>
+                    <div className="text-text-muted text-[10px] truncate max-w-[200px]">{s.feed_url || s.base_url}</div>
+                    {s.last_run && <div className="text-text-muted text-[10px]">last run {new Date(s.last_run).toLocaleString()}</div>}
+                  </td>
+                  <td className="py-2.5 pr-3">
+                    <span className={cn("text-[10px] px-2 py-0.5 rounded-md border border-current/30 font-medium", STATUS_COLOR[s.status])}>{s.status}</span>
+                  </td>
+                  {DIAGNOSTIC_COLS.map((c) => {
+                    const v = s[c.key] || 0;
+                    return (
+                      <td key={c.key} className={cn("py-2.5 pr-3 text-right text-mono", c.warn && v > 0 ? "text-red-600" : "text-text-primary")}>
+                        {v}
+                      </td>
+                    );
+                  })}
+                  <td className="py-2.5 pr-0 text-right whitespace-nowrap">
+                    <div className="inline-flex gap-1.5">
+                      <button
+                        onClick={() => runSource(s.id)}
+                        disabled={busy || !s.enabled}
+                        className="px-2.5 py-1.5 rounded-md border border-border-hairline flex items-center gap-1 hover:border-accent-cyan/40 disabled:opacity-40"
+                      >
+                        <Play className="w-3 h-3" /> Run
+                      </button>
+                      <button
+                        onClick={() => toggleSource(s)}
+                        className="px-2.5 py-1.5 rounded-md border border-border-hairline flex items-center gap-1 hover:border-accent-cyan/40"
+                      >
+                        {s.enabled ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                      </button>
+                      <a
+                        href={s.feed_url || s.base_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2.5 py-1.5 rounded-md border border-border-hairline hover:border-accent-cyan/40 inline-flex items-center"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 
-      {/* Error queue */}
+      {/* Rejected products / error queue: exact reason + retry */}
       <div className="bg-surface-card border border-border-hairline rounded-lg p-5">
-        <div className="flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-1">
           <AlertTriangle className="w-4 h-4 text-amber-500" />
-          <h3 className="font-display font-semibold">Crawler error queue ({errorJobs.length})</h3>
+          <h3 className="font-display font-semibold">Rejected products & crawler errors ({errorJobs.length})</h3>
         </div>
+        <p className="text-xs text-text-muted mb-3">Exact rejection reason per product — fix the source or retry the job.</p>
         {errorJobs.length === 0 ? (
           <p className="text-sm text-text-muted flex items-center gap-1.5"><Check className="w-4 h-4 text-emerald-500" /> No failing jobs — pipeline healthy.</p>
         ) : (
@@ -208,15 +264,6 @@ export default function CrawlerPanel({ onChanged }) {
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function Mini({ label, value, accent }) {
-  return (
-    <div className="rounded-lg bg-surface-primary py-2">
-      <div className="text-[9px] uppercase text-text-muted">{label}</div>
-      <div className={cn("text-mono font-semibold", accent === "red" ? "text-red-600" : "text-text-primary")}>{value}</div>
     </div>
   );
 }

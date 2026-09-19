@@ -1,6 +1,7 @@
-// Crawler worker: claims queued jobs, fetches/parses, validates, matches, prices, publishes.
-// Job locking + crash recovery + exponential backoff retry + source health monitoring.
-// Admin-only invocation; meant to be run repeatedly (scheduled task or "Process queue" button).
+// Crawler worker: claims queued jobs, fetches/parses (JSON-LD, og:meta, HTML images,
+// embedded JSON state), verifies images are accessible, validates, matches, prices,
+// publishes. Job locking + crash recovery + exponential backoff + source health metrics.
+// Admin-only invocation; meant to be run repeatedly (scheduled task or "Process queue").
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.44";
 import { waitUntil } from "base44:runtime";
 import {
@@ -11,50 +12,16 @@ import { validateProduct } from "../../shared/catalog/validate.js";
 import { matchProduct } from "../../shared/catalog/match.js";
 import { premiumScore } from "../../shared/catalog/premium.js";
 import { computeCustomerPrice } from "../../shared/commerce/pricing.js";
+import {
+  parseProductPage, enrichFeedRaw, verifyImageAccessible, absolutizeImageUrl,
+} from "../../shared/catalog/extract.js";
 
 const BACKOFFS = [60, 300, 900]; // seconds: 1min, 5min, 15min
 const STALE_LOCK_MS = 10 * 60 * 1000;
 const STALE_OFFER_MS = 24 * 60 * 60 * 1000;
-
-function extractJsonLd(html) {
-  const out = [];
-  const re = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
-  let m;
-  while ((m = re.exec(html))) {
-    try {
-      const j = JSON.parse(m[1]);
-      const arr = Array.isArray(j) ? j : [j];
-      for (const x of arr) {
-        if (x && typeof x === "object") {
-          const types = Array.isArray(x["@type"]) ? x["@type"] : [x["@type"]];
-          if (types.includes("Product")) out.push(x);
-        }
-      }
-    } catch (_e) { /* malformed JSON-LD block — skip */ }
-  }
-  return out;
-}
-
-function jsonLdToRaw(doc, url) {
-  const offers = Array.isArray(doc.offers) ? doc.offers[0] : doc.offers;
-  const image = Array.isArray(doc.image) ? doc.image[0] : typeof doc.image === "object" && doc.image ? doc.image.url : doc.image;
-  const brand = typeof doc.brand === "object" ? doc.brand && (doc.brand.name || doc.brand["@id"]) : doc.brand;
-  return {
-    title: doc.name,
-    brand,
-    price: normalizePrice(offers && offers.price),
-    currency: normalizeCurrency(offers && offers.priceCurrency),
-    url: (offers && offers.url) || url,
-    image,
-    sku: doc.sku,
-    gtin: doc.gtin13 || doc.gtin12 || doc.gtin,
-    mpn: doc.mpn,
-    model: doc.model,
-    category: typeof doc.category === "object" ? undefined : doc.category,
-    description: doc.description,
-    stock: offers && offers.availability,
-  };
-}
+const IMG_MAIN_ATTEMPTS = 3; // main image candidates checked before publishing
+const IMG_GALLERY_VERIFY = 2; // gallery images checked per product
+const GALLERY_MAX = 6;
 
 async function fetchWithTimeout(url, ms) {
   return await fetch(url, {
@@ -93,8 +60,10 @@ function diffUpdate(existing, record) {
   for (const [k, v] of Object.entries(record)) {
     if (v === undefined || v === null || v === "") continue;
     const old = existing[k];
-    const changedNow = JSON.stringify(old) !== JSON.stringify(v);
-    if (changedNow) { update[k] = v; changed = true; }
+    if (JSON.stringify(old) !== JSON.stringify(v)) {
+      update[k] = v;
+      changed = true;
+    }
   }
   return { update, changed };
 }
@@ -107,12 +76,12 @@ export default async function (req) {
     if (user.role !== "admin") return Response.json({ error: "Forbidden" }, { status: 403 });
 
     const body = await req.json().catch(() => ({}));
-    const maxJobs = Math.min(Number(body.max_jobs) || 10, 25);
+    const maxJobs = Math.min(Number(body.max_jobs) || 25, 50);
     const admin = base44.asServiceRole;
     const now = new Date();
 
     // --- queue: reclaim stale locks, claim due jobs by priority ---
-    const allJobs = await admin.entities.CrawlerJob.list(null, 400);
+    const allJobs = await admin.entities.CrawlerJob.list(null, 500);
     const stale = allJobs.filter(
       (j) => j.status === "RUNNING" && j.locked_at && now - new Date(j.locked_at) > STALE_LOCK_MS
     );
@@ -134,15 +103,18 @@ export default async function (req) {
     }
 
     const sources = await admin.entities.CrawlerSource.list(null, 200);
-    let products = await admin.entities.Product.list("-premium_score", 500);
-    let offers = await admin.entities.Offer.list(null, 500);
+    let products = await admin.entities.Product.list("-premium_score", 2000);
+    let offers = await admin.entities.Offer.list(null, 1000);
 
+    // per-source run metrics (flushed into the source record at the end)
     const perSource = {};
-    const note = (sourceId, ok) => {
-      const s = (perSource[sourceId] = perSource[sourceId] || { processed: 0, ok: 0, failed: 0 });
-      s.processed++;
-      if (ok) s.ok++; else s.failed++;
+    const bump = (sourceId, key, by = 1) => {
+      const s = (perSource[sourceId] = perSource[sourceId] || {
+        processed: 0, ok: 0, failed: 0, found: 0, validated: 0, rejected: 0, imgFound: 0, imgFail: 0,
+      });
+      s[key] = (s[key] || 0) + by;
     };
+
     let completed = 0;
     let failed = 0;
     let retried = 0;
@@ -157,50 +129,96 @@ export default async function (req) {
       const source = sources.find((s) => s.id === job.source_id);
       try {
         if (!source) throw new Error("Source not found");
+        bump(source.id, "processed");
 
-        // --- fetch / resolve raw product ---
-        let raw = job.payload;
-        if (!raw || !raw.title) {
+        // --- resolve raw product: feed payload or live page fetch ---
+        let raw = null;
+        let pageImageCandidates = [];
+        if (job.payload && (job.payload.title || job.payload.name)) {
+          raw = enrichFeedRaw(job.payload);
+        } else {
           if (!(await robotsAllows(job.url))) throw new Error("Blocked by robots.txt");
           const res = await fetchWithTimeout(job.url, 15000);
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          const docs = extractJsonLd(await res.text());
-          if (!docs.length) throw new Error("No JSON-LD product data found");
-          raw = jsonLdToRaw(docs[0], job.url);
+          const parsed = parseProductPage(await res.text(), job.url);
+          raw = enrichFeedRaw(parsed.raw);
+          pageImageCandidates = parsed.imageCandidates;
         }
 
         // --- normalize ---
         raw.title = normalizeTitle(raw.title);
-        if (!raw.title) throw new Error("Missing product title");
+        if (!raw.title) throw new Error("Rejected: no product title found on page");
         raw.price = normalizePrice(raw.price);
         raw.currency = normalizeCurrency(raw.currency) || normalizeCurrency(source.default_currency) || "USD";
-        raw.stock_status = normalizeStock(raw.stock);
         raw.brand = normalizeBrand(raw.brand, raw.title);
         raw.category = raw.category || inferCategory(`${raw.title} ${raw.brand || ""}`);
-        raw.canonical_url = canonicalizeUrl(raw.url || job.url, source.base_url);
-        raw.slug = raw.brand ? slugify(`${raw.brand} ${raw.title}`) : slugify(raw.title);
-        if (!raw.url) raw.url = job.url;
+        raw.stock_status = normalizeStock(raw.stock);
+        raw.url = raw.url || job.url;
+        raw.canonical_url = canonicalizeUrl(raw.url, source.base_url) || raw.url;
+        raw.slug = slugify(raw.brand ? `${raw.brand} ${raw.title}` : raw.title);
+        bump(source.id, "found");
 
-        // --- validate (missing optional fields never reject a good product) ---
+        // --- validation: only title/price/currency/url block publication ---
         const validation = validateProduct(raw);
+        if (validation.missing.length) {
+          bump(source.id, "rejected");
+          throw new Error(`Rejected: ${validation.reason}`);
+        }
+
+        // --- images: absolutize, verify accessibility before publishing ---
+        const mainCandidates = [];
+        const pushMain = (u) => {
+          const abs = absolutizeImageUrl(u, source.base_url);
+          if (abs && !mainCandidates.includes(abs)) mainCandidates.push(abs);
+        };
+        pushMain(raw.image);
+        pageImageCandidates.slice(0, IMG_MAIN_ATTEMPTS).forEach((c) => {
+          if (!mainCandidates.includes(c)) mainCandidates.push(c);
+        });
+        let imageUrl = null;
+        for (const c of mainCandidates.slice(0, IMG_MAIN_ATTEMPTS)) {
+          if (await verifyImageAccessible(c)) {
+            imageUrl = c;
+            bump(source.id, "imgFound");
+            break;
+          }
+          bump(source.id, "imgFail");
+        }
+        // Never swap a real source image for a placeholder: if all checks failed
+        // (e.g. HEAD blocked) keep the original source image anyway.
+        if (!imageUrl && mainCandidates.length) imageUrl = mainCandidates[0];
+
+        const gallery = [];
+        if (Array.isArray(raw.gallery)) {
+          const uniq = [...new Set(raw.gallery.map((g) => absolutizeImageUrl(g, source.base_url)).filter(Boolean))]
+            .filter((u) => u !== imageUrl);
+          for (const g of uniq) {
+            if (gallery.length >= IMG_GALLERY_VERIFY) break;
+            if (await verifyImageAccessible(g)) {
+              gallery.push(g);
+              bump(source.id, "imgFound");
+            } else {
+              bump(source.id, "imgFail");
+            }
+          }
+        }
+
+        // --- pricing / premium / dedupe ---
         const premium = premiumScore({ brand: raw.brand, priceUsd: raw.price, qualityScore: validation.qualityScore });
         const customerPrice = computeCustomerPrice(raw.price);
+        const compareAt = normalizePrice(raw.compare_at_price);
         const match = matchProduct(raw, products);
-
-        // source health gates automatic publishing
-        const sourceHealthy = source.status !== "ERROR" && source.status !== "WARNING";
-        let productRecord = null;
-        let action = null;
 
         const record = {
           name: raw.title,
           slug: raw.slug,
           brand: raw.brand || undefined,
           category: raw.category || "Accessories",
-          source_price: raw.price,
+          source_price: compareAt && compareAt > raw.price ? compareAt : raw.price,
           customer_price: customerPrice,
           currency: raw.currency,
-          image_url: raw.image || (job.payload && job.payload.image),
+          image_url: imageUrl,
+          gallery: gallery.length ? gallery.slice(0, GALLERY_MAX) : undefined,
           description: raw.description || "",
           stock_status: raw.stock_status,
           premium_score: premium.score,
@@ -218,8 +236,13 @@ export default async function (req) {
           sku: raw.sku || undefined,
           gtin: raw.gtin || undefined,
           mpn: raw.mpn || undefined,
+          specifications: raw.variant_sample && raw.variant_sample.length
+            ? { options: raw.option_names || [], variants: raw.variant_sample }
+            : undefined,
         };
 
+        let productRecord = null;
+        let action = null;
         if (match.decision === "AUTO_MATCH" && match.product) {
           const { update, changed } = diffUpdate(match.product, record);
           if (changed) {
@@ -230,27 +253,25 @@ export default async function (req) {
           }
           productRecord = match.product;
         } else if (match.decision === "MANUAL_REVIEW" && match.product) {
+          // uncertain match: annotate, never auto-unpublish the existing product
           await admin.entities.Product.update(match.product.id, {
-            status: "REVIEW",
             match_confidence: match.confidence,
+            review_reason: `Uncertain match (${Math.round(match.confidence * 100)}%) with a newly crawled "${raw.title}" — needs human eyes`,
             last_crawled_at: now.toISOString(),
           });
           productRecord = match.product;
           action = "MATCH_REVIEW";
         } else {
-          const publishable =
-            validation.status === "APPROVED" &&
-            (premium.status === "PREMIUM" || premium.status === "APPROVED") &&
-            sourceHealthy;
           const created = await admin.entities.Product.create({
             ...record,
             brand: record.brand || "Unknown",
-            status: publishable ? "PUBLISHED" : "REVIEW",
+            status: "PUBLISHED",
           });
           products.push(created);
           productRecord = created;
-          action = publishable ? "PUBLISHED" : "REVIEW";
+          action = "PUBLISHED";
         }
+        bump(source.id, "validated");
 
         // --- offer upsert (PRODUCT vs OFFER separation) ---
         if (productRecord && raw.price) {
@@ -285,14 +306,20 @@ export default async function (req) {
           status: "COMPLETED",
           completed_at: now.toISOString(),
           locked_at: null,
-          result: JSON.stringify({ action, premium: premium.status, quality: validation.qualityScore }),
+          result: JSON.stringify({
+            action,
+            premium: premium.status,
+            quality: validation.qualityScore,
+            image: imageUrl ? "ok" : "none",
+          }),
         });
         completed++;
-        note(source.id, true);
+        bump(source.id, "ok");
       } catch (error) {
-        const attempts = (job.attempts || 0) + 1;
         const msg = String((error && error.message) || error).slice(0, 500);
-        if (attempts < (job.max_attempts || 3)) {
+        const deterministic = msg.startsWith("Rejected:");
+        const attempts = (job.attempts || 0) + 1;
+        if (!deterministic && attempts < (job.max_attempts || 3)) {
           await admin.entities.CrawlerJob.update(job.id, {
             status: "RETRYING",
             attempts,
@@ -310,11 +337,11 @@ export default async function (req) {
           });
           failed++;
         }
-        if (job.source_id) note(job.source_id, false);
+        if (job.source_id) bump(job.source_id, "failed");
       }
     }
 
-    // --- source health: >30% fail = WARNING, >60% = ERROR (auto-publish paused) ---
+    // --- flush per-source metrics + health (>30% fail = WARNING, >60% = ERROR) ---
     const sourceUpdates = [];
     for (const [sourceId, s] of Object.entries(perSource)) {
       const source = sources.find((x) => x.id === sourceId);
@@ -331,6 +358,11 @@ export default async function (req) {
         status,
         products_updated: (source.products_updated || 0) + s.ok,
         products_failed: (source.products_failed || 0) + s.failed,
+        products_found: (source.products_found || 0) + s.found,
+        products_validated: (source.products_validated || 0) + s.validated,
+        products_rejected: (source.products_rejected || 0) + s.rejected,
+        images_found: (source.images_found || 0) + s.imgFound,
+        images_failed: (source.images_failed || 0) + s.imgFail,
         last_error: s.failed ? source.last_error || "Some jobs failed" : source.last_error,
         last_success: s.ok ? now.toISOString() : source.last_success,
       });

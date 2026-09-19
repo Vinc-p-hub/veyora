@@ -104,6 +104,10 @@
       "type": "number",
       "default": 0
     },
+    "review_reason": {
+      "type": "string",
+      "description": "Exact reason a product sits in review or was rejected"
+    },
     "status": {
       "type": "string",
       "enum": [
