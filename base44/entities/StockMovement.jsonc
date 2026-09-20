@@ -1,0 +1,64 @@
+{
+  "name": "StockMovement",
+  "type": "object",
+  "properties": {
+    "product_id": {
+      "type": "string"
+    },
+    "product_name": {
+      "type": "string",
+      "description": "Product name denormalized for the movement history"
+    },
+    "qty": {
+      "type": "number",
+      "description": "Signed quantity change (negative = units out, positive = units in)"
+    },
+    "old_stock": {
+      "type": "number",
+      "description": "VEYRO stock value before the movement"
+    },
+    "new_stock": {
+      "type": "number",
+      "description": "VEYRO stock value after the movement"
+    },
+    "reason": {
+      "type": "string",
+      "description": "ORDER_FULFILLMENT, MANUAL_ADD, MANUAL_REMOVE, MANUAL_ADJUST, CORRECTION\u2026"
+    },
+    "order_number": {
+      "type": "string",
+      "description": "Order that triggered the movement, when applicable"
+    },
+    "actor_email": {
+      "type": "string",
+      "description": "Admin who made a manual change (empty for automated order movements)"
+    }
+  },
+  "required": [
+    "product_id",
+    "qty",
+    "reason"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

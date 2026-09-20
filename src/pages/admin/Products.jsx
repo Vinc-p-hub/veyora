@@ -110,6 +110,7 @@ export default function Products() {
               ) : p.status === "DISABLED" ? (
                 <button onClick={() => setStatus(p, "PUBLISHED")} className="text-xs text-emerald-600 hover:underline shrink-0">Publish</button>
               ) : null}
+              <Link to={`/admin/products/${p.id}`} className="text-xs text-accent-cyan hover:underline shrink-0">Manage</Link>
             </div>
           ))}
           {visible.length === 0 && <p className="text-sm text-text-muted py-8 text-center">No products match.</p>}

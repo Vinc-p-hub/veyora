@@ -21,7 +21,7 @@ const BACKOFFS = [60, 300, 900]; // seconds: 1min, 5min, 15min
 const STALE_LOCK_MS = 10 * 60 * 1000;
 const STALE_OFFER_MS = 24 * 60 * 60 * 1000;
 const IMG_MAIN_ATTEMPTS = 3;
-const IMG_GALLERY_VERIFY = 2;
+const IMG_GALLERY_VERIFY = 4;
 const GALLERY_MAX = 6;
 
 async function fetchWithTimeout(url, ms) {
@@ -133,6 +133,7 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
   let failed = 0;
   let retried = 0;
   const jobUpdates = [];
+  const imageFixJobs = [];
 
   for (const job of jobs) {
     await admin.entities.CrawlerJob.update(job.id, {
@@ -210,12 +211,20 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
       }
       if (!imageUrl && mainCandidates.length) imageUrl = mainCandidates[0];
 
+      // REAL GALLERY ONLY — the declared gallery is merged with the page's
+      // image candidates (og:image, img/src, data-src, srcset, picture/source,
+      // embedded JSON state), deduplicated and verified. An image is never
+      // duplicated artificially or generated to fill the gallery.
       const gallery = [];
-      if (Array.isArray(raw.gallery)) {
-        const uniq = [...new Set(raw.gallery.map((g) => absolutizeImageUrl(g, source.base_url)).filter(Boolean))]
-          .filter((u) => u !== imageUrl);
+      const galleryPool = [
+        ...(Array.isArray(raw.gallery) ? raw.gallery.map((g) => absolutizeImageUrl(g, source.base_url)).filter(Boolean) : []),
+        ...pageImageCandidates,
+      ]
+        .filter((u) => u !== imageUrl)
+        .filter((u, i, arr) => arr.indexOf(u) === i);
+      if (galleryPool.length) {
         const galleryChecks = await Promise.all(
-          uniq.slice(0, IMG_GALLERY_VERIFY).map((g) => verifyImageAccessible(g).then((ok) => ({ g, ok })))
+          galleryPool.slice(0, IMG_GALLERY_VERIFY).map((g) => verifyImageAccessible(g).then((ok) => ({ g, ok })))
         );
         for (const { g, ok } of galleryChecks) {
           if (ok) {
@@ -226,6 +235,13 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
           }
         }
       }
+      // IMAGE_INCOMPLETE: only one usable image while the source page clearly
+      // exposes more — flagged and queued for a gallery-fix re-crawl.
+      const sourceImageCount = Math.max(
+        pageImageCandidates.length,
+        Array.isArray(raw.gallery) ? raw.gallery.length : 0
+      );
+      const imageStatus = gallery.length === 0 && sourceImageCount > 1 ? "IMAGE_INCOMPLETE" : "COMPLETE";
 
       // --- pricing via central rules / premium / dedupe ---
       const rules = resolveRules(pricingConfig, { category: raw.category, source_id: source.id });
@@ -244,6 +260,7 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
         currency: "USD",
         image_url: imageUrl,
         gallery: gallery.length ? gallery.slice(0, GALLERY_MAX) : undefined,
+        image_status: imageStatus,
         description: raw.description || "",
         stock_status: raw.stock_status,
         premium_score: premium.score,
@@ -311,18 +328,38 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
         productRecord = match.product;
         action = "MATCH_REVIEW";
       } else {
+        // DATA_QUALITY_REVIEW: essential fields exist (validation passed) but
+        // the source data is too thin to publish as premium — routed to human
+        // review instead of publishing thin or invented information.
+        const lowQuality = validation.qualityScore < 50;
         const created = await admin.entities.Product.create({
           ...record,
           // Internal VEYRO commercial allocation (default from Super Admin) —
           // a sellable ceiling, never a claim about the supplier's real stock.
           ...applyStockAllocation(record.stock_status, null, allocationDefault),
           brand: record.brand || "Unknown",
-          status: "PUBLISHED",
+          status: lowQuality ? "REVIEW" : "PUBLISHED",
+          review_reason: lowQuality
+            ? `DATA_QUALITY_REVIEW — source data too thin to publish (quality ${validation.qualityScore}/100)`
+            : undefined,
           first_seen_at: now.toISOString(),
         });
         products.push(created);
         productRecord = created;
-        action = "PUBLISHED";
+        action = lowQuality ? "QUALITY_REVIEW" : "PUBLISHED";
+      }
+      // Gallery-fix queue: only initial discovery jobs enqueue a fix so a fix
+      // job can never re-queue itself in an endless loop.
+      if (imageStatus === "IMAGE_INCOMPLETE" && productRecord && job.type === "FETCH_PRODUCT" && raw.url) {
+        imageFixJobs.push({
+          type: "UPDATE_PRODUCT",
+          source_id: source.id,
+          product_id: productRecord.id,
+          url: raw.url,
+          priority: 7,
+          status: "QUEUED",
+          scheduled_at: now.toISOString(),
+        });
       }
       bump(source.id, "validated");
 
@@ -405,6 +442,10 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
       }
       if (job.source_id) bump(job.source_id, "failed");
     }
+  }
+
+  if (imageFixJobs.length) {
+    await admin.entities.CrawlerJob.bulkCreate(imageFixJobs).catch(() => {});
   }
 
   if (jobUpdates.length) {

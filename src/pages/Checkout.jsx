@@ -72,12 +72,14 @@ export default function Checkout() {
     // decremented atomically before the order is written. If the supplier is
     // unavailable, the order is refused.
     let d = data;
+    const orderNumber = "VYR-" + Date.now().toString(36).toUpperCase().slice(-8);
     try {
       const res = await base44.functions.invoke("checkoutRevalidate", {
         items: items.map((i) => ({ product_id: i.id, qty: i.qty })),
         country_code: country.code,
         plan_id: planId,
         commit: true,
+        order_number: orderNumber,
       });
       d = res.data;
       setData(d);
@@ -88,7 +90,6 @@ export default function Checkout() {
     }
     const finalItems = (d.items || []).filter((i) => i.available);
     const finalTotals = d.totals || { subtotal: 0, shipping: 0, tax: 0, total: 0 };
-    const orderNumber = "VYR-" + Date.now().toString(36).toUpperCase().slice(-8);
     try {
       await base44.entities.Order.create({
         order_number: orderNumber,
@@ -103,6 +104,7 @@ export default function Checkout() {
           seller_id: i.seller_id,
           seller_name: i.seller_name,
           delivery_days: i.delivery_days,
+          fulfillment_source: i.fulfillment_source || "SUPPLIER",
         })),
         subtotal: finalTotals.subtotal,
         shipping: finalTotals.shipping,

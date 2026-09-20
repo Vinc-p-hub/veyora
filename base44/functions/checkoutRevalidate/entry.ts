@@ -11,6 +11,7 @@ import {
 import {
   mergeConfig, resolveRules, computePriceChain, computePlanFromConfig,
 } from "../../shared/commerce/rules.js";
+import { selectFulfillmentSource, recordStockMovement } from "../../shared/commerce/stock.js";
 
 const SUPPLIER_FRESH_MS = 24 * 60 * 60 * 1000; // supplier data older than 24h = stale
 
@@ -24,8 +25,10 @@ export default async function (req) {
     const countryCode = String(body.country_code || "US").toUpperCase().slice(0, 2);
     const planId = String(body.plan_id || "plan_5");
     // commit: final gate before the order is written — refuses the order when a
-    // supplier is unavailable, otherwise decrements the internal VEYRO allocation.
+    // supplier is unavailable, otherwise decrements the internal VEYRO allocation
+    // and the real VEYRO physical stock for VEYRO-fulfilled lines.
     const commit = body.commit === true;
+    const orderNumber = typeof body.order_number === "string" ? body.order_number.slice(0, 24) : "";
     const blockedLines = [];
     const admin = base44.asServiceRole;
     const now = new Date();
@@ -111,6 +114,9 @@ export default async function (req) {
         warnings.push(`${product.name}: VEYRO sellable allocation for this quantity is exhausted right now.`);
       }
       if (!canSell) blockedLines.push(product.name);
+      // FULFILLMENT_SOURCE: VEYRO's own physical stock ships first when enough
+      // unreserved units exist — otherwise the verified partner supplier ships.
+      const fulfillmentSource = canSell ? selectFulfillmentSource(product, qty) : "SUPPLIER";
       const lineTotalUsd = round2(unitUsd * qty);
       subtotalUsd = round2(subtotalUsd + lineTotalUsd);
       items.push({
@@ -129,6 +135,7 @@ export default async function (req) {
         changed: Math.abs(unitUsd - listedUsd) > 0.01,
         available: canSell,
         supplier_fresh: supplierFresh,
+        fulfillment_source: fulfillmentSource,
       });
       snapshotItems.push({
         product_id: product.id,
@@ -147,6 +154,7 @@ export default async function (req) {
         margin_percent: rules.margin_percent ?? null,
         pricing_rules: JSON.parse(JSON.stringify(rules || {})),
         unit_customer_price_usd: unitUsd,
+        fulfillment_source: fulfillmentSource,
         qty,
         line_total_usd: lineTotalUsd,
       });
@@ -176,7 +184,10 @@ export default async function (req) {
 
     // Final gate (commit): refuse the whole order if any supplier is
     // unavailable, otherwise decrement the internal VEYRO sellable allocation
-    // before the order is written. The real supplier stock is never touched.
+    // and the REAL VEYRO physical stock (VEYRO-fulfilled lines) before the
+    // order is written. The real supplier stock is never touched.
+    const productUpdateSets = [];
+    const stockMovements = [];
     if (commit) {
       if (blockedLines.length) {
         return Response.json(
@@ -194,15 +205,42 @@ export default async function (req) {
         const product = products.find((p) => p.id === it.product_id);
         if (!product) continue;
         const allocated = Number(product.veyro_allocated_stock) || 0;
-        if (allocated <= 0) continue; // product without internal allocation configured
-        const current = typeof product.available_to_sell === "number" ? product.available_to_sell : allocated;
-        if (current < it.qty) {
-          return Response.json(
-            { ok: false, blocked: true, error: `${it.name}: sold out during checkout.`, items, warnings },
-            { status: 409 }
-          );
+        if (allocated > 0) {
+          const current = typeof product.available_to_sell === "number" ? product.available_to_sell : allocated;
+          if (current < it.qty) {
+            return Response.json(
+              { ok: false, blocked: true, error: `${it.name}: sold out during checkout.`, items, warnings },
+              { status: 409 }
+            );
+          }
+          product.available_to_sell = Math.max(0, current - it.qty);
+          productUpdateSets.push({ id: product.id, available_to_sell: product.available_to_sell });
         }
-        await admin.entities.Product.update(product.id, { available_to_sell: Math.max(0, current - it.qty) });
+        // VEYRO-owned physical inventory: real decrement + immutable movement log.
+        if (it.fulfillment_source === "VEYRO") {
+          const oldStock = Number(product.veyro_stock) || 0;
+          const newStock = Math.max(0, oldStock - it.qty);
+          product.veyro_stock = newStock;
+          productUpdateSets.push({ id: product.id, veyro_stock: newStock });
+          stockMovements.push({
+            product_id: product.id,
+            product_name: it.name,
+            qty: -it.qty,
+            old_stock: oldStock,
+            new_stock: newStock,
+            reason: "ORDER_FULFILLMENT",
+            order_number: orderNumber,
+          });
+        }
+      }
+      // One update per product (a product may appear on several lines).
+      const byId = new Map();
+      for (const u of productUpdateSets) byId.set(u.id, { ...(byId.get(u.id) || {}), ...u });
+      if (byId.size) {
+        await admin.entities.Product.bulkUpdate([...byId.values()]);
+      }
+      for (const m of stockMovements) {
+        waitUntil(recordStockMovement(admin, m));
       }
     }
 

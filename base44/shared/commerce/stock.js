@@ -33,3 +33,31 @@ export function applyStockAllocation(supplierStatus, existing, defaultAllocation
     available_to_sell: supplierAvailable ? prevAllocated : 0,
   };
 }
+
+// FULFILLMENT_SOURCE selection: VEYRO's own physical stock ships first when
+// enough unreserved units cover the quantity; otherwise the verified partner
+// supplier fulfills the order. Real supplier stock is never mixed in.
+export function selectFulfillmentSource(product, qty) {
+  const veyroStock = Number(product && product.veyro_stock) || 0;
+  const reserved = Number(product && product.reserved_stock) || 0;
+  const free = Math.max(0, veyroStock - reserved);
+  return free >= qty ? "VEYRO" : "SUPPLIER";
+}
+
+// Immutable inventory history — every real VEYRO stock change is logged.
+export async function recordStockMovement(admin, movement) {
+  try {
+    await admin.entities.StockMovement.create({
+      product_id: movement.product_id,
+      product_name: movement.product_name || "",
+      qty: movement.qty,
+      old_stock: movement.old_stock,
+      new_stock: movement.new_stock,
+      reason: movement.reason,
+      order_number: movement.order_number || "",
+      actor_email: movement.actor_email || "",
+    });
+  } catch (_e) {
+    /* history logging must never break the order flow */
+  }
+}

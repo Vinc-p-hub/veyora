@@ -68,6 +68,15 @@
         "type": "string"
       }
     },
+    "image_status": {
+      "type": "string",
+      "enum": [
+        "COMPLETE",
+        "IMAGE_INCOMPLETE"
+      ],
+      "default": "COMPLETE",
+      "description": "IMAGE_INCOMPLETE = only one usable image while the source clearly exposes more \u2014 queued for a gallery-fix re-crawl. Never filled with duplicated or generated images."
+    },
     "description": {
       "type": "string"
     },
@@ -93,7 +102,17 @@
         "UNKNOWN"
       ],
       "default": "IN_STOCK",
-      "description": "Real supplier stock status as crawled \u2014 never altered by VEYRO's internal allocation"
+      "description": "Real supplier stock status as crawled (supplier_stock) \u2014 never altered by VEYRO's internal allocation or physical stock"
+    },
+    "veyro_stock": {
+      "type": "number",
+      "default": 0,
+      "description": "Real VEYRO physical inventory units \u2014 decremented on VEYRO-fulfilled orders. Priority fulfillment source when free units (veyro_stock - reserved_stock) cover the quantity."
+    },
+    "reserved_stock": {
+      "type": "number",
+      "default": 0,
+      "description": "VEYRO units reserved (pending orders, holds) \u2014 not sellable"
     },
     "veyro_allocated_stock": {
       "type": "number",
@@ -157,6 +176,14 @@
       ],
       "default": "AUTO",
       "description": "AUTO derives the tier from demand signals (orders, wishlist, premium, new arrivals); explicit values override it"
+    },
+    "seo_title": {
+      "type": "string",
+      "description": "Unique SEO title for the product page (fallback: brand + name)"
+    },
+    "meta_description": {
+      "type": "string",
+      "description": "Unique meta description for the product page"
     },
     "source_id": {
       "type": "string"

@@ -27,6 +27,7 @@ export default function ProductDetail() {
   const [planId, setPlanId] = useState("plan_5");
   const [added, setAdded] = useState(false);
   const [wishlisted, setWishlisted] = useState(false);
+  const [activeImage, setActiveImage] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -61,6 +62,12 @@ export default function ProductDetail() {
     if (Array.isArray(v)) return v.map(specText).join(", ");
     return Object.entries(v).map(([k, x]) => `${k}: ${specText(x)}`).join(" · ");
   };
+
+  // REAL GALLERY ONLY — main image + the real crawled gallery, deduplicated.
+  // The image is never duplicated artificially to fill the thumbnails.
+  const gallery = [...new Set([product.image_url, ...(Array.isArray(product.gallery) ? product.gallery : [])].filter(Boolean))];
+  const mainImage = activeImage && gallery.includes(activeImage) ? activeImage : gallery[0] || product.image_url;
+  const veyroFreeUnits = Math.max(0, (Number(product.veyro_stock) || 0) - (Number(product.reserved_stock) || 0));
 
   const price = product.customer_price;
   const plan = buildPlan(price, planId);
@@ -114,18 +121,27 @@ export default function ProductDetail() {
         {/* Gallery */}
         <div className="space-y-3">
           <div className="relative aspect-square rounded-lg overflow-hidden bg-surface-card border border-border-hairline">
-            <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
+            <img src={mainImage} alt={`${product.name} — ${gallery.indexOf(mainImage) + 1}`} className="w-full h-full object-cover" />
             <div className="absolute top-4 left-4 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-primary/80 backdrop-blur border border-badge-premium/30 text-xs text-mono text-badge-premium">
               <ShieldCheck className="w-3.5 h-3.5" /> Premium {product.premium_score}%
             </div>
           </div>
-          <div className="grid grid-cols-4 gap-2">
-            {[product.image_url, product.image_url, product.image_url, product.image_url].map((img, i) => (
-              <div key={i} className="aspect-square rounded-lg overflow-hidden bg-surface-card border border-border-hairline opacity-70 hover:opacity-100 cursor-pointer transition">
-                <img src={img} alt="" className="w-full h-full object-cover" />
-              </div>
-            ))}
-          </div>
+          {gallery.length > 1 && (
+            <div className="grid grid-cols-4 gap-2">
+              {gallery.map((img, i) => (
+                <button
+                  key={img}
+                  onClick={() => setActiveImage(img)}
+                  className={cn(
+                    "aspect-square rounded-lg overflow-hidden bg-surface-card border transition",
+                    mainImage === img ? "border-accent-cyan opacity-100" : "border-border-hairline opacity-70 hover:opacity-100"
+                  )}
+                >
+                  <img src={img} alt={`${product.name} — view ${i + 1}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Info */}
@@ -276,6 +292,11 @@ export default function ProductDetail() {
             <div className="text-xs text-text-muted pt-1">
               Stock status: <span className="text-text-primary">{product.stock_status.replace(/_/g, " ").toLowerCase()}</span>.
             </div>
+            {veyroFreeUnits > 0 && (
+              <div className="text-xs text-accent-cyan pt-0.5">
+                In VEYRO stock — {veyroFreeUnits} unit{veyroFreeUnits > 1 ? "s" : ""} ship directly from VEYRO.
+              </div>
+            )}
           </div>
           {multipleSellers && <ProductOffers product={product} offers={offers} />}
         </div>

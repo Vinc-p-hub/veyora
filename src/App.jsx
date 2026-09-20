@@ -26,6 +26,7 @@ import Compare from '@/pages/Compare';
 import Overview from '@/pages/admin/Overview';
 import ApprovalQueue from '@/pages/admin/ApprovalQueue';
 import Products from '@/pages/admin/Products';
+import ProductEdit from '@/pages/admin/ProductEdit';
 import OrdersAdmin from '@/pages/admin/Orders';
 import Partners from '@/pages/admin/Partners';
 import Offers from '@/pages/admin/Offers';
@@ -95,6 +96,7 @@ const AuthenticatedApp = () => {
                 <Route index element={<Overview />} />
                 <Route path="approval-queue" element={<ApprovalQueue />} />
                 <Route path="products" element={<Products />} />
+                <Route path="products/:id" element={<ProductEdit />} />
                 <Route path="orders" element={<OrdersAdmin />} />
                 <Route path="partners" element={<Partners />} />
                 <Route path="offers" element={<Offers />} />
