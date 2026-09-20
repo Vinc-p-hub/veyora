@@ -14,6 +14,8 @@ export function stripHtml(str) {
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(p|div|li|h[1-6])>/gi, "\n")
+    // inline formatting tags vanish without leaving a stray space
+    .replace(/<\/?(?:b|i|em|strong|span|a|small|sup|sub|code|u|mark)\b[^>]*>/gi, "")
     .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;/gi, " ")
     .replace(/&amp;/gi, "&")
@@ -327,6 +329,11 @@ export function enrichFeedRaw(raw) {
     delete out.images;
   }
   if (out.image && typeof out.image === "object") out.image = out.image.src || out.image.url || null;
+  // Shopify feeds carry the description in body_html — map it to description
+  if (!out.description && typeof out.body_html === "string") {
+    out.description = out.body_html;
+    delete out.body_html;
+  }
   if (typeof out.description === "string" && /<\/?[a-z][\s\S]*>/i.test(out.description)) {
     out.description = stripHtml(out.description);
   }

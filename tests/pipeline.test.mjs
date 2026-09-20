@@ -172,7 +172,7 @@ test("offer selection: reliable supplier beats raw cheapest", () => {
 });
 
 test("levenshtein distance sanity", () => {
-  assert.equal(levenshtein("headfon", "headphones") <= 3, true);
+  assert.equal(levenshtein("headphnes", "headphones"), 1); // single typo
   assert.equal(levenshtein("abc", "abc"), 0);
 });
 
@@ -198,6 +198,12 @@ test("json-ld extraction: real script tag wins, Next.js RSC payload fallback", (
   assert.equal(docs2[0].offers.price, "999");
 
   // A real script tag always wins over the embedded fallback
-  const docs3 = extractJsonLd(real + rsc);
-  assert.equal(docs3.length, 2);
+  const realLd2 = { ...productLd, sku: "REAL-1", name: "Real Winner" };
+  const rscLd = { ...productLd, sku: "RSC-1", name: "RSC Fallback" };
+  const real2 = `<script type="application/ld+json">${JSON.stringify(realLd2)}</script>`;
+  const escaped2 = JSON.stringify(rscLd).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  const rsc2 = `<script>self.__next_f.push([1,"${escaped2}"])</script>`;
+  const docs3 = extractJsonLd(real2 + rsc2);
+  assert.equal(docs3.length, 1); // RSC payload ignored when a real block exists
+  assert.equal(docs3[0].name, "Real Winner");
 });
