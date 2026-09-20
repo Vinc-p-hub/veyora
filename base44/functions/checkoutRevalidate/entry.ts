@@ -144,11 +144,11 @@ export default async function (req) {
     }
 
     const countryRule = config.country_rules[countryCode] || {};
-    // VEYRO worldwide shipping: flat $14 when no explicit country fee is
+    // VEYRO worldwide shipping: flat $15 when no explicit country fee is
     // configured in the pricing rules — a seller without its own shipping
     // price never ships for free by accident.
     const shippingUsd = round2(
-      typeof countryRule.shipping_fee === "number" ? countryRule.shipping_fee : 14
+      typeof countryRule.shipping_fee === "number" ? countryRule.shipping_fee : 15
     );
     const taxRate = typeof countryRule.tax_rate === "number" ? countryRule.tax_rate : country.taxRate;
     const taxUsd = round2(subtotalUsd * taxRate);

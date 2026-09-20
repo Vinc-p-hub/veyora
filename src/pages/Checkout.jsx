@@ -54,7 +54,7 @@ export default function Checkout() {
   // currency) instead of "…" / zeros — the final total is always re-verified
   // server-side before the order goes through.
   const veyroSubtotal = Math.round(items.reduce((s, i) => s + (i.customer_price || 0) * i.qty, 0) * 100) / 100;
-  const veyroShipping = country.shipping || 14;
+  const veyroShipping = country.shipping || 15;
   const veyroTax = Math.round(veyroSubtotal * country.taxRate * 100) / 100;
   const veyroTotal = Math.round((veyroSubtotal + veyroShipping + veyroTax) * 100) / 100;
   const show = (v) => (data ? money(v) : formatPrice(v, currency));
