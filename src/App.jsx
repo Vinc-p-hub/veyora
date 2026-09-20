@@ -43,6 +43,10 @@ import ReviewsAdmin from '@/pages/admin/ReviewsAdmin';
 import Users from '@/pages/admin/Users';
 import SupportAdmin from '@/pages/admin/SupportAdmin';
 import Logs from '@/pages/admin/Logs';
+import Login from '@/pages/Login';
+import Register from '@/pages/Register';
+import ForgotPassword from '@/pages/ForgotPassword';
+import ResetPassword from '@/pages/ResetPassword';
 import { CartProvider } from '@/lib/CartContext';
 import { RegionProvider } from '@/lib/RegionContext';
 import { LanguageProvider } from '@/lib/i18n';
@@ -78,6 +82,11 @@ const AuthenticatedApp = () => {
         <PricingProvider>
           <CartProvider>
             <Routes>
+              {/* Auth pages — standalone, outside the marketplace layout */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               {/* Add your page Route elements here */}
               <Route element={<Layout />}>
                 <Route path="/" element={<Home />} />
