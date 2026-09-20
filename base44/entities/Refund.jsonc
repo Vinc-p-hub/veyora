@@ -1,0 +1,91 @@
+{
+  "name": "Refund",
+  "type": "object",
+  "properties": {
+    "intent_id": {
+      "type": "string",
+      "description": "PaymentIntent being refunded"
+    },
+    "order_number": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Refunded amount in the order currency \u2014 always re-validated against the intent"
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD"
+    },
+    "reason": {
+      "type": "string",
+      "enum": [
+        "CUSTOMER_REQUEST",
+        "RETURN",
+        "DAMAGED",
+        "DUPLICATE",
+        "FRAUD",
+        "OTHER"
+      ],
+      "default": "CUSTOMER_REQUEST"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "PENDING",
+        "PROCESSING",
+        "SUCCEEDED",
+        "FAILED",
+        "CANCELLED"
+      ],
+      "default": "PENDING",
+      "description": "Server-set only \u2014 confirmed by the PSP signed webhook"
+    },
+    "external_id": {
+      "type": "string",
+      "description": "Refund id on the PSP side"
+    },
+    "requested_by": {
+      "type": "string",
+      "description": "Admin email that initiated the refund"
+    },
+    "processed_at": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "order_number",
+    "amount",
+    "currency",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

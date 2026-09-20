@@ -1,0 +1,83 @@
+{
+  "name": "PspWebhookEvent",
+  "type": "object",
+  "properties": {
+    "provider": {
+      "type": "string",
+      "description": "PSP adapter that emitted the event"
+    },
+    "event_type": {
+      "type": "string",
+      "description": "e.g. payment.succeeded, payment.failed, refund.succeeded, dispute.opened"
+    },
+    "external_id": {
+      "type": "string",
+      "description": "Unique event id on the PSP side \u2014 the idempotency anchor"
+    },
+    "signature_valid": {
+      "type": "boolean",
+      "default": false
+    },
+    "processed": {
+      "type": "boolean",
+      "default": false,
+      "description": "True once the transaction was validated and the order updated"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "RECEIVED",
+        "PROCESSED",
+        "DUPLICATE",
+        "INVALID_SIGNATURE",
+        "INVALID_PAYLOAD",
+        "TRANSACTION_MISMATCH",
+        "ERROR"
+      ],
+      "default": "RECEIVED"
+    },
+    "order_number": {
+      "type": "string"
+    },
+    "intent_id": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "number"
+    },
+    "currency": {
+      "type": "string"
+    },
+    "error": {
+      "type": "string",
+      "description": "Rejection or processing error detail \u2014 never contains secrets"
+    }
+  },
+  "required": [
+    "provider",
+    "external_id",
+    "status"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

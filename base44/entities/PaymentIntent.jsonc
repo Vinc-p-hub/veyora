@@ -1,0 +1,123 @@
+{
+  "name": "PaymentIntent",
+  "type": "object",
+  "properties": {
+    "order_number": {
+      "type": "string",
+      "description": "VEYRO order this payment intent belongs to"
+    },
+    "provider": {
+      "type": "string",
+      "description": "PSP adapter id from the registry, e.g. onramp_veyro"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Amount to charge, in the order currency"
+    },
+    "currency": {
+      "type": "string",
+      "default": "USD"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "CREATED",
+        "PENDING",
+        "PROCESSING",
+        "SUCCEEDED",
+        "FAILED",
+        "CANCELLED",
+        "REFUNDED",
+        "PARTIALLY_REFUNDED"
+      ],
+      "default": "CREATED",
+      "description": "Server-set only \u2014 the frontend can never confirm a payment"
+    },
+    "external_id": {
+      "type": "string",
+      "description": "Payment id on the PSP side, received via signed webhook"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "description": "Guarantees one active intent per order+amount \u2014 duplicate creations return the same intent"
+    },
+    "payment_mode": {
+      "type": "string",
+      "enum": [
+        "PAY_NOW",
+        "INSTALLMENTS"
+      ],
+      "default": "PAY_NOW"
+    },
+    "down_payment": {
+      "type": "number",
+      "description": "Amount charged today for installment plans"
+    },
+    "installment_count": {
+      "type": "number",
+      "default": 0
+    },
+    "installment_amount": {
+      "type": "number",
+      "default": 0
+    },
+    "risk_score": {
+      "type": "number",
+      "default": 0,
+      "description": "Fraud/risk score computed server-side at intent creation"
+    },
+    "risk_flags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "failure_reason": {
+      "type": "string"
+    },
+    "confirmed_at": {
+      "type": "string",
+      "description": "When the signed webhook confirmed the payment"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Country, customer email, provider context \u2014 no secrets ever stored here"
+    }
+  },
+  "required": [
+    "order_number",
+    "provider",
+    "amount",
+    "currency"
+  ],
+  "rls": {
+    "read": {
+      "$or": [
+        {
+          "created_by_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}
