@@ -23,6 +23,9 @@ import Support from '@/pages/Support';
 import FinancingInfo from '@/pages/FinancingInfo';
 import FinancingCalculator from '@/pages/FinancingCalculator';
 import Compare from '@/pages/Compare';
+import Brand from '@/pages/Brand';
+import LegalPage from '@/pages/LegalPage';
+import Contact from '@/pages/Contact';
 import Overview from '@/pages/admin/Overview';
 import ApprovalQueue from '@/pages/admin/ApprovalQueue';
 import Products from '@/pages/admin/Products';
@@ -90,6 +93,18 @@ const AuthenticatedApp = () => {
                 <Route path="/financing-info" element={<FinancingInfo />} />
                 <Route path="/financing-calculator" element={<FinancingCalculator />} />
                 <Route path="/compare" element={<Compare />} />
+                <Route path="/brand/:brand" element={<Brand />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/legal" element={<LegalPage doc="legal" />} />
+                <Route path="/terms" element={<LegalPage doc="terms" />} />
+                <Route path="/privacy" element={<LegalPage doc="privacy" />} />
+                <Route path="/refund-policy" element={<LegalPage doc="refund-policy" />} />
+                <Route path="/shipping-policy" element={<LegalPage doc="shipping-policy" />} />
+                <Route path="/return-policy" element={<LegalPage doc="return-policy" />} />
+                <Route path="/warranty" element={<LegalPage doc="warranty" />} />
+                <Route path="/seller-policy" element={<LegalPage doc="seller-policy" />} />
+                <Route path="/reviews-policy" element={<LegalPage doc="reviews-policy" />} />
+                <Route path="/cookie-policy" element={<LegalPage doc="cookie-policy" />} />
               </Route>
               {/* Super Admin console — completely separated from the public marketplace */}
               <Route path="/admin" element={<Admin />}>

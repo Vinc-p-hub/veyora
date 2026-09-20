@@ -33,7 +33,7 @@ function Footer() {
   const { t, tCat } = useLang();
   return (
     <footer className="bg-noon text-noon-fg mt-10">
-      <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-10 grid grid-cols-2 md:grid-cols-4 gap-8">
+      <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-10 grid grid-cols-2 md:grid-cols-5 gap-8">
         <div className="col-span-2 md:col-span-1">
           <span className="font-display font-extrabold text-xl">veyro</span>
           <p className="text-xs mt-3 opacity-80 leading-relaxed">{t("footer.tagline")}</p>
@@ -63,6 +63,22 @@ function Footer() {
             <Link to="/wishlist" className="block hover:underline">{t("nav.wishlist")}</Link>
             <Link to="/financing-info" className="block hover:underline">{t("footer.financing")}</Link>
             <Link to="/support" className="block hover:underline">{t("footer.help")}</Link>
+            <Link to="/contact" className="block hover:underline">Contact us</Link>
+          </div>
+        </div>
+        <div>
+          <h4 className="font-semibold text-sm mb-3">Legal &amp; policies</h4>
+          <div className="space-y-2 text-xs opacity-80">
+            <Link to="/legal" className="block hover:underline">Legal center</Link>
+            <Link to="/terms" className="block hover:underline">Terms of service</Link>
+            <Link to="/privacy" className="block hover:underline">Privacy policy</Link>
+            <Link to="/refund-policy" className="block hover:underline">Refund policy</Link>
+            <Link to="/shipping-policy" className="block hover:underline">Shipping policy</Link>
+            <Link to="/return-policy" className="block hover:underline">Return policy</Link>
+            <Link to="/warranty" className="block hover:underline">Warranty</Link>
+            <Link to="/seller-policy" className="block hover:underline">Seller policy</Link>
+            <Link to="/reviews-policy" className="block hover:underline">Reviews policy</Link>
+            <Link to="/cookie-policy" className="block hover:underline">Cookie policy</Link>
           </div>
         </div>
       </div>

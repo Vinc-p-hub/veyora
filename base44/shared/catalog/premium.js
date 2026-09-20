@@ -15,6 +15,7 @@ const PREMIUM_BRANDS = [
   "panasonic", "philips", "hisense", "tcl", "vizio", "netgear", "tp-link",
   "tplink", "anker", "belkin", "ring", "ecobee", "roborock", "miele", "bosch",
   "fujifilm", "fuji", "panasonic lumix", "lumix", "olympus", "om system",
+  "surface", "alienware", "realme", "vivo",
   "polar", "suunto", "withings", "dji", "insta360", "eight sleep", "molekule",
 ];
 

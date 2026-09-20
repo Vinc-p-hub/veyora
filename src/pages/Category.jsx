@@ -5,6 +5,7 @@ import { base44 } from "@/api/base44Client";
 import ProductCard from "@/components/ProductCard";
 import { useRegion } from "@/lib/RegionContext";
 import { useLang } from "@/lib/i18n";
+import { applySeo } from "@/lib/seo";
 
 const CATEGORIES = [
   "Laptops", "Smartphones", "Tablets", "Headphones & Earbuds", "TVs & Monitors",
@@ -70,6 +71,17 @@ export default function Category() {
     }
     return list;
   }, [products, q, cat, brand, sort]);
+
+  // SEO landing pages: every category / brand / search view gets a unique
+  // title, meta description and canonical URL.
+  useEffect(() => {
+    const label = cat ? cat : q ? `"${q}"` : "All products";
+    applySeo({
+      title: `${label} | VEYRO Premium Electronics`,
+      description: `Shop ${label.toLowerCase()} on VEYRO — premium electronics marketplace with verified partner merchants, transparent pricing, real stock and flexible installments.`,
+      path: `${window.location.pathname}${window.location.search}`,
+    });
+  }, [cat, q, brand]);
 
   const setParam = (key, val) => {
     const next = new URLSearchParams(params);

@@ -8,6 +8,7 @@ import { useLang } from "@/lib/i18n";
 import { formatPrice } from "@/lib/pricing";
 import { usePricing } from "@/lib/PricingContext";
 import { useSiteText } from "@/lib/useSiteText";
+import { applySeo } from "@/lib/seo";
 import ProductOffers from "@/components/ProductOffers";
 import CustomerReviews from "@/components/reviews/CustomerReviews";
 import SourceReviews from "@/components/reviews/SourceReviews";
@@ -46,6 +47,60 @@ export default function ProductDetail() {
       .then((rows) => setOffers(rows.filter((o) => !o.stale && o.stock_status !== "OUT_OF_STOCK")))
       .catch(() => {});
   }, [product?.id]);
+
+  // SEO: unique title, meta description, canonical URL and Product structured
+  // data. The structured data carries ONLY what is real on the page — price,
+  // availability, brand, identifiers, and ratings exclusively when real
+  // published reviews exist. Nothing is invented.
+  useEffect(() => {
+    if (!product) return;
+    const availabilityMap = {
+      IN_STOCK: "https://schema.org/InStock",
+      LOW_STOCK: "https://schema.org/LimitedAvailability",
+      OUT_OF_STOCK: "https://schema.org/OutOfStock",
+      PREORDER: "https://schema.org/PreOrder",
+    };
+    const jsonLd = {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: product.name,
+      image: [product.image_url, ...(Array.isArray(product.gallery) ? product.gallery : [])].filter(Boolean).slice(0, 8),
+      description: product.description || undefined,
+      sku: product.sku || undefined,
+      gtin13: product.gtin && product.gtin.length === 13 ? product.gtin : undefined,
+      mpn: product.mpn || undefined,
+      brand: product.brand ? { "@type": "Brand", name: product.brand } : undefined,
+      ...(Number(product.reviews_count) > 0 && product.rating ? {
+        aggregateRating: {
+          "@type": "AggregateRating",
+          ratingValue: product.rating,
+          reviewCount: product.reviews_count,
+        },
+      } : {}),
+      offers: {
+        "@type": "Offer",
+        url: `${window.location.origin}/product/${product.slug}`,
+        price: product.customer_price,
+        priceCurrency: product.currency || "USD",
+        itemCondition: "https://schema.org/NewCondition",
+        ...(availabilityMap[product.stock_status] ? { availability: availabilityMap[product.stock_status] } : {}),
+        hasMerchantReturnPolicy: {
+          "@type": "MerchantReturnPolicy",
+          returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+          merchantReturnDays: 30,
+          returnMethod: "https://schema.org/ReturnByMail",
+          returnFees: "https://schema.org/FreeReturn",
+        },
+      },
+    };
+    applySeo({
+      title: `${product.seo_title || `${product.brand} ${product.name}`} | VEYRO`,
+      description: product.meta_description ||
+        `Buy ${product.name}${product.brand ? ` by ${product.brand}` : ""} on VEYRO — transparent pricing, verified sellers and flexible installment plans.`,
+      path: `/product/${product.slug}`,
+      jsonLd,
+    });
+  }, [product, country.code]);
 
   if (loading) {
     return <div className="p-10 max-w-[1400px] mx-auto"><div className="aspect-[3/4] bg-surface-card rounded-lg animate-pulse max-w-md" /></div>;

@@ -16,7 +16,7 @@ import NewArrivalsSection from "@/components/NewArrivalsSection";
 const CATEGORIES = [
   { name: "Smartphones", icon: "📱", fallback: "https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&q=80" },
   { name: "Laptops", icon: "💻", fallback: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&q=80" },
-  { name: "Computer Components", icon: "⚙️", fallback: null },
+  { name: "Computer Components", icon: "⚙️", fallback: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=80" },
   { name: "Accessories", icon: "🔌", fallback: "https://images.unsplash.com/photo-1546868871-7041f2a55778?w=400&q=80" },
   { name: "Tablets", icon: "🖥️", fallback: "https://images.unsplash.com/photo-1561154464-82e9adf32764?w=400&q=80" },
   { name: "Headphones & Earbuds", icon: "🎧", fallback: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80" },
@@ -24,9 +24,9 @@ const CATEGORIES = [
   { name: "Cameras", icon: "📷", fallback: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400&q=80" },
   { name: "Gaming", icon: "🎮", fallback: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400&q=80" },
   { name: "Smartwatches", icon: "⌚", fallback: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80" },
-  { name: "Audio", icon: "🔊", fallback: null },
-  { name: "Smart Home", icon: "🏠", fallback: null },
-  { name: "Networking", icon: "📡", fallback: null },
+  { name: "Audio", icon: "🔊", fallback: "https://images.unsplash.com/photo-1589256469067-ea99122bbdc4?w=400&q=80" },
+  { name: "Smart Home", icon: "🏠", fallback: "https://images.unsplash.com/photo-1519558260268-cde7e03a0152?w=400&q=80" },
+  { name: "Networking", icon: "📡", fallback: "https://images.unsplash.com/photo-1606904825846-647eb07f5be2?w=400&q=80" },
 ];
 
 const PRIORITY_ORDER = ["Smartphones", "Laptops", "Computer Components", "Accessories"];
@@ -260,7 +260,7 @@ export default function Home() {
                 >
                   <span className="w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden bg-white border border-border-hairline flex items-center justify-center group-hover:border-accent-cyan group-hover:shadow-md transition">
                     {realImg ? (
-                      <Image src={realImg} className="w-full h-full group-hover:scale-110 transition duration-500" />
+                      <Image src={realImg} alt={c.name} className="w-full h-full group-hover:scale-110 transition duration-500" />
                     ) : c.fallback ? (
                       <img
                         src={c.fallback}
@@ -307,7 +307,7 @@ export default function Home() {
             {BRANDS.map((b) => (
               <Link
                 key={b}
-                to={`/category?brand=${encodeURIComponent(b)}`}
+                to={`/brand/${encodeURIComponent(b)}`}
                 className="px-4 py-2 rounded-lg bg-surface-primary border border-border-hairline text-xs font-medium hover:border-accent-cyan transition"
               >
                 {b}
