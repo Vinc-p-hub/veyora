@@ -1,6 +1,7 @@
 {
   "type": "supabase",
   "scopes": [
+    "database:write",
     "projects:read"
   ]
 }
