@@ -6,6 +6,7 @@ import { useRegion } from "@/lib/RegionContext";
 import { usePricing } from "@/lib/PricingContext";
 import { useLang } from "@/lib/i18n";
 import { PAYMENT_PROVIDERS } from "@/lib/countries";
+import { formatPrice } from "@/lib/pricing";
 import { base44 } from "@/api/base44Client";
 import { useSiteText } from "@/lib/useSiteText";
 import { cn } from "@/lib/utils";
@@ -14,7 +15,7 @@ export default function Checkout() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { items, clearCart } = useCart();
-  const { country } = useRegion();
+  const { country, currency } = useRegion();
   const { plans, buildPlan } = usePricing();
   const { t } = useLang();
   const getText = useSiteText();
@@ -54,6 +55,16 @@ export default function Checkout() {
   const warnings = data?.warnings || [];
   const orderItems = (data?.items || []).filter((i) => i.available);
   const anyUnavailable = (data?.items || []).some((i) => i.available === false);
+
+  // While the live server check is running or has failed, the summary still
+  // shows the REAL VEYRO prices (customer_price, converted to the active
+  // currency) instead of "…" / zeros — the final total is always re-verified
+  // server-side before the order goes through.
+  const veyroSubtotal = Math.round(items.reduce((s, i) => s + (i.customer_price || 0) * i.qty, 0) * 100) / 100;
+  const veyroShipping = country.shipping || 0;
+  const veyroTax = Math.round(veyroSubtotal * country.taxRate * 100) / 100;
+  const veyroTotal = Math.round((veyroSubtotal + veyroShipping + veyroTax) * 100) / 100;
+  const show = (v) => (data ? money(v) : formatPrice(v, currency));
 
   if (items.length === 0) {
     return (
@@ -175,7 +186,7 @@ export default function Checkout() {
             <h2 className="font-display font-semibold text-lg mb-4">Payment plan</h2>
             <div className="grid grid-cols-2 gap-2.5">
               {plans.map((opt) => {
-                const p = data ? buildPlan(totals.total, opt.id) : null;
+                const p = buildPlan(data ? totals.total : veyroTotal, opt.id);
                 return (
                   <button
                     key={opt.id}
@@ -187,7 +198,7 @@ export default function Checkout() {
                   >
                     <div className="text-sm font-medium">{opt.label}</div>
                     <div className="text-mono text-xs text-accent-cyan mt-1">
-                      {p ? (p.count === 0 ? money(p.total) : `${money(p.first_payment)} today · ${t("card.paymentsTotal", { n: p.count, total: money(p.total) })}`) : "…"}
+                      {p.count === 0 ? show(p.total) : `${show(p.first_payment)} today · ${t("card.paymentsTotal", { n: p.count, total: show(p.total) })}`}
                     </div>
                   </button>
                 );
@@ -237,8 +248,13 @@ export default function Checkout() {
         <div className="md:col-span-1">
           <div className="bg-surface-card border border-border-hairline rounded-lg p-5 sticky top-24">
             <h2 className="font-display font-semibold text-lg mb-4">Summary</h2>
+            {!data && (
+              <p className="text-[11px] text-text-muted bg-surface-primary rounded-lg p-2.5 mb-3">
+                Live server check pending — the amounts shown are the real VEYRO prices for your items. The final total is re-verified before the order is placed.
+              </p>
+            )}
             <div className="space-y-2.5 text-sm max-h-40 overflow-auto scrollbar-hide mb-3">
-              {(data?.items || items.map((i) => ({ product_id: i.id, name: i.name, qty: i.qty, available: true }))).map((i) => (
+              {(data?.items || items.map((i) => ({ product_id: i.id, name: i.name, qty: i.qty, available: true, line_total: (i.customer_price || 0) * i.qty, veyro_price: true }))).map((i) => (
                 <div key={i.product_id} className="flex justify-between gap-2">
                   <span className="text-text-muted">
                     <span className="block truncate">{i.name} ×{i.qty}{i.available === false && <span className="text-red-500"> · unavailable</span>}</span>
@@ -248,15 +264,15 @@ export default function Checkout() {
                       </span>
                     )}
                   </span>
-                  <span className="text-mono shrink-0">{i.line_total !== undefined ? money(i.line_total) : "…"}</span>
+                  <span className="text-mono shrink-0">{i.line_total !== undefined ? (i.veyro_price ? formatPrice(i.line_total, currency) : money(i.line_total)) : "…"}</span>
                 </div>
               ))}
             </div>
             <div className="border-t border-border-hairline pt-3 space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-text-muted">Subtotal</span><span className="text-mono">{money(totals.subtotal)}</span></div>
-              <div className="flex justify-between"><span className="text-text-muted">Shipping</span><span className="text-mono">{money(totals.shipping)}</span></div>
-              <div className="flex justify-between"><span className="text-text-muted">Tax ({(country.taxRate * 100).toFixed(0)}%)</span><span className="text-mono">{money(totals.tax)}</span></div>
-              <div className="flex justify-between font-semibold border-t border-border-hairline pt-2"><span>Total</span><span className="text-mono">{money(totals.total)}</span></div>
+              <div className="flex justify-between"><span className="text-text-muted">Subtotal</span><span className="text-mono">{data ? money(totals.subtotal) : formatPrice(veyroSubtotal, currency)}</span></div>
+              <div className="flex justify-between"><span className="text-text-muted">Shipping</span><span className="text-mono">{data ? money(totals.shipping) : formatPrice(veyroShipping, currency)}</span></div>
+              <div className="flex justify-between"><span className="text-text-muted">Tax ({(country.taxRate * 100).toFixed(0)}%)</span><span className="text-mono">{data ? money(totals.tax) : formatPrice(veyroTax, currency)}</span></div>
+              <div className="flex justify-between font-semibold border-t border-border-hairline pt-2"><span>Total</span><span className="text-mono">{data ? money(totals.total) : formatPrice(veyroTotal, currency)}</span></div>
               {plan && plan.installmentCount > 0 && (
                 <div className="flex justify-between text-accent-cyan"><span>Pay today</span><span className="text-mono">{money(plan.downPayment)}</span></div>
               )}
