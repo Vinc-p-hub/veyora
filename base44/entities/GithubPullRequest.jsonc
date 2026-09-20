@@ -1,0 +1,81 @@
+{
+  "name": "GithubPullRequest",
+  "type": "object",
+  "properties": {
+    "github_id": {
+      "type": "string",
+      "description": "GitHub PR id \u2014 the upsert anchor"
+    },
+    "project_full_name": {
+      "type": "string",
+      "description": "owner/name of the repo the PR belongs to"
+    },
+    "number": {
+      "type": "number"
+    },
+    "title": {
+      "type": "string"
+    },
+    "body": {
+      "type": "string",
+      "description": "PR description (truncated) \u2014 as written by the author"
+    },
+    "author": {
+      "type": "string"
+    },
+    "author_avatar": {
+      "type": "string"
+    },
+    "draft": {
+      "type": "boolean",
+      "default": false
+    },
+    "html_url": {
+      "type": "string"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "OPEN",
+        "CLOSED"
+      ],
+      "default": "OPEN",
+      "description": "OPEN = awaiting review/merge. Set to CLOSED automatically once the PR is no longer open on GitHub"
+    },
+    "created_at": {
+      "type": "string",
+      "description": "Original GitHub creation date"
+    },
+    "updated_at": {
+      "type": "string",
+      "description": "Last GitHub update date"
+    }
+  },
+  "required": [
+    "github_id",
+    "project_full_name",
+    "state"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "name": "GithubProject",
+  "type": "object",
+  "properties": {
+    "full_name": {
+      "type": "string",
+      "description": "Unique repo key owner/name \u2014 the upsert anchor"
+    },
+    "name": {
+      "type": "string"
+    },
+    "owner": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "html_url": {
+      "type": "string"
+    },
+    "private": {
+      "type": "boolean",
+      "default": false
+    },
+    "language": {
+      "type": "string"
+    },
+    "stars": {
+      "type": "number",
+      "default": 0
+    },
+    "open_prs": {
+      "type": "number",
+      "default": 0,
+      "description": "Open pull requests count at last sync (scanned repos only)"
+    },
+    "pushed_at": {
+      "type": "string"
+    },
+    "synced_at": {
+      "type": "string",
+      "description": "When the last githubSync run saved this project"
+    }
+  },
+  "required": [
+    "full_name"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

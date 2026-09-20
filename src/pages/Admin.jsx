@@ -6,7 +6,7 @@ import React, { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import {
   Shield, LayoutDashboard, AlertTriangle, Database, Package, Handshake, Cpu,
-  BarChart3, Coins, Globe, Users, Headphones, ScrollText, Lock, LogOut, Percent, Tag, Images, Star,
+  BarChart3, Coins, Globe, Users, Headphones, ScrollText, Lock, LogOut, Percent, Tag, Images, Star, Github,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -37,6 +37,7 @@ const MENU = [
   { to: "/admin/users", label: "Users & roles", icon: Users },
   { to: "/admin/support", label: "Support", icon: Headphones },
   { to: "/admin/logs", label: "Audit logs", icon: ScrollText },
+  { to: "/admin/github", label: "GitHub", icon: Github },
 ];
 
 export default function Admin() {

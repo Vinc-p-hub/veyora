@@ -43,6 +43,7 @@ import ReviewsAdmin from '@/pages/admin/ReviewsAdmin';
 import Users from '@/pages/admin/Users';
 import SupportAdmin from '@/pages/admin/SupportAdmin';
 import Logs from '@/pages/admin/Logs';
+import GithubPage from '@/pages/admin/Github';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
@@ -134,6 +135,7 @@ const AuthenticatedApp = () => {
                 <Route path="users" element={<Users />} />
                 <Route path="support" element={<SupportAdmin />} />
                 <Route path="logs" element={<Logs />} />
+                <Route path="github" element={<GithubPage />} />
               </Route>
               <Route path="*" element={<PageNotFound />} />
             </Routes>
