@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { Star, ShieldCheck, Truck, RefreshCw, Check, ChevronRight, Heart } from "lucide-react";
+import { Star, ShieldCheck, Truck, RefreshCw, Check, ChevronRight, Heart, Play } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useRegion } from "@/lib/RegionContext";
 import { useCart } from "@/lib/CartContext";
@@ -29,6 +29,7 @@ export default function ProductDetail() {
   const [added, setAdded] = useState(false);
   const [wishlisted, setWishlisted] = useState(false);
   const [activeImage, setActiveImage] = useState(null);
+  const [activeVideo, setActiveVideo] = useState(null);
 
   useEffect(() => {
     setLoading(true);
@@ -121,6 +122,7 @@ export default function ProductDetail() {
   // REAL GALLERY ONLY — main image + the real crawled gallery, deduplicated.
   // The image is never duplicated artificially to fill the thumbnails.
   const gallery = [...new Set([product.image_url, ...(Array.isArray(product.gallery) ? product.gallery : [])].filter(Boolean))];
+  const videos = Array.isArray(product.videos) ? product.videos.filter(Boolean) : [];
   const mainImage = activeImage && gallery.includes(activeImage) ? activeImage : gallery[0] || product.image_url;
   const veyroFreeUnits = Math.max(0, (Number(product.veyro_stock) || 0) - (Number(product.reserved_stock) || 0));
 
@@ -176,23 +178,44 @@ export default function ProductDetail() {
         {/* Gallery */}
         <div className="space-y-3">
           <div className="relative aspect-square rounded-lg overflow-hidden bg-surface-card border border-border-hairline">
-            <img src={mainImage} alt={`${product.name} — ${gallery.indexOf(mainImage) + 1}`} className="w-full h-full object-cover" />
+            {activeVideo ? (
+              <video src={activeVideo} controls autoPlay playsInline className="w-full h-full object-cover bg-black" />
+            ) : (
+              <img src={mainImage} alt={`${product.name} — ${gallery.indexOf(mainImage) + 1}`} className="w-full h-full object-cover" />
+            )}
             <div className="absolute top-4 left-4 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-primary/80 backdrop-blur border border-badge-premium/30 text-xs text-mono text-badge-premium">
               <ShieldCheck className="w-3.5 h-3.5" /> Premium {product.premium_score}%
             </div>
           </div>
-          {gallery.length > 1 && (
+          {(gallery.length > 1 || videos.length > 0) && (
             <div className="grid grid-cols-4 gap-2">
               {gallery.map((img, i) => (
                 <button
                   key={img}
-                  onClick={() => setActiveImage(img)}
+                  onClick={() => { setActiveImage(img); setActiveVideo(null); }}
                   className={cn(
                     "aspect-square rounded-lg overflow-hidden bg-surface-card border transition",
-                    mainImage === img ? "border-accent-cyan opacity-100" : "border-border-hairline opacity-70 hover:opacity-100"
+                    !activeVideo && mainImage === img ? "border-accent-cyan opacity-100" : "border-border-hairline opacity-70 hover:opacity-100"
                   )}
                 >
                   <img src={img} alt={`${product.name} — view ${i + 1}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
+              {videos.map((v, i) => (
+                <button
+                  key={v}
+                  onClick={() => setActiveVideo(v)}
+                  className={cn(
+                    "relative aspect-square rounded-lg overflow-hidden bg-surface-card border transition",
+                    activeVideo === v ? "border-accent-cyan opacity-100" : "border-border-hairline opacity-70 hover:opacity-100"
+                  )}
+                >
+                  <video src={v} preload="metadata" muted className="w-full h-full object-cover" />
+                  <span className="absolute inset-0 flex items-center justify-center">
+                    <span className="w-8 h-8 rounded-full bg-black/50 flex items-center justify-center">
+                      <Play className="w-4 h-4 text-white fill-white" />
+                    </span>
+                  </span>
                 </button>
               ))}
             </div>

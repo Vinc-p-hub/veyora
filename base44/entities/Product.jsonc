@@ -77,6 +77,13 @@
       "default": "COMPLETE",
       "description": "IMAGE_INCOMPLETE = only one usable image while the source clearly exposes more \u2014 queued for a gallery-fix re-crawl. Never filled with duplicated or generated images."
     },
+    "videos": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Product videos (public storage URLs) \u2014 uploaded manually by staff or taken from the source page. Never generated or duplicated."
+    },
     "description": {
       "type": "string"
     },

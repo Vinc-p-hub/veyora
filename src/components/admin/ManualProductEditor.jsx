@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Package, Plus, Trash2, Pencil, Upload, Check, Rocket, Loader2 } from "lucide-react";
+import { Package, Plus, Trash2, Pencil, Upload, Check, Rocket, Loader2, Video, Play } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useToast } from "@/components/ui/use-toast";
 import { Image } from "@/components/ui/image";
@@ -39,7 +39,9 @@ export default function ManualProductEditor() {
   const [loading, setLoading] = useState(true);
   const [draft, setDraft] = useState(EMPTY);
   const [images, setImages] = useState([]);
+  const [videos, setVideos] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
   const [saving, setSaving] = useState(false);
   const [alloc, setAlloc] = useState(10);
 
@@ -79,6 +81,23 @@ export default function ManualProductEditor() {
     }
   };
 
+  const uploadVideos = async (e) => {
+    const files = [...(e.target.files || [])];
+    if (!files.length) return;
+    setUploadingVideo(true);
+    try {
+      const urls = [];
+      for (const file of files.slice(0, 3 - videos.length)) {
+        const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
+        urls.push(file_url);
+      }
+      setVideos((prev) => [...prev, ...urls].slice(0, 3));
+    } finally {
+      setUploadingVideo(false);
+      e.target.value = "";
+    }
+  };
+
   const parseSpecs = (text) => {
     const specs = {};
     for (const line of (text || "").split("\n")) {
@@ -88,6 +107,27 @@ export default function ManualProductEditor() {
     return Object.keys(specs).length ? specs : undefined;
   };
 
+  const buildBase = () => ({
+    name: draft.name.trim(),
+    slug: editing ? draft.slug : `${slugify(draft.name)}-${Date.now().toString(36).slice(-4)}`,
+    brand: draft.brand.trim(),
+    category: draft.category,
+    description: draft.description.trim() || undefined,
+    customer_price: parseFloat(draft.customer_price),
+    currency: (draft.currency || "USD").toUpperCase().slice(0, 3),
+    sku: draft.sku.trim() || undefined,
+    stock_status: draft.stock_status,
+    badge: draft.badge.trim() || undefined,
+    specifications: parseSpecs(draft.specs),
+    variant_info: (draft.color || draft.ram || draft.storage)
+      ? { color: draft.color || undefined, ram: draft.ram || undefined, storage: draft.storage || undefined }
+      : undefined,
+    image_url: images[0],
+    gallery: images.length > 1 ? images.slice(1) : undefined,
+    videos: videos.length ? videos : undefined,
+    source_name: "VEYRO Direct",
+  });
+
   const save = async () => {
     if (!draft.name.trim() || !draft.brand.trim() || !draft.customer_price) {
       toast({ description: "Name, brand and price are required." });
@@ -95,35 +135,49 @@ export default function ManualProductEditor() {
     }
     setSaving(true);
     try {
-      const base = {
-        name: draft.name.trim(),
-        slug: `${slugify(draft.name)}-${Date.now().toString(36).slice(-4)}`,
-        brand: draft.brand.trim(),
-        category: draft.category,
-        description: draft.description.trim() || undefined,
-        customer_price: parseFloat(draft.customer_price),
-        currency: (draft.currency || "USD").toUpperCase().slice(0, 3),
-        sku: draft.sku.trim() || undefined,
-        stock_status: draft.stock_status,
-        badge: draft.badge.trim() || undefined,
-        specifications: parseSpecs(draft.specs),
-        variant_info: (draft.color || draft.ram || draft.storage)
-          ? { color: draft.color || undefined, ram: draft.ram || undefined, storage: draft.storage || undefined }
-          : undefined,
-        image_url: images[0],
-        gallery: images.length > 1 ? images.slice(1) : undefined,
-        source_name: "VEYRO Direct",
-      };
       if (editing) {
-        await base44.entities.Product.update(draft.id, { ...base, slug: draft.slug });
+        await base44.entities.Product.update(draft.id, buildBase());
         toast({ description: "Draft updated." });
       } else {
-        await base44.entities.Product.create({ ...base, status: "DRAFT" });
+        await base44.entities.Product.create({ ...buildBase(), status: "DRAFT" });
         toast({ description: "Draft created — validate then publish." });
       }
       setDraft(EMPTY);
       setImages([]);
+      setVideos([]);
       await load();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // SAVE & PUBLISH: creates the manual product AND publishes it to the front
+  // store (homepage, category, search) in one click — the DRAFT → VALIDATE →
+  // PUBLISH path stays available for staged work.
+  const saveAndPublish = async () => {
+    if (!draft.name.trim() || !draft.brand.trim() || !draft.customer_price) {
+      toast({ description: "Name, brand and price are required." });
+      return;
+    }
+    if (!images.length) {
+      toast({ description: "Upload at least one image before publishing." });
+      return;
+    }
+    setSaving(true);
+    try {
+      let id;
+      if (editing) {
+        await base44.entities.Product.update(draft.id, { ...buildBase(), status: "VALIDATED" });
+        id = draft.id;
+      } else {
+        const created = await base44.entities.Product.create({ ...buildBase(), status: "VALIDATED" });
+        id = created.id;
+      }
+      const record = await base44.entities.Product.get(id);
+      setDraft(EMPTY);
+      setImages([]);
+      setVideos([]);
+      await publish(record);
     } finally {
       setSaving(false);
     }
@@ -168,6 +222,7 @@ export default function ManualProductEditor() {
       badge: p.badge || "", featured: p.premium_score >= 99, new_arrival: true,
     });
     setImages([p.image_url, ...(p.gallery || [])].filter(Boolean));
+    setVideos(Array.isArray(p.videos) ? p.videos.filter(Boolean) : []);
   };
 
   const input = "bg-surface-primary border border-border-hairline rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent-cyan/50";
@@ -183,7 +238,7 @@ export default function ManualProductEditor() {
         <div className="flex items-center justify-between">
           <h3 className="font-display font-semibold text-sm">{editing ? `Edit: ${draft.name}` : "New manual product"}</h3>
           {editing && (
-            <button onClick={() => { setDraft(EMPTY); setImages([]); }} className="text-xs text-text-muted hover:text-text-primary">Cancel</button>
+            <button onClick={() => { setDraft(EMPTY); setImages([]); setVideos([]); }} className="text-xs text-text-muted hover:text-text-primary">Cancel</button>
           )}
         </div>
 
@@ -202,6 +257,25 @@ export default function ManualProductEditor() {
             <input type="file" accept="image/*" multiple onChange={uploadImages} className="hidden" disabled={uploading} />
           </label>
           <span className="text-[10px] text-text-muted">First image = main. Gallery up to 8.</span>
+        </div>
+
+        {/* Videos */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {videos.map((url, i) => (
+            <div key={url} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border-hairline bg-surface-secondary group">
+              <video src={url} preload="metadata" muted className="w-full h-full object-cover" />
+              <button onClick={() => setVideos((prev) => prev.filter((_, x) => x !== i))}
+                className="absolute inset-x-0 bottom-0 bg-black/60 text-white text-[9px] py-0.5 opacity-0 group-hover:opacity-100 transition">remove</button>
+              <span className="absolute top-1 start-1 text-[8px] font-bold bg-noon text-noon-fg px-1 rounded flex items-center gap-0.5"><Video className="w-2 h-2" />{i + 1}</span>
+            </div>
+          ))}
+          {videos.length < 3 && (
+            <label className="w-16 h-16 rounded-lg border-2 border-dashed border-border-hairline bg-surface-primary hover:border-accent-cyan/50 transition flex flex-col items-center justify-center cursor-pointer">
+              {uploadingVideo ? <Loader2 className="w-4 h-4 animate-spin text-text-muted" /> : <Video className="w-4 h-4 text-text-muted" />}
+              <input type="file" accept="video/*" multiple onChange={uploadVideos} className="hidden" disabled={uploadingVideo} />
+            </label>
+          )}
+          <span className="text-[10px] text-text-muted">Product videos — up to 3, shown on the product page.</span>
         </div>
 
         <div className="grid md:grid-cols-4 gap-3">
@@ -225,10 +299,16 @@ export default function ManualProductEditor() {
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
-          <button onClick={save} disabled={saving || uploading}
-            className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center gap-1.5">
-            <Plus className="w-4 h-4" /> {editing ? "Update draft" : "Save draft"}
-          </button>
+          <div className="flex gap-2">
+            <button onClick={save} disabled={saving || uploading || uploadingVideo}
+              className="px-4 py-2 rounded-lg border border-border-hairline text-sm font-semibold hover:border-accent-cyan/40 disabled:opacity-40 flex items-center gap-1.5">
+              <Plus className="w-4 h-4" /> {editing ? "Update draft" : "Save draft"}
+            </button>
+            <button onClick={saveAndPublish} disabled={saving || uploading || uploadingVideo}
+              className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center gap-1.5">
+              <Rocket className="w-4 h-4" /> Save & publish to store
+            </button>
+          </div>
           <label className="flex items-center gap-1.5 text-xs text-text-muted cursor-pointer">
             <input type="checkbox" checked={draft.featured} onChange={(e) => setDraft({ ...draft, featured: e.target.checked })} className="accent-black" /> Featured
           </label>
