@@ -130,7 +130,6 @@ export default function ProductDetail() {
   const plan = buildPlan(price, planId);
   const bestSellerName = offers[0]?.seller_name || product.source_name;
   const multipleSellers = offers.length > 1;
-  const sourcePriceFmt = formatPrice(product.source_price, currency);
   const todayFmt = formatPrice(plan.first_payment, currency);
   const monthlyFmt = formatPrice(plan.next_amount, currency);
   const totalFmt = formatPrice(plan.total, currency);
@@ -238,15 +237,9 @@ export default function ProductDetail() {
 
           {/* Price + installment panel */}
           <div className="bg-surface-card border border-border-hairline rounded-lg p-5 space-y-4">
-            <div className="flex items-end justify-between">
-              <div>
-                <div className="text-[10px] uppercase tracking-widest text-text-muted">Total price</div>
-                <div className="font-display font-bold text-3xl md:text-4xl mt-1">{formatPrice(price, currency)}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-[10px] uppercase tracking-widest text-text-muted">Source price</div>
-                <div className="text-mono text-text-muted line-through text-sm mt-1">{sourcePriceFmt}</div>
-              </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-widest text-text-muted">Total price</div>
+              <div className="font-display font-bold text-3xl md:text-4xl mt-1">{formatPrice(price, currency)}</div>
             </div>
 
             {/* Plan selector */}

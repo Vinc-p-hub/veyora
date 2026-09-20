@@ -18,8 +18,10 @@ export default function ProductCard({ product, compact }) {
   const { buildPlan } = usePricing();
   const price = product.customer_price;
   const plan = buildPlan(price);
-  const discount = product.source_price && product.source_price > price
-    ? Math.round((1 - price / product.source_price) * 100)
+  // Discount is derived from the previous REAL VEYRO customer price — never
+  // from the secret supplier source price (back-office only).
+  const discount = product.previous_price && product.previous_price > price
+    ? Math.round((1 - price / product.previous_price) * 100)
     : 0;
 
   return (
@@ -68,7 +70,7 @@ export default function ProductCard({ product, compact }) {
           )}
           {discount > 0 && (
             <div className="flex items-baseline gap-1.5 flex-wrap mt-0.5">
-              <span className="text-[11px] text-text-muted line-through">{formatPrice(product.source_price, currency)}</span>
+              <span className="text-[11px] text-text-muted line-through">{formatPrice(product.previous_price, currency)}</span>
               <span className="text-[11px] font-semibold text-accent-cyan">{t("card.off", { n: discount })}</span>
             </div>
           )}
