@@ -14,6 +14,27 @@ export const CURRENCIES = {
   XAF: { code: "XAF", symbol: "FCFA", rate: 605 },
   CAD: { code: "CAD", symbol: "C$", rate: 1.36 },
   AUD: { code: "AUD", symbol: "A$", rate: 1.52 },
+  // Global crawler network — supplier currencies of the newly integrated
+  // sources (units per 1 USD). Kept in one place so the whole pipeline
+  // (ingestion → USD base → customer currency) converts consistently.
+  QAR: { code: "QAR", symbol: "QR", rate: 3.64 },
+  SAR: { code: "SAR", symbol: "SR", rate: 3.75 },
+  ZAR: { code: "ZAR", symbol: "R", rate: 18.3 },
+  DKK: { code: "DKK", symbol: "kr", rate: 6.9 },
+  SEK: { code: "SEK", symbol: "kr", rate: 10.6 },
+  NOK: { code: "NOK", symbol: "kr", rate: 10.8 },
+  PLN: { code: "PLN", symbol: "zł", rate: 4.05 },
+  CHF: { code: "CHF", symbol: "CHF", rate: 0.88 },
+  RON: { code: "RON", symbol: "lei", rate: 4.6 },
+  SGD: { code: "SGD", symbol: "S$", rate: 1.34 },
+  TWD: { code: "TWD", symbol: "NT$", rate: 32.3 },
+  JPY: { code: "JPY", symbol: "¥", rate: 152 },
+  TRY: { code: "TRY", symbol: "₺", rate: 34 },
+  INR: { code: "INR", symbol: "₹", rate: 84 },
+  BRL: { code: "BRL", symbol: "R$", rate: 5.5 },
+  MXN: { code: "MXN", symbol: "MX$", rate: 18.5 },
+  HKD: { code: "HKD", symbol: "HK$", rate: 7.8 },
+  NZD: { code: "NZD", symbol: "NZ$", rate: 1.64 },
 };
 export const SUPPORTED_CURRENCIES = Object.keys(CURRENCIES);
 

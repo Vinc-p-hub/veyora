@@ -18,6 +18,10 @@ const BRAND_TOKENS = [
   "realme", "zte", "nubia", "nokia", "fairphone", "gigabyte", "omen",
   "victus", "pavilion", "elitebook", "spectre", "zenfone", "legion",
   "yoga", "thinkbook", "matebook", "mac", "notebook", "laptop", "gaming",
+  // Priority consumer-electronics brands (global catalog network).
+  "bose", "sennheiser", "jbl", "anker", "logitech", "dyson", "garmin",
+  "gopro", "dji", "canon", "nikon", "fujifilm", "panasonic", "nintendo",
+  "playstation", "xbox", "sony", "playstation5", "airpods", "watch",
 ];
 
 // The brands whose new releases must reach the catalog first.
@@ -27,12 +31,16 @@ export const PRIORITY_BRANDS = new Set([
   "asus", "acer", "msi", "razer", "lg", "microsoft", "alienware", "tcl",
   "tecno", "infinix", "vaio", "framework",
   "realme", "zte", "nubia", "nokia", "gigabyte",
+  "bose", "sennheiser", "jbl", "anker", "logitech", "dyson", "garmin",
+  "gopro", "dji", "canon", "nikon", "nintendo",
 ]);
 
-// Flagship device / computer categories.
+// Flagship device / computer categories + the VEYRO priority categories
+// (smartphones, laptops, tablets, gaming, audio, cameras, smartwatches).
 export const PRIORITY_CATEGORIES = new Set([
   "Smartphones", "Laptops", "Phones", "Computers", "Tablets",
   "Computer Components",
+  "Gaming", "Audio", "Cameras", "Smartwatches", "Headphones & Earbuds",
 ]);
 
 // A product counts as a "new arrival" during this window after discovery.
