@@ -12,6 +12,14 @@ import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { cn } from "@/lib/utils";
 
+// Hard allowlist — even an account that somehow carries the admin role is
+// refused here unless its email is one of the designated founder accounts.
+const ALLOWED_EMAILS = [
+  "webdxb1@gmail.com",
+  "vincentnogue2@gmail.com",
+  "vincentnogue@yahoo.com",
+];
+
 const MENU = [
   { to: "/admin", label: "Overview", icon: LayoutDashboard, end: true },
   { to: "/admin/approval-queue", label: "Approval queue", icon: AlertTriangle },
@@ -33,7 +41,9 @@ const MENU = [
 
 export default function Admin() {
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const isAdmin =
+    user?.role === "admin" &&
+    ALLOWED_EMAILS.includes(String(user?.email || "").toLowerCase());
   const [bootstrapped, setBootstrapped] = useState(false);
 
   // Server-side role bootstrap: designated accounts are elevated only after the
