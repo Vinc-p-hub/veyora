@@ -107,9 +107,18 @@ export async function runDiscovery({ admin, source, actor }) {
     const res = await fetchWithTimeout(source.feed_url, 25000);
     if (!res.ok) throw new Error(`Sitemap HTTP ${res.status}`);
     let urls = extractSitemapUrls(await res.text());
-    if (urls.some((u) => u.endsWith(".xml")) && source.max_depth > 1) {
-      const childUrls = urls.filter((u) => u.endsWith(".xml")).slice(0, 10);
-      urls = urls.filter((u) => !u.endsWith(".xml"));
+    // Shopify sitemap indexes paginate child sitemaps with query params
+    // (?from=&to=), so test the pathname, not the raw URL string.
+    const isSitemapDoc = (u) => {
+      try {
+        return new URL(u).pathname.endsWith(".xml");
+      } catch (_e) {
+        return u.endsWith(".xml");
+      }
+    };
+    if (urls.some(isSitemapDoc) && source.max_depth > 1) {
+      const childUrls = urls.filter(isSitemapDoc).slice(0, 10);
+      urls = urls.filter((u) => !isSitemapDoc(u));
       for (const child of childUrls) {
         try {
           const r = await fetchWithTimeout(child, 15000);

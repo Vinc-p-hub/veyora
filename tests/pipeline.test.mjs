@@ -7,7 +7,7 @@ import {
 } from "../base44/shared/catalog/normalize.js";
 import { validateProduct } from "../base44/shared/catalog/validate.js";
 import { matchProduct } from "../base44/shared/catalog/match.js";
-import { enrichFeedRaw, parseProductPage, absolutizeImageUrl, stripHtml } from "../base44/shared/catalog/extract.js";
+import { enrichFeedRaw, parseProductPage, absolutizeImageUrl, stripHtml, extractJsonLd } from "../base44/shared/catalog/extract.js";
 import { premiumScore } from "../base44/shared/catalog/premium.js";
 import { searchCatalog, normalizeQuery, levenshtein } from "../base44/shared/search/engine.js";
 import {
@@ -174,4 +174,30 @@ test("offer selection: reliable supplier beats raw cheapest", () => {
 test("levenshtein distance sanity", () => {
   assert.equal(levenshtein("headfon", "headphones") <= 3, true);
   assert.equal(levenshtein("abc", "abc"), 0);
+});
+
+test("json-ld extraction: real script tag wins, Next.js RSC payload fallback", () => {
+  const productLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: "Test Laptop",
+    sku: "TL-1",
+    offers: { "@type": "Offer", price: "999", priceCurrency: "USD", availability: "https://schema.org/InStock" },
+  };
+  const real = `<script type="application/ld+json">${JSON.stringify(productLd)}</script>`;
+  const docs1 = extractJsonLd(real);
+  assert.equal(docs1.length, 1);
+  assert.equal(docs1[0].name, "Test Laptop");
+
+  // Next.js flight payload: the same JSON-LD escaped inside self.__next_f.push
+  const escaped = JSON.stringify(productLd).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  const rsc = `<script>self.__next_f.push([1,"${escaped}"])</script>`;
+  const docs2 = extractJsonLd(rsc);
+  assert.equal(docs2.length, 1);
+  assert.equal(docs2[0].name, "Test Laptop");
+  assert.equal(docs2[0].offers.price, "999");
+
+  // A real script tag always wins over the embedded fallback
+  const docs3 = extractJsonLd(real + rsc);
+  assert.equal(docs3.length, 2);
 });

@@ -79,6 +79,23 @@ export function extractJsonLd(html) {
       /* malformed JSON-LD block — skip */
     }
   }
+  // Next.js RSC / flight payloads embed JSON-LD as an escaped string inside
+  // self.__next_f.push(...) chunks instead of a real <script type="ld+json">
+  // tag — common for Next.js merchants (e.g. Adarc). Only used when no real
+  // JSON-LD block was found, so a proper script tag always wins.
+  if (!out.length) {
+    const escRe = /\{\\"@context\\":\\"https:\\?\/\\?\/schema\.org\\"[\s\S]*?\}(?=["\n])/g;
+    let em;
+    while ((em = escRe.exec(html))) {
+      try {
+        const literal = JSON.parse('"' + em[0] + '"');
+        const parsed = JSON.parse(literal);
+        collectProductNodes(Array.isArray(parsed) ? parsed : [parsed], out);
+      } catch (_e) {
+        /* malformed embedded JSON-LD — skip */
+      }
+    }
+  }
   return out;
 }
 
