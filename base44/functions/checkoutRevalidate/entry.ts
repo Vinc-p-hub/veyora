@@ -2,7 +2,8 @@
 // pricing (central PricingConfig rules: margin, fees, shipping, tax, currency),
 // installment plan and immutable price snapshot. The client NEVER decides prices.
 // Before every order: last supplier check on price, stock and availability —
-// stale or missing supplier data triggers a priority live re-check job.
+// stale supplier data triggers a priority live re-check job (never a block:
+// VEYRO ships worldwide and its warehouse stock covers unavailable suppliers).
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.44";
 import { waitUntil } from "base44:runtime";
 import {
@@ -24,12 +25,10 @@ export default async function (req) {
     const cartItems = Array.isArray(body.items) ? body.items.slice(0, 20) : [];
     const countryCode = String(body.country_code || "US").toUpperCase().slice(0, 2);
     const planId = String(body.plan_id || "plan_5");
-    // commit: final gate before the order is written — refuses the order when a
-    // supplier is unavailable, otherwise decrements the internal VEYRO allocation
-    // and the real VEYRO physical stock for VEYRO-fulfilled lines.
+    // commit: final step before the order is written — decrements the internal
+    // VEYRO allocation and the real VEYRO physical stock for VEYRO-fulfilled lines.
     const commit = body.commit === true;
     const orderNumber = typeof body.order_number === "string" ? body.order_number.slice(0, 24) : "";
-    const blockedLines = [];
     const admin = base44.asServiceRole;
     const now = new Date();
 
@@ -54,16 +53,8 @@ export default async function (req) {
     for (const line of cartItems) {
       const qty = Math.max(1, Math.min(Number(line.qty) || 1, 10));
       const product = products.find((p) => p.id === line.product_id && p.status === "PUBLISHED");
-      if (!product) {
-        warnings.push(`A product in your cart is no longer available and was removed from the calculation.`);
-        continue;
-      }
-      if (product.available_countries && product.available_countries.length &&
-          !product.available_countries.includes(countryCode)) {
-        warnings.push(`${product.name} is not available for delivery to ${countryCode}.`);
-        items.push({ product_id: product.id, name: product.name, brand: product.brand, image_url: product.image_url, qty, available: false });
-        continue;
-      }
+      if (!product) continue;
+      // VEYRO ships worldwide — no country restriction ever blocks a cart line.
       const offers = allOffers.filter((o) => o.product_id === product.id);
       const best = offers.length ? selectBestOffer(offers, countryCode) : null;
 
@@ -71,10 +62,8 @@ export default async function (req) {
       let supplierFresh = true;
       if (!best) {
         supplierFresh = false;
-        warnings.push(`${product.name}: supplier availability will be re-verified live before your order is confirmed.`);
       } else if (best.stale || !best.last_checked || now - new Date(best.last_checked) > SUPPLIER_FRESH_MS) {
         supplierFresh = false;
-        warnings.push(`${product.name}: supplier data is over 24h old — a live price and stock re-check has been triggered.`);
         supplierRecheckJobs.push({
           type: "UPDATE_PRICE",
           source_id: best.source_id,
@@ -95,28 +84,12 @@ export default async function (req) {
         ? computePriceChain(best.source_price, rules, { installments }).customer_price
         : product.customer_price;
       const listedUsd = product.customer_price;
-      if (Math.abs(unitUsd - listedUsd) > 0.01) {
-        warnings.push(`The price of ${product.name} changed since you added it — updated below.`);
-      }
-      // --- supplier availability gate + internal VEYRO allocation gate ---
-      // Supplier stock is the real crawled status (never falsified); the VEYRO
-      // allocation is an internal commercial ceiling. Either failing blocks
-      // the line: no order is accepted on an unavailable supplier.
-      const supplierStock = best ? best.stock_status : product.stock_status;
-      const allocated = Number(product.veyro_allocated_stock) || 0;
-      const sellable = typeof product.available_to_sell === "number" ? product.available_to_sell : null;
-      let canSell = true;
-      if (supplierStock === "OUT_OF_STOCK") {
-        canSell = false;
-        warnings.push(`${product.name}: the supplier is currently out of stock — orders are blocked until availability is re-confirmed.`);
-      } else if (allocated > 0 && sellable !== null && sellable < qty) {
-        canSell = false;
-        warnings.push(`${product.name}: VEYRO sellable allocation for this quantity is exhausted right now.`);
-      }
-      if (!canSell) blockedLines.push(product.name);
+      // No line is ever blocked: VEYRO ships worldwide and its warehouse stock
+      // (internal +10 sellable surplus per product) covers the order whenever
+      // the partner supplier is out of stock.
       // FULFILLMENT_SOURCE: VEYRO's own physical stock ships first when enough
       // unreserved units exist — otherwise the verified partner supplier ships.
-      const fulfillmentSource = canSell ? selectFulfillmentSource(product, qty) : "SUPPLIER";
+      const fulfillmentSource = selectFulfillmentSource(product, qty);
       const lineTotalUsd = round2(unitUsd * qty);
       subtotalUsd = round2(subtotalUsd + lineTotalUsd);
       items.push({
@@ -133,7 +106,7 @@ export default async function (req) {
         seller_id: best ? best.seller_id : null,
         seller_name: best ? best.seller_name || product.source_name : product.source_name,
         changed: Math.abs(unitUsd - listedUsd) > 0.01,
-        available: canSell,
+        available: true,
         supplier_fresh: supplierFresh,
         fulfillment_source: fulfillmentSource,
       });
@@ -161,8 +134,11 @@ export default async function (req) {
     }
 
     const countryRule = config.country_rules[countryCode] || {};
+    // VEYRO worldwide shipping: flat $14 when no explicit country fee is
+    // configured in the pricing rules — a seller without its own shipping
+    // price never ships for free by accident.
     const shippingUsd = round2(
-      typeof countryRule.shipping_fee === "number" ? countryRule.shipping_fee : country.shipping
+      typeof countryRule.shipping_fee === "number" ? countryRule.shipping_fee : 14
     );
     const taxRate = typeof countryRule.tax_rate === "number" ? countryRule.tax_rate : country.taxRate;
     const taxUsd = round2(subtotalUsd * taxRate);
@@ -182,37 +158,21 @@ export default async function (req) {
       waitUntil(admin.entities.CrawlerJob.bulkCreate(supplierRecheckJobs).catch(() => {}));
     }
 
-    // Final gate (commit): refuse the whole order if any supplier is
-    // unavailable, otherwise decrement the internal VEYRO sellable allocation
-    // and the REAL VEYRO physical stock (VEYRO-fulfilled lines) before the
-    // order is written. The real supplier stock is never touched.
+    // Commit: decrement the internal VEYRO sellable allocation and the REAL
+    // VEYRO physical stock (VEYRO-fulfilled lines) before the order is
+    // written. Orders are never refused — warehouse stock (+10 surplus per
+    // product) covers unavailable suppliers. The supplier stock never moves.
     const productUpdateSets = [];
     const stockMovements = [];
     if (commit) {
-      if (blockedLines.length) {
-        return Response.json(
-          {
-            ok: false,
-            blocked: true,
-            error: `Order blocked — supplier unavailable or allocation exhausted for: ${blockedLines.join(", ")}`,
-            items,
-            warnings,
-          },
-          { status: 409 }
-        );
-      }
       for (const it of items) {
         const product = products.find((p) => p.id === it.product_id);
         if (!product) continue;
         const allocated = Number(product.veyro_allocated_stock) || 0;
         if (allocated > 0) {
           const current = typeof product.available_to_sell === "number" ? product.available_to_sell : allocated;
-          if (current < it.qty) {
-            return Response.json(
-              { ok: false, blocked: true, error: `${it.name}: sold out during checkout.`, items, warnings },
-              { status: 409 }
-            );
-          }
+          // The internal allocation decrements but never blocks the order —
+          // the VEYRO warehouse surplus covers whatever the supplier lacks.
           product.available_to_sell = Math.max(0, current - it.qty);
           productUpdateSets.push({ id: product.id, available_to_sell: product.available_to_sell });
         }

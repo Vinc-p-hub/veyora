@@ -132,7 +132,7 @@ export default function ProductDetail() {
   const todayFmt = formatPrice(plan.first_payment, currency);
   const monthlyFmt = formatPrice(plan.next_amount, currency);
   const totalFmt = formatPrice(plan.total, currency);
-  const shipping = country.shipping ? formatPrice(country.shipping, currency) : "Free";
+  const shipping = formatPrice(country.shipping || 14, currency);
   const tax = Math.round(price * country.taxRate * 100) / 100;
 
   const handleAdd = () => {
