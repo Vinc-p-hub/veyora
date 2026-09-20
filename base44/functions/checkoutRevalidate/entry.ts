@@ -34,8 +34,6 @@ export default async function (req) {
 
     if (!cartItems.length) return Response.json({ error: "Cart empty" }, { status: 400 });
 
-    const products = await admin.entities.Product.list(null, 500);
-    const allOffers = await admin.entities.Offer.list(null, 500);
     const country = getCountry(countryCode);
     const currency = CURRENCIES[country.currency] || CURRENCIES.USD;
 
@@ -49,13 +47,21 @@ export default async function (req) {
     const items = [];
     const snapshotItems = [];
     const supplierRecheckJobs = [];
+    // Every cart line is priced, whatever happens: each product is fetched live
+    // by its id (no listing cap, no status filter) and its unit price always
+    // resolves — best offer → VEYRO price → engine price from the source price.
+    const productMap = new Map();
 
     for (const line of cartItems) {
       const qty = Math.max(1, Math.min(Number(line.qty) || 1, 10));
-      const product = products.find((p) => p.id === line.product_id && p.status === "PUBLISHED");
-      if (!product) continue;
+      let product = productMap.get(line.product_id) || null;
+      if (!product) {
+        product = await admin.entities.Product.get(line.product_id).catch(() => null);
+        if (product) productMap.set(line.product_id, product);
+      }
+      if (!product) continue; // only a deleted product can ever be dropped
       // VEYRO ships worldwide — no country restriction ever blocks a cart line.
-      const offers = allOffers.filter((o) => o.product_id === product.id);
+      const offers = await admin.entities.Offer.filter({ product_id: product.id }).catch(() => []);
       const best = offers.length ? selectBestOffer(offers, countryCode) : null;
 
       // --- last supplier verification before the order ---
@@ -82,7 +88,11 @@ export default async function (req) {
       });
       const unitUsd = best
         ? computePriceChain(best.source_price, rules, { installments }).customer_price
-        : product.customer_price;
+        : product.customer_price != null
+          ? product.customer_price
+          : product.source_price != null
+            ? computePriceChain(product.source_price, rules, { installments }).customer_price
+            : 0;
       const listedUsd = product.customer_price;
       // No line is ever blocked: VEYRO ships worldwide and its warehouse stock
       // (internal +10 sellable surplus per product) covers the order whenever
@@ -166,7 +176,7 @@ export default async function (req) {
     const stockMovements = [];
     if (commit) {
       for (const it of items) {
-        const product = products.find((p) => p.id === it.product_id);
+        const product = productMap.get(it.product_id);
         if (!product) continue;
         const allocated = Number(product.veyro_allocated_stock) || 0;
         if (allocated > 0) {
