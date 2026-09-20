@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Heart, CreditCard, LifeBuoy, MapPin, Globe, Check, Loader2 } from "lucide-react";
+import { Heart, CreditCard, LifeBuoy, MapPin, Globe, Check, Loader2, UserCircle2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { useLang, LANGUAGES } from "@/lib/i18n";
@@ -10,7 +10,7 @@ import { useToast } from "@/components/ui/use-toast";
 const EMPTY_ADDRESS = { label: "", name: "", street: "", city: "", country: "", phone: "" };
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, isLoadingAuth } = useAuth();
   const { t, lang, setLang } = useLang();
   const { countryCode, setCountryCode, country, countries, currency } = useRegion();
   const { toast } = useToast();
@@ -22,13 +22,35 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (!user) return;
     base44.auth.me().then((data) => {
       setMe(data);
       setFullName(data.full_name || "");
       setPhone(data.phone || "");
       setAddresses(Array.isArray(data.addresses) ? data.addresses : []);
     });
-  }, []);
+  }, [user?.id]);
+
+  // Signed-out visitors get a clear sign-in entry point instead of an empty account page.
+  if (!isLoadingAuth && !user) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-16 text-center">
+        <UserCircle2 className="w-12 h-12 mx-auto text-text-muted mb-4" />
+        <h1 className="font-display font-bold text-2xl">{t("profile.title")}</h1>
+        <p className="text-sm text-text-muted mt-2">{t("profile.loginPrompt")}</p>
+        <div className="flex gap-3 justify-center mt-6">
+          <Link to="/login"
+            className="px-5 py-2.5 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90">
+            {t("profile.loginCta")}
+          </Link>
+          <Link to="/register"
+            className="px-5 py-2.5 rounded-lg border border-border-hairline text-sm font-medium hover:border-accent-cyan/40">
+            {t("profile.registerCta")}
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const save = async () => {
     setSaving(true);
