@@ -4,9 +4,11 @@ import { Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
 import Stars from "@/components/reviews/Stars";
+import ManualSourceReviewForm from "@/components/admin/reviews/ManualSourceReviewForm";
 
 // Imported source reviews — verbatim reviews from authorized merchants. The
-// admin can hide/restore/delete them; the text itself is immutable.
+// admin can hide/restore/delete them; the text itself is immutable. Staff can
+// also paste a real partner review manually (stored verbatim, source-labeled).
 export default function SourceReviewsAdmin() {
   const [reviews, setReviews] = useState(null);
   const [productNames, setProductNames] = useState({});
@@ -61,6 +63,7 @@ export default function SourceReviewsAdmin() {
 
   return (
     <div className="bg-surface-card border border-border-hairline rounded-lg p-5">
+      <ManualSourceReviewForm onCreated={load} />
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
@@ -80,7 +83,7 @@ export default function SourceReviewsAdmin() {
         <div className="h-24 rounded-lg animate-pulse bg-surface-primary" />
       ) : filtered.length === 0 ? (
         <p className="text-sm text-text-muted">
-          No imported source reviews yet. Enable “Import public reviews” on a crawler source whose reuse terms permit it.
+          No source reviews yet. The crawler imports them automatically from merchants that publish them, or add a real partner review manually with “Add partner review”.
         </p>
       ) : (
         <div className="space-y-3">
