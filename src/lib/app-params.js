@@ -14,11 +14,13 @@ const getAppParams = () => {
 	if (isClearAccessTokenRequested()) {
 		clearStoredAccessToken();
 	}
+	// Fallbacks for builds made outside the platform (local dev, GitHub clone):
+	// without them the SDK targets /api/apps/undefined/... and every data call fails.
 	return {
-		appId: import.meta.env.VITE_BASE44_APP_ID,
+		appId: import.meta.env.VITE_BASE44_APP_ID || '6aae3bd1fa32640256bb8573',
 		token: getAccessToken(),
 		functionsVersion: import.meta.env.VITE_BASE44_FUNCTIONS_VERSION,
-		appBaseUrl: import.meta.env.VITE_BASE44_APP_BASE_URL,
+		appBaseUrl: import.meta.env.VITE_BASE44_APP_BASE_URL || 'https://veyro-tech-prime.base44.app',
 	}
 }
 
