@@ -60,6 +60,7 @@ export const PAYMENT_PROVIDERS = {
   onafriq: { id: "onafriq", name: "Onafriq", desc: "Pan-African mobile money network", badge: "Africa" },
   alipay: { id: "alipay", name: "Alipay", desc: "Alipay wallet", badge: "China" },
   crypto: { id: "crypto", name: "Crypto", desc: "USDT · BTC · ETH", badge: "On-chain" },
+  nexapay: { id: "nexapay", name: "NexaPay", desc: "Card · Mobile Money — secure hosted checkout", badge: "Global" },
 };
 
 // Region defaults: tax rate, shipping (USD) and default provider bundle.
@@ -114,7 +115,7 @@ const RAW_COUNTRIES = [
   "MD|Moldova|MDL|🇲🇩|europe", "UA|Ukraine|UAH|🇺🇦|europe", "BY|Belarus|BYN|🇧🇾|europe",
   "RU|Russia|RUB|🇷🇺|europe",
   // ── Middle East & North Africa ─────────────────────────────────────────────
-  "AE|United Arab Emirates|AED|🇦🇪|mena|0.05|stripe,paystack,crypto",
+  "AE|United Arab Emirates|AED|🇦🇪|mena|0.05|stripe,paystack,nexapay,crypto",
   "SA|Saudi Arabia|SAR|🇸🇦|mena|0.15", "QA|Qatar|QAR|🇶🇦|mena", "KW|Kuwait|KWD|🇰🇼|mena",
   "BH|Bahrain|BHD|🇧🇭|mena", "OM|Oman|OMR|🇴🇲|mena", "JO|Jordan|JOD|🇯🇴|mena",
   "LB|Lebanon|LBP|🇱🇧|mena", "IQ|Iraq|IQD|🇮🇶|mena", "YE|Yemen|YER|🇾🇪|mena",
@@ -200,6 +201,10 @@ export const COUNTRIES = RAW_COUNTRIES.map((row) => {
     providers: providers ? providers.split(",") : def.providers,
   };
 });
+
+// Frontend-only allowlist — the storefront currently exposes ONLY NexaPay.
+// The full catalog and per-country provider data above stay intact (admin / future use).
+export const ACTIVE_PROVIDERS = ["nexapay"];
 
 export const LANGUAGES = [
   { code: "en", label: "English", dir: "ltr" },

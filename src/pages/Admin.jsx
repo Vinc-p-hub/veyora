@@ -6,7 +6,7 @@ import React, { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import {
   Shield, LayoutDashboard, AlertTriangle, Database, Package, Handshake, Cpu,
-  BarChart3, Coins, Globe, Users, Headphones, ScrollText, Lock, LogOut, Percent, Tag, Images, Star, Github,
+  BarChart3, Coins, Globe, Users, Headphones, ScrollText, Lock, LogOut, Percent, Tag, Images, Star, Github, Boxes,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -24,6 +24,7 @@ const MENU = [
   { to: "/admin", label: "Overview", icon: LayoutDashboard, end: true },
   { to: "/admin/approval-queue", label: "Approval queue", icon: AlertTriangle },
   { to: "/admin/products", label: "Products", icon: Database },
+  { to: "/admin/stock", label: "Stock", icon: Boxes },
   { to: "/admin/orders", label: "Orders", icon: Package },
   { to: "/admin/partners", label: "Partners", icon: Handshake },
   { to: "/admin/offers", label: "Offers", icon: Tag },

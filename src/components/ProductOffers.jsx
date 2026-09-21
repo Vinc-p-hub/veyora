@@ -4,16 +4,17 @@ import { formatPrice } from "@/lib/pricing";
 import { useRegion } from "@/lib/RegionContext";
 import { cn } from "@/lib/utils";
 
-// Multi-seller offer comparison — real supplier offers joined with the live
-// VEYRO margin so every offer shows the total price the customer would pay.
-// Sorted on price + shipping + reliability, not price alone.
+// Multi-seller offer comparison — VEYRO guarantees ONE single store price.
+// Supplier costs and margins are strictly back-office: this panel NEVER shows
+// per-seller prices (the customer must never see how the price is built).
+// It only shows who can ship, how fast, and how reliable each seller is —
+// VEYRO automatically selects the best seller at checkout, server-side.
 export default function ProductOffers({ product, offers }) {
   const { currency } = useRegion();
   const [open, setOpen] = useState(false);
-  const ratio = product.source_price > 0 ? product.customer_price / product.source_price : 1.3;
   const rows = [...offers].sort(
     (a, b) =>
-      a.source_price * ratio + (a.shipping_cost || 0) * 0.5 - (b.source_price * ratio + (b.shipping_cost || 0) * 0.5)
+      a.source_price + (a.shipping_cost || 0) * 0.5 - (b.source_price + (b.shipping_cost || 0) * 0.5)
   );
 
   return (
@@ -23,12 +24,15 @@ export default function ProductOffers({ product, offers }) {
         className="w-full flex items-center justify-between p-4 text-sm font-semibold hover:bg-surface-secondary/50 transition"
       >
         <span className="flex items-center gap-2">
-          <Store className="w-4 h-4 text-accent-cyan" /> {offers.length} sellers available — compare offers
+          <Store className="w-4 h-4 text-accent-cyan" /> {offers.length} sellers available
         </span>
         <ChevronDown className={cn("w-4 h-4 transition", open && "rotate-180")} />
       </button>
       {open && (
         <div className="border-t border-border-hairline">
+          <p className="px-4 py-2.5 text-[11px] text-text-muted bg-surface-primary/50">
+            One guaranteed price — VEYRO automatically selects the most reliable seller for your order.
+          </p>
           {rows.map((o, i) => (
             <div
               key={o.id}
@@ -45,12 +49,7 @@ export default function ProductOffers({ product, offers }) {
                   {` · reliability ${Math.round(o.supplier_score || 80)}/100`}
                 </div>
               </div>
-              <div className="text-right shrink-0">
-                <div className="font-display font-bold">
-                  {formatPrice(o.source_price * ratio + (o.shipping_cost || 0), currency)}
-                </div>
-                {i === 0 && <div className="text-[10px] text-accent-cyan font-medium">Best offer</div>}
-              </div>
+              {i === 0 && <span className="text-[10px] text-accent-cyan font-medium shrink-0">Selected</span>}
             </div>
           ))}
         </div>

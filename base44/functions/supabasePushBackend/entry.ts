@@ -7,7 +7,9 @@ import {
   getSupabaseContext, runSql, snakeCase, inferColumns, buildTableSql, buildUpsertSql,
 } from "../../shared/integrations/supabase.js";
 
-const SCHEMA = "veyro";
+// public = the schema Supabase's Table Editor shows by default, so the synced
+// tables are immediately visible in the dashboard.
+const SCHEMA = "public";
 const ENTITY_NAMES = [
   "Product", "Offer", "Seller", "CrawlerSource", "CrawlerJob",
   "Order", "PaymentIntent", "PspWebhookEvent", "Refund", "Dispute",

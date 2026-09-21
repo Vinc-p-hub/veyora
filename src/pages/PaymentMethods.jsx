@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { CreditCard, ShieldCheck, Check } from "lucide-react";
 import { base44 } from "@/api/base44Client";
-import { PAYMENT_PROVIDERS } from "@/lib/countries";
+import { PAYMENT_PROVIDERS, ACTIVE_PROVIDERS } from "@/lib/countries";
 import { useLang } from "@/lib/i18n";
 import { useRegion } from "@/lib/RegionContext";
 import { useToast } from "@/components/ui/use-toast";
@@ -23,7 +23,7 @@ export default function PaymentMethods() {
     toast({ description: t("payment.preferredSet") });
   };
 
-  const available = (country.providers || []).map((p) => PAYMENT_PROVIDERS[p]).filter(Boolean);
+  const available = ACTIVE_PROVIDERS.map((p) => PAYMENT_PROVIDERS[p]).filter(Boolean);
 
   return (
     <div className="max-w-3xl mx-auto px-4 md:px-8 py-8 space-y-6">

@@ -4,6 +4,7 @@ import { Package, CreditCard, Clock, Check, Truck } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useRegion } from "@/lib/RegionContext";
 import { formatPrice } from "@/lib/pricing";
+import NexaPayWidget from "@/components/payments/NexaPayWidget";
 
 const STATUS_FLOW = ["PAID", "VERIFYING_SUPPLIER", "PROCESSING", "SHIPPED", "IN_TRANSIT", "DELIVERED", "COMPLETED"];
 const STATUS_LABEL = {
@@ -23,6 +24,7 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState(localStorage.getItem("veyro_email") || "");
   const [searched, setSearched] = useState(false);
+  const [paying, setPaying] = useState(null); // resume a hosted-checkout payment inline
   const placed = params.get("placed");
 
   const loadOrders = async (em) => {
@@ -94,6 +96,29 @@ export default function Orders() {
                     )}
                   </div>
                 </div>
+
+                {/* Pending payment — resume the hosted checkout inline */}
+                {order.status === "PENDING_PAYMENT" && order.payment_provider === "nexapay" && (
+                  paying && paying.id === order.id ? (
+                    <div className="border-b border-border-hairline p-4 bg-surface-secondary">
+                      <NexaPayWidget
+                        key={order.order_number}
+                        orderNumber={order.order_number}
+                        onPaid={() => { setPaying(null); loadOrders(email); }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="border-b border-border-hairline px-4 py-3 bg-amber-50 flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-xs text-amber-700">Payment pending — your order is confirmed once the payment is verified.</div>
+                      <button
+                        onClick={() => setPaying(order)}
+                        className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-xs font-semibold"
+                      >
+                        Complete payment
+                      </button>
+                    </div>
+                  )
+                )}
 
                 {/* Items */}
                 <div className="p-4 space-y-2">

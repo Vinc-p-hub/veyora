@@ -5,11 +5,12 @@ import { useCart } from "@/lib/CartContext";
 import { useRegion } from "@/lib/RegionContext";
 import { usePricing } from "@/lib/PricingContext";
 import { useLang } from "@/lib/i18n";
-import { PAYMENT_PROVIDERS } from "@/lib/countries";
+import { PAYMENT_PROVIDERS, ACTIVE_PROVIDERS } from "@/lib/countries";
 import { formatPrice } from "@/lib/pricing";
 import { base44 } from "@/api/base44Client";
 import { useSiteText } from "@/lib/useSiteText";
 import { cn } from "@/lib/utils";
+import NexaPayWidget from "@/components/payments/NexaPayWidget";
 
 export default function Checkout() {
   const [params] = useSearchParams();
@@ -21,9 +22,13 @@ export default function Checkout() {
   const getText = useSiteText();
 
   const [planId, setPlanId] = useState(params.get("plan") || "plan_5");
-  const [provider, setProvider] = useState(country.providers[0]);
+  // Storefront payment methods are filtered by the ACTIVE_PROVIDERS allowlist
+  // (currently NexaPay only) — country provider data stays intact in the registry.
+  const activeProviders = ACTIVE_PROVIDERS.filter((p) => PAYMENT_PROVIDERS[p]);
+  const [provider, setProvider] = useState(activeProviders[0]);
   const [form, setForm] = useState({ name: "", email: "", address: "", city: "", postal: "" });
   const [placing, setPlacing] = useState(false);
+  const [payingOrder, setPayingOrder] = useState(null); // live NexaPay payment step
   const [data, setData] = useState(null); // server-authoritative revalidation
   const [revalidating, setRevalidating] = useState(true);
 
@@ -58,6 +63,26 @@ export default function Checkout() {
   const veyroTax = Math.round(veyroSubtotal * country.taxRate * 100) / 100;
   const veyroTotal = Math.round((veyroSubtotal + veyroShipping + veyroTax) * 100) / 100;
   const show = (v) => (data ? money(v) : formatPrice(v, currency));
+
+  if (payingOrder) {
+    return (
+      <div className="px-4 md:px-8 py-6 md:py-10 max-w-2xl mx-auto">
+        <h1 className="font-display font-bold text-2xl md:text-3xl mb-1">Secure payment</h1>
+        <p className="text-sm text-text-muted mb-6">
+          Order {payingOrder.orderNumber} ·{" "}
+          <span className="text-mono">
+            {payingOrder.total.toLocaleString(undefined, { maximumFractionDigits: 2 })} {payingOrder.currency}
+          </span>{" "}
+          — your order is confirmed once NexaPay verifies the payment.
+        </p>
+        <NexaPayWidget
+          key={payingOrder.orderNumber}
+          orderNumber={payingOrder.orderNumber}
+          onPaid={() => navigate(`/orders?placed=${payingOrder.orderNumber}`)}
+        />
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -141,12 +166,19 @@ export default function Checkout() {
         installment_count: d.plan?.installmentCount || 0,
         installment_amount: d.plan?.installmentAmount || 0,
         price_snapshot: d.snapshot, // immutable — future price changes never touch this order
-        status: "PAID",
+        status: provider === "nexapay" ? "PENDING_PAYMENT" : "PAID",
         address: { line: form.address, city: form.city, postal: form.postal },
         tracking_number: "TRK" + Math.random().toString(36).slice(2, 10).toUpperCase(),
       });
       clearCart();
-      navigate(`/orders?placed=${orderNumber}`);
+      if (provider === "nexapay") {
+        // The order stays PENDING_PAYMENT until the signed NexaPay webhook
+        // confirms the payment server-side — never on the client's word.
+        setPlacing(false);
+        setPayingOrder({ orderNumber, currency: d.currency, total: finalTotals.total });
+      } else {
+        navigate(`/orders?placed=${orderNumber}`);
+      }
     } catch (e) {
       setPlacing(false);
       alert("Order failed. Please try again.");
@@ -207,7 +239,7 @@ export default function Checkout() {
             <h2 className="font-display font-semibold text-lg mb-1">Payment method</h2>
             <p className="text-xs text-text-muted mb-4">Available providers for {country.name}</p>
             <div className="space-y-2.5">
-              {country.providers.map((pid) => {
+              {activeProviders.map((pid) => {
                 const p = PAYMENT_PROVIDERS[pid];
                 return (
                   <button

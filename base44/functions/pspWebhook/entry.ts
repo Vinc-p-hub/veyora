@@ -17,16 +17,26 @@ export default async function (req) {
   const rawBody = await req.text();
 
   // --- 1) SIGNATURE VERIFY (fail closed) ---
-  const webhookKey = secrets.get("VEYRO_PSP_WEBHOOK_KEY");
-  const provider = getPsp("onramp_veyro");
-  const signature = req.headers.get(provider.signatureHeader) || req.headers.get("x-signature") || "";
+  // Provider dispatch: a NexaPay-Signature header routes to the NexaPay
+  // contract (own signature scheme + own signing secret).
+  const providerId = req.headers.get("nexapay-signature") ? "nexapay" : "onramp_veyro";
+  let webhookKey;
+  try {
+    webhookKey = secrets.get(providerId === "nexapay" ? "NEXAPAY_WEBHOOK_SECRET" : "VEYRO_PSP_WEBHOOK_KEY");
+  } catch (_e) {
+    webhookKey = undefined; // missing secret -> fail closed below
+  }
+  const provider = getPsp(providerId);
+  const signature =
+    req.headers.get(provider.signatureHeader) ||
+    (providerId === "nexapay" ? "" : req.headers.get("x-signature") || "");
   const check = await provider.verifySignature(rawBody, signature, webhookKey);
   if (!check.ok) {
     if (check.reason === "WEBHOOK_KEY_NOT_CONFIGURED") {
       return Response.json({ error: "Webhook key not configured — refusing all webhook traffic" }, { status: 503 });
     }
     await admin.entities.PspWebhookEvent.create({
-      provider: "onramp_veyro",
+      provider: providerId,
       event_type: "unknown",
       external_id: "unsigned_" + Date.now(),
       signature_valid: false,
@@ -43,7 +53,7 @@ export default async function (req) {
     payload = normalizeWebhookEvent(JSON.parse(rawBody));
   } catch (_e) {
     await admin.entities.PspWebhookEvent.create({
-      provider: "onramp_veyro",
+      provider: providerId,
       event_type: "unknown",
       external_id: "malformed_" + Date.now(),
       signature_valid: true,
@@ -58,7 +68,7 @@ export default async function (req) {
   }
 
   const seen = await admin.entities.PspWebhookEvent.filter(
-    { provider: "onramp_veyro", external_id: payload.external_id },
+    { provider: providerId, external_id: payload.external_id },
     null,
     1
   );
@@ -67,7 +77,7 @@ export default async function (req) {
   }
 
   const event = await admin.entities.PspWebhookEvent.create({
-    provider: "onramp_veyro",
+    provider: providerId,
     event_type: payload.type,
     external_id: payload.external_id,
     signature_valid: true,
@@ -108,13 +118,18 @@ export default async function (req) {
     });
     return Response.json({ ok: true, status: "REJECTED" });
   }
-  // Amount must match the intent when the webhook carries one — a signed
-  // webhook claiming a different amount never updates the order.
-  if (payload.amount != null && Math.abs(payload.amount - intent.amount) > 0.01) {
+  // Amount must match what the intent actually charges when the webhook
+  // carries one — a signed webhook claiming a different amount never updates
+  // the order. NexaPay charges the down payment on installment plans.
+  const expectedAmount =
+    intent.provider === "nexapay" && intent.metadata && intent.metadata.nexapay_charge_amount != null
+      ? Number(intent.metadata.nexapay_charge_amount)
+      : intent.amount;
+  if (payload.amount != null && Math.abs(payload.amount - expectedAmount) > 0.01) {
     await admin.entities.PspWebhookEvent.update(event.id, {
       intent_id: intent.id,
       status: "TRANSACTION_MISMATCH",
-      error: `Amount mismatch: webhook ${payload.amount} vs intent ${intent.amount}`,
+      error: `Amount mismatch: webhook ${payload.amount} vs intent ${expectedAmount}`,
     });
     return Response.json({ ok: true, status: "REJECTED" });
   }
@@ -153,7 +168,7 @@ export default async function (req) {
     await admin.entities.Dispute.create({
       intent_id: intent.id,
       order_number: payload.order_number,
-      provider: "onramp_veyro",
+      provider: providerId,
       external_id: payload.payment_external_id || payload.external_id,
       amount: payload.amount != null ? payload.amount : intent.amount,
       currency: payload.currency || intent.currency,
