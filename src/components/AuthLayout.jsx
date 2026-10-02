@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { ShieldCheck, Truck, CreditCard } from "lucide-react";
 
 // VEYRO-branded auth layout: premium split screen on desktop (brand panel +
@@ -8,12 +9,17 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
     <div className="min-h-screen flex bg-surface-primary">
       {/* Brand panel — desktop only */}
       <div className="hidden lg:flex w-[44%] bg-noon-fg text-white flex-col justify-between p-12 relative overflow-hidden">
-        <div className="flex items-center gap-2.5">
+        {/* The brand mark always leads back to the storefront */}
+        <Link
+          to="/"
+          aria-label="VEYRO — back to the storefront"
+          className="relative z-10 flex items-center gap-2.5 w-fit no-tap-highlight hover:opacity-80 transition"
+        >
           <span className="w-9 h-9 bg-noon flex items-center justify-center">
             <span className="font-display font-extrabold text-noon-fg text-lg leading-none">V</span>
           </span>
           <span className="font-display font-bold text-xl tracking-tight">VEYRO</span>
-        </div>
+        </Link>
         <div className="relative z-10">
           <h2 className="font-display font-bold text-3xl xl:text-4xl leading-tight max-w-md">
             International Premium Electronics
@@ -44,6 +50,17 @@ export default function AuthLayout({ icon: Icon, title, subtitle, footer, childr
       {/* Form panel */}
       <div className="flex-1 flex items-center justify-center px-4 py-10">
         <div className="w-full max-w-md">
+          {/* Mobile has no brand panel — the mark sits above the form instead */}
+          <Link
+            to="/"
+            aria-label="VEYRO — back to the storefront"
+            className="lg:hidden flex items-center justify-center gap-2.5 mb-6 no-tap-highlight"
+          >
+            <span className="w-8 h-8 bg-noon flex items-center justify-center">
+              <span className="font-display font-extrabold text-noon-fg text-base leading-none">V</span>
+            </span>
+            <span className="font-display font-bold text-lg tracking-tight text-text-primary">VEYRO</span>
+          </Link>
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-12 h-12 bg-noon mb-4">
               <Icon className="w-6 h-6 text-noon-fg" aria-hidden="true" />
