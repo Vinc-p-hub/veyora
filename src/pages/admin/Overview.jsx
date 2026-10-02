@@ -1,97 +1,56 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
-import { Database, AlertTriangle, Cpu, Package, Activity } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import useAdminDashboard from "@/hooks/useAdminDashboard";
+import DashboardKpis from "@/components/admin/dashboard/DashboardKpis";
+import SalesPerformanceCard from "@/components/admin/dashboard/SalesPerformanceCard";
+import CrawlerVolumeCard from "@/components/admin/dashboard/CrawlerVolumeCard";
+import ConnectionsCard from "@/components/admin/dashboard/ConnectionsCard";
 
 export default function Overview() {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [products, sources, jobs, orders] = await Promise.all([
-        base44.entities.Product.list("-premium_score", 200),
-        base44.entities.CrawlerSource.list("-created_date", 50),
-        base44.entities.CrawlerJob.list("-updated_date", 200),
-        base44.entities.Order.list("-created_date", 100),
-      ]);
-      setData({
-        published: products.filter((p) => p.status === "PUBLISHED").length,
-        review: products.filter((p) => p.status === "REVIEW").length,
-        sources,
-        failedJobs: jobs.filter((j) => j.status === "FAILED").length,
-        orders,
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  if (loading) return <div className="h-40 bg-surface-card rounded-lg animate-pulse" />;
-
-  const paidOrders = data.orders.filter((o) => o.status === "PAID" || o.status === "PROCESSING" || o.status === "SHIPPED" || o.status === "DELIVERED" || o.status === "COMPLETED");
-  const revenue = paidOrders.reduce((s, o) => s + (o.total || 0), 0);
-  const activeOrders = data.orders.filter((o) => ["VERIFYING_SUPPLIER", "PROCESSING", "SHIPPED", "IN_TRANSIT"].includes(o.status)).length;
-
-  const stats = [
-    { label: "Published products", value: data.published, icon: Database },
-    { label: "In approval queue", value: data.review, icon: AlertTriangle, accent: data.review > 0 ? "amber" : "" },
-    { label: "Active sources", value: data.sources.filter((s) => s.status === "ACTIVE").length, icon: Cpu },
-    { label: "Crawler errors", value: data.failedJobs, icon: AlertTriangle, accent: data.failedJobs > 0 ? "red" : "" },
-    { label: "Orders (all time)", value: data.orders.length, icon: Package },
-    { label: "Active orders", value: activeOrders, icon: Activity, accent: activeOrders > 0 ? "amber" : "" },
-  ];
+  const { data, loading, lastUpdate, reload } = useAdminDashboard();
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="font-display font-bold text-xl md:text-2xl">Overview</h1>
-        <Link to="/admin/sources" className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-sm font-semibold">Open crawler console</Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-display font-bold text-xl md:text-2xl">Live dashboard</h1>
+          <p className="text-xs text-text-muted flex items-center gap-1.5 mt-1">
+            <span className="relative flex w-2 h-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full w-2 h-2 bg-emerald-500" />
+            </span>
+            Real time — updates automatically{lastUpdate ? ` · last refresh ${lastUpdate.toLocaleTimeString()}` : ""}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={reload}
+            className="px-4 py-2 rounded-lg border border-border-hairline text-sm font-semibold hover:border-accent-cyan/40 flex items-center gap-2"
+          >
+            <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} /> Refresh
+          </button>
+          <Link to="/admin/sources" className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-sm font-semibold">Open crawler console</Link>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {stats.map((s) => (
-          <div key={s.label} className="bg-surface-card border border-border-hairline rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[9px] uppercase tracking-widest text-text-muted">{s.label}</span>
-              <s.icon className={cn("w-4 h-4", s.accent === "red" ? "text-red-600" : s.accent === "amber" ? "text-amber-600" : "text-accent-cyan")} />
-            </div>
-            <div className="font-display font-bold text-2xl">{s.value}</div>
+      {loading && !data ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="h-24 bg-surface-card border border-border-hairline rounded-lg animate-pulse" />
+          ))}
+        </div>
+      ) : (
+        <>
+          <DashboardKpis data={data} />
+          <div className="grid xl:grid-cols-2 gap-4">
+            <SalesPerformanceCard data={data} />
+            <CrawlerVolumeCard data={data} />
+            <ConnectionsCard data={data} />
           </div>
-        ))}
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-4">
-        <div className="bg-surface-card border border-border-hairline rounded-lg p-5">
-          <h3 className="font-display font-semibold mb-4">Source health</h3>
-          {data.sources.length === 0 ? (
-            <p className="text-sm text-text-muted">No sources configured.</p>
-          ) : (
-            <div className="space-y-3">
-              {data.sources.map((s) => (
-                <div key={s.id} className="flex items-center justify-between text-sm gap-2">
-                  <span className="text-text-muted truncate">{s.name}</span>
-                  <span className={cn(
-                    "text-xs font-medium whitespace-nowrap",
-                    s.status === "ACTIVE" ? "text-emerald-600" : s.status === "WARNING" ? "text-amber-600" : s.status === "ERROR" ? "text-red-600" : "text-text-muted"
-                  )}>
-                    {s.status} · {s.products_updated || 0} ok / {s.products_failed || 0} failed
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="bg-surface-card border border-border-hairline rounded-lg p-5">
-          <h3 className="font-display font-semibold mb-4">Revenue (all currencies)</h3>
-          <div className="font-display font-bold text-3xl">{revenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-          <p className="text-xs text-text-muted mt-1">Sum of paid order totals across all countries. Installment plans: {paidOrders.filter((o) => (o.installment_count || 0) > 0).length}.</p>
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }
