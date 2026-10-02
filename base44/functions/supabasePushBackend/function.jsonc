@@ -1,0 +1,16 @@
+{
+  "name": "supabasePushBackend",
+  "entry": "entry.ts",
+  "automations": [
+    {
+      "type": "scheduled",
+      "name": "supabase_auto_sync",
+      "description": "Pushes the whole backend (catalog, orders, payments, CMS...) to the Supabase public schema every 6 hours",
+      "function_args": { "automation_key": "veyro-supabase-sync-c41d8f2e-9b7a-4e13-8d6f-2a5c7e91b4d0" },
+      "is_active": true,
+      "schedule_mode": "recurring",
+      "schedule_type": "cron",
+      "cron_expression": "0 */6 * * ?"
+    }
+  ]
+}

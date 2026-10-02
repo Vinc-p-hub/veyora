@@ -10,6 +10,9 @@ import {
 // public = the schema Supabase's Table Editor shows by default, so the synced
 // tables are immediately visible in the dashboard.
 const SCHEMA = "public";
+// Key carried by the cron automation (function.jsonc) — unauthenticated calls
+// must present it; interactive admin calls authenticate via auth.me() instead.
+const AUTOMATION_KEY = "veyro-supabase-sync-c41d8f2e-9b7a-4e13-8d6f-2a5c7e91b4d0";
 const ENTITY_NAMES = [
   "Product", "Offer", "Seller", "CrawlerSource", "CrawlerJob",
   "Order", "PaymentIntent", "PspWebhookEvent", "Refund", "Dispute",
@@ -24,9 +27,21 @@ const CHUNK_SIZE = 25; // rows per upsert statement
 export default async function (req) {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
-    if (user.role !== "admin") return Response.json({ error: "Forbidden" }, { status: 403 });
+    let user = null;
+    try {
+      user = await base44.auth.me();
+    } catch (_e) {
+      user = null;
+    }
+    const body = await req.json().catch(() => ({}));
+    const args = body.args || {};
+    if (!user) {
+      if (String(args.automation_key || "") !== AUTOMATION_KEY) {
+        return Response.json({ error: "Unauthorized" }, { status: 401 });
+      }
+    } else if (user.role !== "admin") {
+      return Response.json({ error: "Forbidden" }, { status: 403 });
+    }
     const admin = base44.asServiceRole;
 
     const ctx = await getSupabaseContext(admin);
@@ -56,8 +71,8 @@ export default async function (req) {
 
     const ok = results.filter((r) => r.status === "ok");
     await admin.entities.AuditLog.create({
-      actor_email: user.email,
-      actor_id: user.id,
+      actor_email: user ? user.email : "automation",
+      actor_id: user ? user.id : null,
       action: "SUPABASE_PUSH_BACKEND",
       target_type: "supabase",
       target_id: ctx.ref,
