@@ -5,6 +5,7 @@
 // catalog plus masked previews (last 4 characters) and writes new values with
 // the service role. Admin-only.
 import { createClientFromRequest } from "npm:@base44/sdk@0.8.52";
+import { secrets } from "base44:runtime";
 import { PSP_CATALOG, getProvider, isProviderImplemented } from "../../shared/payments/catalog.js";
 
 const mask = (value) => (value ? `••••${String(value).slice(-4)}` : "");
@@ -26,6 +27,31 @@ export default async function (req) {
     const listPayload = () =>
       PSP_CATALOG.map((p) => {
         const row = byProvider.get(p.id);
+        // Providers wired through the app's environment secrets instead of the
+        // vault: shown read-only, with masked previews of the live keys.
+        if (p.managed_by === "secrets") {
+          const hints = {};
+          let configured = true;
+          for (const [key, envName] of Object.entries(p.env_keys || {})) {
+            const value = secrets.get(envName);
+            const field = p.fields.find((f) => f.key === key);
+            if (value) hints[key] = mask(value);
+            else if (!field || field.required !== false) configured = false;
+          }
+          return {
+            id: p.id,
+            label: p.label,
+            region: p.region,
+            fields: p.fields,
+            implemented: isProviderImplemented(p.id),
+            enabled: configured,
+            mode: "LIVE",
+            configured,
+            hints,
+            updated_by: null,
+            managed_by: "secrets",
+          };
+        }
         return {
           id: p.id,
           label: p.label,
@@ -44,6 +70,12 @@ export default async function (req) {
 
     if (action === "disconnect") {
       const provider = getProvider(body.provider);
+      if (provider && provider.managed_by === "secrets") {
+        return Response.json(
+          { error: `${provider.label} runs on app secrets — remove them from the app's Secrets settings.` },
+          { status: 400 }
+        );
+      }
       const row = provider ? byProvider.get(provider.id) : null;
       if (row) {
         await admin.entities.PspCredential.delete(row.id);
@@ -62,6 +94,12 @@ export default async function (req) {
     if (action === "save") {
       const provider = getProvider(body.provider);
       if (!provider) return Response.json({ error: "Unknown payment provider" }, { status: 400 });
+      if (provider.managed_by === "secrets") {
+        return Response.json(
+          { error: `${provider.label} runs on app secrets — rotate them from the app's Secrets settings.` },
+          { status: 400 }
+        );
+      }
       const existing = byProvider.get(provider.id);
       const incoming = body.credentials && typeof body.credentials === "object" ? body.credentials : {};
 

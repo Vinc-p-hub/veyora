@@ -29,6 +29,24 @@ export default function ProviderForm({ provider, onSaved }) {
     }
   };
 
+  // Secrets-managed provider: live and read-only here.
+  if (provider.managed_by === "secrets") {
+    return (
+      <div className="mt-3 border-t border-border-hairline pt-3 space-y-2">
+        <p className="text-xs text-text-muted">
+          Live and offered at checkout. Its keys are stored as app secrets rather than in this vault —
+          rotate them from the app's Secrets settings.
+        </p>
+        {provider.fields.map((f) => (
+          <div key={f.key} className="flex items-center justify-between text-[11px]">
+            <span className="text-text-muted">{f.label}</span>
+            <span className="text-mono">{provider.hints?.[f.key] || "Not set"}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="mt-3 border-t border-border-hairline pt-3 space-y-3">
       {provider.fields.map((f) => (

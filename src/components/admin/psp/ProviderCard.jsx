@@ -4,6 +4,14 @@ import { cn } from "@/lib/utils";
 import ProviderForm from "@/components/admin/psp/ProviderForm";
 
 function Status({ provider }) {
+  // Live provider running on the app's environment secrets, not the vault.
+  if (provider.managed_by === "secrets") {
+    return (
+      <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-medium shrink-0 bg-emerald-100 text-emerald-700">
+        <CheckCircle2 className="w-3 h-3" /> Live · app secrets
+      </span>
+    );
+  }
   // The catalog entry exists but the provider's API contract is not wired yet —
   // keys can be stored, but it is never offered to customers.
   if (provider.implemented === false) {

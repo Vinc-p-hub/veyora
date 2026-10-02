@@ -11,6 +11,24 @@ const secret = (key, label, extra = {}) => ({ key, label, type: "secret", requir
 const text = (key, label, extra = {}) => ({ key, label, type: "text", required: true, ...extra });
 
 export const PSP_CATALOG = [
+  // Live today. Its keys are app secrets (NEXAPAY_*), not vault entries, so the
+  // back office shows it read-only — the checkout already offers it.
+  {
+    id: "nexapay",
+    label: "NexaPay",
+    region: "Global · live",
+    managed_by: "secrets",
+    env_keys: {
+      api_key: "NEXAPAY_API_KEY",
+      secret_key: "NEXAPAY_SECRET_KEY",
+      webhook_secret: "NEXAPAY_WEBHOOK_SECRET",
+    },
+    fields: [
+      secret("api_key", "API key"),
+      secret("secret_key", "Secret key"),
+      secret("webhook_secret", "Webhook signing secret"),
+    ],
+  },
   {
     id: "paystack",
     label: "Paystack",
