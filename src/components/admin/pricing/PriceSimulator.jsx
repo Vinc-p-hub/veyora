@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { PlayCircle, Calculator } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { listCountries } from "@/lib/countries";
-import { cn } from "@/lib/utils";
 
 const CATEGORIES = [
   "Laptops", "Smartphones", "Tablets", "Headphones & Earbuds", "TVs & Monitors",

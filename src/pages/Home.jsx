@@ -10,6 +10,7 @@ import { usePricing } from "@/lib/PricingContext";
 import { Image } from "@/components/ui/image";
 import ProductCard from "@/components/ProductCard";
 import NewArrivalsSection from "@/components/NewArrivalsSection";
+import DealsSection from "@/components/DealsSection";
 
 // Landing priority: flagship smartphones & laptops first, then computers and
 // brand accessories — with the latest crawler arrivals front and center.
@@ -242,6 +243,9 @@ export default function Home() {
             </div>
           </motion.div>
         </motion.section>
+
+        {/* Deals of the moment — live automatic promotions (hidden when none run) */}
+        <DealsSection products={[...products, ...newest]} />
 
         {/* Latest Arrivals — freshest verified products from the crawler */}
         <NewArrivalsSection products={newest} />

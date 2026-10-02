@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Package, Plus, Trash2, Pencil, Upload, Check, Rocket, Loader2, Video, Play } from "lucide-react";
+import { Package, Plus, Trash2, Pencil, Upload, Check, Rocket, Loader2, Video } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useToast } from "@/components/ui/use-toast";
 import { Image } from "@/components/ui/image";

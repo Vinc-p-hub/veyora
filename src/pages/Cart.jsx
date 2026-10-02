@@ -4,13 +4,16 @@ import { Trash2, ShoppingBag, ArrowRight } from "lucide-react";
 import { useCart } from "@/lib/CartContext";
 import { useRegion } from "@/lib/RegionContext";
 import { formatPrice } from "@/lib/pricing";
+import { usePromotions } from "@/lib/PromotionsContext";
 
 export default function Cart() {
   const { items, updateQty, removeItem } = useCart();
   const { currency } = useRegion();
+  const { promoFor } = usePromotions();
   const navigate = useNavigate();
 
-  const subtotal = items.reduce((s, i) => s + i.customer_price * i.qty, 0);
+  const unitOf = (i) => promoFor(i)?.price ?? i.customer_price;
+  const subtotal = items.reduce((s, i) => s + unitOf(i) * i.qty, 0);
 
   if (items.length === 0) {
     return (
@@ -34,13 +37,18 @@ export default function Cart() {
         <div className="md:col-span-2 space-y-3">
           {items.map((item) => (
             <div key={item.id} className="flex gap-4 bg-surface-card border border-border-hairline rounded-lg p-3">
-              <Link to={`/product/${item.id}`} className="w-24 h-24 rounded-lg overflow-hidden bg-surface-secondary shrink-0">
+              <Link to={`/product/${item.slug || item.id}`} className="w-24 h-24 rounded-lg overflow-hidden bg-surface-secondary shrink-0">
                 <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
               </Link>
               <div className="flex-1 min-w-0">
                 <div className="text-[10px] uppercase tracking-widest text-text-muted">{item.brand}</div>
-                <Link to={`/product/${item.id}`} className="text-sm font-medium hover:text-accent-cyan line-clamp-2">{item.name}</Link>
-                <div className="font-display font-bold text-lg mt-1">{formatPrice(item.customer_price, currency)}</div>
+                <Link to={`/product/${item.slug || item.id}`} className="text-sm font-medium hover:text-accent-cyan line-clamp-2">{item.name}</Link>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="font-display font-bold text-lg">{formatPrice(unitOf(item), currency)}</span>
+                  {unitOf(item) < item.customer_price && (
+                    <span className="text-xs text-text-muted line-through">{formatPrice(item.customer_price, currency)}</span>
+                  )}
+                </div>
                 <div className="flex items-center gap-3 mt-2">
                   <div className="flex items-center border border-border-hairline rounded-lg">
                     <button onClick={() => updateQty(item.id, item.qty - 1)} className="px-3 py-1.5 text-sm text-text-muted hover:text-text-primary">−</button>

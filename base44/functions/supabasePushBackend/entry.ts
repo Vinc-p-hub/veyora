@@ -18,7 +18,7 @@ const ENTITY_NAMES = [
   "Order", "PaymentIntent", "PspWebhookEvent", "Refund", "Dispute",
   "Review", "SourceReview", "ReviewInvitation",
   "StockMovement", "AuditLog", "SearchQuery",
-  "HeroSlide", "SiteSetting", "PricingConfig", "PricingChangeLog",
+  "HeroSlide", "SiteSetting", "PricingConfig", "PricingChangeLog", "Promotion",
   "CurrencyRate", "CountryConfig", "SupportTicket", "WishlistItem", "User",
 ];
 const ROW_LIMIT = 1000; // rows pushed per entity per run

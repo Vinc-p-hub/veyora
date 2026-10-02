@@ -27,6 +27,8 @@ export function CartProvider({ children }) {
         ...prev,
         {
           id: product.id,
+          slug: product.slug,
+          category: product.category,
           name: product.name,
           brand: product.brand,
           image_url: product.image_url,

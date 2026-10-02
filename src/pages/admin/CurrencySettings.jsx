@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Coins, Plus, Trash2, Check } from "lucide-react";
+import { Coins, Plus, Trash2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useToast } from "@/components/ui/use-toast";
 

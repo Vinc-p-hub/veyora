@@ -13,6 +13,7 @@ import {
   mergeConfig, resolveRules, computePriceChain, computePlanFromConfig,
 } from "../../shared/commerce/rules.js";
 import { selectFulfillmentSource, recordStockMovement } from "../../shared/commerce/stock.js";
+import { bestAutoPromo, evaluateOrderPromos } from "../../shared/commerce/promotions.js";
 
 const SUPPLIER_FRESH_MS = 24 * 60 * 60 * 1000; // supplier data older than 24h = stale
 
@@ -29,6 +30,7 @@ export default async function (req) {
     // VEYRO allocation and the real VEYRO physical stock for VEYRO-fulfilled lines.
     const commit = body.commit === true;
     const orderNumber = typeof body.order_number === "string" ? body.order_number.slice(0, 24) : "";
+    const couponCode = typeof body.coupon_code === "string" ? body.coupon_code.slice(0, 32) : "";
     const admin = base44.asServiceRole;
     const now = new Date();
 
@@ -41,6 +43,11 @@ export default async function (req) {
     const cfgDocs = await admin.entities.PricingConfig.filter({ active: true }, "-created_date", 5);
     const config = mergeConfig(cfgDocs[0] || {});
     const installments = planId !== "pay_now";
+    // Active promotions (automatic + coupons) — evaluated server-side only.
+    const promos = await admin.entities.Promotion.filter({ active: true }, "-priority", 200).catch(() => []);
+    const promoLines = [];
+    const usedPromoIds = new Set();
+    let autoSavingsUsd = 0;
 
     let subtotalUsd = 0;
     const warnings = [];
@@ -94,21 +101,34 @@ export default async function (req) {
             ? computePriceChain(product.source_price, rules, { installments }).customer_price
             : 0;
       const listedUsd = product.customer_price;
+      // Live AUTOMATIC promotion — capped so the price never drops below the supplier cost.
+      const auto = bestAutoPromo(promos, product, unitUsd, {
+        now,
+        floorUsd: best ? Number(best.source_price) || 0 : Number(product.source_price) || 0,
+      });
+      const finalUnitUsd = auto ? round2(unitUsd - auto.discount) : unitUsd;
+      if (auto) {
+        usedPromoIds.add(auto.promo.id);
+        autoSavingsUsd = round2(autoSavingsUsd + auto.discount * qty);
+      }
       // No line is ever blocked: VEYRO ships worldwide and its warehouse stock
       // (internal +10 sellable surplus per product) covers the order whenever
       // the partner supplier is out of stock.
       // FULFILLMENT_SOURCE: VEYRO's own physical stock ships first when enough
       // unreserved units exist — otherwise the verified partner supplier ships.
       const fulfillmentSource = selectFulfillmentSource(product, qty);
-      const lineTotalUsd = round2(unitUsd * qty);
+      const lineTotalUsd = round2(finalUnitUsd * qty);
       subtotalUsd = round2(subtotalUsd + lineTotalUsd);
+      promoLines.push({ product, line_total_usd: lineTotalUsd });
       items.push({
         product_id: product.id,
         name: product.name,
         brand: product.brand,
         image_url: product.image_url,
         qty,
-        unit_price: unitUsd,
+        unit_price: finalUnitUsd,
+        list_unit_price: unitUsd,
+        promo_label: auto ? auto.promo.label || auto.promo.name : null,
         line_total: lineTotalUsd,
         stock_status: best ? best.stock_status : product.stock_status,
         delivery_days: best && best.delivery_days ? best.delivery_days : product.delivery_days,
@@ -136,27 +156,39 @@ export default async function (req) {
         variant: product.variant_info || null,
         margin_percent: rules.margin_percent ?? null,
         pricing_rules: JSON.parse(JSON.stringify(rules || {})),
-        unit_customer_price_usd: unitUsd,
+        unit_customer_price_usd: finalUnitUsd,
+        list_unit_price_usd: unitUsd,
+        promotion_id: auto ? auto.promo.id : null,
+        unit_discount_usd: auto ? auto.discount : 0,
         fulfillment_source: fulfillmentSource,
         qty,
         line_total_usd: lineTotalUsd,
       });
     }
 
+    // Order-level promotions: coupon code (validated here only) + free shipping.
+    const promoEval = evaluateOrderPromos(promos, { lines: promoLines, subtotalUsd, couponCode, now });
+    const discountUsd = promoEval.coupon_discount_usd;
+    if (promoEval.coupon && promoEval.coupon.valid) usedPromoIds.add(promoEval.coupon.promotion_id);
+    if (promoEval.free_shipping) usedPromoIds.add(promoEval.free_shipping.id);
+    const netSubtotalUsd = round2(subtotalUsd - discountUsd);
+
     const countryRule = config.country_rules[countryCode] || {};
     // VEYRO worldwide shipping: flat $15 when no explicit country fee is
     // configured in the pricing rules — a seller without its own shipping
-    // price never ships for free by accident.
-    const shippingUsd = round2(
+    // price never ships for free by accident (only a free-shipping promotion can).
+    const shippingUsd = promoEval.free_shipping ? 0 : round2(
       typeof countryRule.shipping_fee === "number" ? countryRule.shipping_fee : 15
     );
     const taxRate = typeof countryRule.tax_rate === "number" ? countryRule.tax_rate : country.taxRate;
-    const taxUsd = round2(subtotalUsd * taxRate);
-    const totalUsd = round2(subtotalUsd + shippingUsd + taxUsd);
+    const taxUsd = round2(netSubtotalUsd * taxRate);
+    const totalUsd = round2(netSubtotalUsd + shippingUsd + taxUsd);
     const rate = currency.rate;
 
     const totals = {
       subtotal: convertPrice(subtotalUsd, currency.code),
+      discount: convertPrice(discountUsd, currency.code),
+      savings: convertPrice(round2(autoSavingsUsd + discountUsd), currency.code),
       shipping: convertPrice(shippingUsd, currency.code),
       tax: convertPrice(taxUsd, currency.code),
       total: convertPrice(totalUsd, currency.code),
@@ -212,6 +244,12 @@ export default async function (req) {
       for (const m of stockMovements) {
         waitUntil(recordStockMovement(admin, m));
       }
+      // Promotion usage counters (usage limits are enforced from these).
+      const promoById = new Map(promos.map((p) => [p.id, p]));
+      for (const id of usedPromoIds) {
+        const p = promoById.get(id);
+        if (p) waitUntil(admin.entities.Promotion.update(id, { usage_count: (Number(p.usage_count) || 0) + 1 }).catch(() => {}));
+      }
     }
 
     const snapshot = {
@@ -223,6 +261,11 @@ export default async function (req) {
       shipping_usd: shippingUsd,
       tax_usd: taxUsd,
       total_usd: totalUsd,
+      discount_usd: discountUsd,
+      auto_savings_usd: autoSavingsUsd,
+      coupon: promoEval.coupon,
+      free_shipping: !!promoEval.free_shipping,
+      promotion_ids: [...usedPromoIds],
       totals_local: totals,
       plan,
       items: snapshotItems,
@@ -237,6 +280,8 @@ export default async function (req) {
       totals,
       plan,
       warnings,
+      coupon: promoEval.coupon,
+      free_shipping: !!promoEval.free_shipping,
       snapshot,
     });
   } catch (error) {

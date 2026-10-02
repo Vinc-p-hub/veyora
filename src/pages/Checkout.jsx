@@ -11,6 +11,8 @@ import { base44 } from "@/api/base44Client";
 import { useSiteText } from "@/lib/useSiteText";
 import { cn } from "@/lib/utils";
 import NexaPayWidget from "@/components/payments/NexaPayWidget";
+import CouponField from "@/components/checkout/CouponField";
+import { usePromotions } from "@/lib/PromotionsContext";
 
 export default function Checkout() {
   const [params] = useSearchParams();
@@ -31,6 +33,9 @@ export default function Checkout() {
   const [payingOrder, setPayingOrder] = useState(null); // live NexaPay payment step
   const [data, setData] = useState(null); // server-authoritative revalidation
   const [revalidating, setRevalidating] = useState(true);
+  const [couponCode, setCouponCode] = useState(""); // validated server-side only
+  const { promoFor } = usePromotions();
+  const unitOf = (i) => promoFor(i)?.price ?? (i.customer_price || 0);
 
   const cartKey = items.map((i) => `${i.id}:${i.qty}`).join("|");
 
@@ -44,11 +49,12 @@ export default function Checkout() {
         items: items.map((i) => ({ product_id: i.id, qty: i.qty })),
         country_code: country.code,
         plan_id: planId,
+        coupon_code: couponCode,
       })
       .then((res) => setData(res.data))
       .catch(() => {})
       .finally(() => setRevalidating(false));
-  }, [cartKey, country.code, planId]);
+  }, [cartKey, country.code, planId, couponCode]);
 
   const money = (v) => `${data?.symbol || ""}${(v ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
   const totals = data?.totals || { subtotal: 0, shipping: 0, tax: 0, total: 0 };
@@ -58,7 +64,7 @@ export default function Checkout() {
   // shows the REAL VEYRO prices (customer_price, converted to the active
   // currency) instead of "…" / zeros — the final total is always re-verified
   // server-side before the order goes through.
-  const veyroSubtotal = Math.round(items.reduce((s, i) => s + (i.customer_price || 0) * i.qty, 0) * 100) / 100;
+  const veyroSubtotal = Math.round(items.reduce((s, i) => s + unitOf(i) * i.qty, 0) * 100) / 100;
   const veyroShipping = country.shipping || 15;
   const veyroTax = Math.round(veyroSubtotal * country.taxRate * 100) / 100;
   const veyroTotal = Math.round((veyroSubtotal + veyroShipping + veyroTax) * 100) / 100;
@@ -109,6 +115,7 @@ export default function Checkout() {
         plan_id: planId,
         commit: true,
         order_number: orderNumber,
+        coupon_code: couponCode,
       });
       d = res.data;
       setData(d);
@@ -125,8 +132,8 @@ export default function Checkout() {
             name: i.name,
             brand: i.brand,
             qty: i.qty,
-            unit_price: i.customer_price || 0,
-            line_total: Math.round((i.customer_price || 0) * i.qty * 100) / 100,
+            unit_price: unitOf(i),
+            line_total: Math.round(unitOf(i) * i.qty * 100) / 100,
             seller_id: i.seller_id || null,
             seller_name: i.seller_name || i.source_name,
             delivery_days: i.delivery_days || 5,
@@ -156,6 +163,8 @@ export default function Checkout() {
           fulfillment_source: i.fulfillment_source || "SUPPLIER",
         })),
         subtotal: finalTotals.subtotal,
+        discount: finalTotals.discount || 0,
+        coupon_code: d.coupon?.valid ? d.coupon.code : "",
         shipping: finalTotals.shipping,
         tax: finalTotals.tax,
         total: finalTotals.total,
@@ -276,7 +285,7 @@ export default function Checkout() {
               </p>
             )}
             <div className="space-y-2.5 text-sm max-h-40 overflow-auto scrollbar-hide mb-3">
-              {(data?.items || items.map((i) => ({ product_id: i.id, name: i.name, qty: i.qty, available: true, line_total: (i.customer_price || 0) * i.qty, veyro_price: true }))).map((i) => (
+              {(data?.items || items.map((i) => ({ product_id: i.id, name: i.name, qty: i.qty, available: true, line_total: unitOf(i) * i.qty, veyro_price: true }))).map((i) => (
                 <div key={i.product_id} className="flex justify-between gap-2">
                   <span className="text-text-muted">
                     <span className="block truncate">{i.name} ×{i.qty}{i.available === false && <span className="text-red-500"> · unavailable</span>}</span>
@@ -290,11 +299,26 @@ export default function Checkout() {
                 </div>
               ))}
             </div>
+            <div className="mb-3">
+              <CouponField
+                applied={couponCode}
+                result={data?.coupon}
+                loading={revalidating}
+                onApply={setCouponCode}
+                onRemove={() => setCouponCode("")}
+              />
+            </div>
             <div className="border-t border-border-hairline pt-3 space-y-2 text-sm">
               <div className="flex justify-between"><span className="text-text-muted">Subtotal</span><span className="text-mono">{data ? money(totals.subtotal) : formatPrice(veyroSubtotal, currency)}</span></div>
-              <div className="flex justify-between"><span className="text-text-muted">Shipping</span><span className="text-mono">{data ? money(totals.shipping) : formatPrice(veyroShipping, currency)}</span></div>
+              {data && totals.discount > 0 && (
+                <div className="flex justify-between text-emerald-600"><span>Promo code</span><span className="text-mono">−{money(totals.discount)}</span></div>
+              )}
+              <div className="flex justify-between"><span className="text-text-muted">Shipping</span><span className="text-mono">{data ? (data.free_shipping ? "Free" : money(totals.shipping)) : formatPrice(veyroShipping, currency)}</span></div>
               <div className="flex justify-between"><span className="text-text-muted">Tax ({(country.taxRate * 100).toFixed(0)}%)</span><span className="text-mono">{data ? money(totals.tax) : formatPrice(veyroTax, currency)}</span></div>
               <div className="flex justify-between font-semibold border-t border-border-hairline pt-2"><span>Total</span><span className="text-mono">{data ? money(totals.total) : formatPrice(veyroTotal, currency)}</span></div>
+              {data && totals.savings > 0 && (
+                <div className="flex justify-between text-xs text-emerald-600"><span>You save</span><span className="text-mono">{money(totals.savings)}</span></div>
+              )}
               {plan && plan.installmentCount > 0 && (
                 <div className="flex justify-between text-accent-cyan"><span>Pay today</span><span className="text-mono">{money(plan.downPayment)}</span></div>
               )}

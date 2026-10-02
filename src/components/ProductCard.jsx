@@ -5,6 +5,7 @@ import { formatPrice } from "@/lib/pricing";
 import { useRegion } from "@/lib/RegionContext";
 import { useLang } from "@/lib/i18n";
 import { usePricing } from "@/lib/PricingContext";
+import { usePromotions } from "@/lib/PromotionsContext";
 
 const FALLBACK_IMG =
   "data:image/svg+xml;utf8," +
@@ -16,13 +17,14 @@ export default function ProductCard({ product, compact }) {
   const { currency } = useRegion();
   const { t } = useLang();
   const { buildPlan } = usePricing();
-  const price = product.customer_price;
+  const { promoFor } = usePromotions();
+  const promo = promoFor(product);
+  const price = promo ? promo.price : product.customer_price;
   const plan = buildPlan(price);
-  // Discount is derived from the previous REAL VEYRO customer price — never
-  // from the secret supplier source price (back-office only).
-  const discount = product.previous_price && product.previous_price > price
-    ? Math.round((1 - price / product.previous_price) * 100)
-    : 0;
+  // Discount: a live VEYRO promotion first, otherwise the previous REAL VEYRO
+  // customer price — never the secret supplier source price (back-office only).
+  const original = promo ? promo.original : product.previous_price;
+  const discount = original && original > price ? Math.round((1 - price / original) * 100) : 0;
 
   return (
     <Link
@@ -40,7 +42,11 @@ export default function ProductCard({ product, compact }) {
         {product.stock_status === "LOW_STOCK" && (
           <span className="absolute top-2 end-2 text-[10px] bg-white border border-border-hairline px-1.5 py-0.5 rounded text-text-muted">{t("stock.LOW_STOCK")}</span>
         )}
-        {product.badge && (
+        {promo ? (
+          <span className="absolute top-2 start-2 text-[10px] font-bold bg-destructive text-destructive-foreground px-1.5 py-0.5 rounded">
+            {promo.promo.label || `-${promo.percent}%`}
+          </span>
+        ) : product.badge && (
           <span className="absolute top-2 start-2 text-[10px] font-bold bg-noon text-noon-fg px-1.5 py-0.5 rounded">{product.badge}</span>
         )}
       </div>
@@ -70,7 +76,7 @@ export default function ProductCard({ product, compact }) {
           )}
           {discount > 0 && (
             <div className="flex items-baseline gap-1.5 flex-wrap mt-0.5">
-              <span className="text-[11px] text-text-muted line-through">{formatPrice(product.previous_price, currency)}</span>
+              <span className="text-[11px] text-text-muted line-through">{formatPrice(original, currency)}</span>
               <span className="text-[11px] font-semibold text-accent-cyan">{t("card.off", { n: discount })}</span>
             </div>
           )}

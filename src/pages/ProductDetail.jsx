@@ -7,6 +7,7 @@ import { useCart } from "@/lib/CartContext";
 import { useLang } from "@/lib/i18n";
 import { formatPrice } from "@/lib/pricing";
 import { usePricing } from "@/lib/PricingContext";
+import { usePromotions } from "@/lib/PromotionsContext";
 import { useSiteText } from "@/lib/useSiteText";
 import { applySeo } from "@/lib/seo";
 import ProductOffers from "@/components/ProductOffers";
@@ -20,6 +21,7 @@ export default function ProductDetail() {
   const { currency, country } = useRegion();
   const { addItem } = useCart();
   const { plans, buildPlan } = usePricing();
+  const { promoFor, freeShippingFor } = usePromotions();
   const { t } = useLang();
   const getText = useSiteText();
   const [product, setProduct] = useState(null);
@@ -34,7 +36,12 @@ export default function ProductDetail() {
   useEffect(() => {
     setLoading(true);
     base44.entities.Product.filter({ slug, status: "PUBLISHED" }, null, 1)
-      .then((res) => setProduct(res[0] || null))
+      .then(async (res) => {
+        if (res[0]) return setProduct(res[0]);
+        // Older cart links point to the product id instead of the slug.
+        const byId = await base44.entities.Product.get(slug).catch(() => null);
+        setProduct(byId && byId.status === "PUBLISHED" ? byId : null);
+      })
       .finally(() => setLoading(false));
   }, [slug]);
 
@@ -81,7 +88,7 @@ export default function ProductDetail() {
       offers: {
         "@type": "Offer",
         url: `${window.location.origin}/product/${product.slug}`,
-        price: product.customer_price,
+        price: promoFor(product)?.price ?? product.customer_price,
         priceCurrency: product.currency || "USD",
         itemCondition: "https://schema.org/NewCondition",
         ...(availabilityMap[product.stock_status] ? { availability: availabilityMap[product.stock_status] } : {}),
@@ -101,7 +108,7 @@ export default function ProductDetail() {
       path: `/product/${product.slug}`,
       jsonLd,
     });
-  }, [product, country.code]);
+  }, [product, country.code, promoFor]);
 
   if (loading) {
     return <div className="p-10 max-w-[1400px] mx-auto"><div className="aspect-[3/4] bg-surface-card rounded-lg animate-pulse max-w-md" /></div>;
@@ -126,14 +133,15 @@ export default function ProductDetail() {
   const mainImage = activeImage && gallery.includes(activeImage) ? activeImage : gallery[0] || product.image_url;
   const veyroFreeUnits = Math.max(0, (Number(product.veyro_stock) || 0) - (Number(product.reserved_stock) || 0));
 
-  const price = product.customer_price;
+  const promo = promoFor(product);
+  const price = promo ? promo.price : product.customer_price;
   const plan = buildPlan(price, planId);
   const bestSellerName = offers[0]?.seller_name || product.source_name;
   const multipleSellers = offers.length > 1;
   const todayFmt = formatPrice(plan.first_payment, currency);
   const monthlyFmt = formatPrice(plan.next_amount, currency);
   const totalFmt = formatPrice(plan.total, currency);
-  const shipping = formatPrice(country.shipping || 15, currency);
+  const shipping = freeShippingFor(product, price) ? "Free" : formatPrice(country.shipping || 15, currency);
   const tax = Math.round(price * country.taxRate * 100) / 100;
 
   const handleAdd = () => {
@@ -239,7 +247,22 @@ export default function ProductDetail() {
           <div className="bg-surface-card border border-border-hairline rounded-lg p-5 space-y-4">
             <div>
               <div className="text-[10px] uppercase tracking-widest text-text-muted">Total price</div>
-              <div className="font-display font-bold text-3xl md:text-4xl mt-1">{formatPrice(price, currency)}</div>
+              <div className="flex items-baseline gap-3 flex-wrap mt-1">
+                <div className="font-display font-bold text-3xl md:text-4xl">{formatPrice(price, currency)}</div>
+                {promo && (
+                  <>
+                    <span className="text-base text-text-muted line-through">{formatPrice(promo.original, currency)}</span>
+                    <span className="text-xs font-bold bg-destructive text-destructive-foreground px-2 py-0.5 rounded">
+                      {promo.promo.label || `-${promo.percent}%`}
+                    </span>
+                  </>
+                )}
+              </div>
+              {promo?.promo.ends_at && (
+                <div className="text-[11px] text-destructive mt-1">
+                  Offer ends {new Date(promo.promo.ends_at).toLocaleString(undefined, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                </div>
+              )}
             </div>
 
             {/* Plan selector */}

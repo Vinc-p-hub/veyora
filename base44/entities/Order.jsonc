@@ -21,6 +21,15 @@
     "subtotal": {
       "type": "number"
     },
+    "discount": {
+      "type": "number",
+      "default": 0,
+      "description": "Coupon discount applied server-side, in the order currency"
+    },
+    "coupon_code": {
+      "type": "string",
+      "description": "Coupon code validated server-side at checkout"
+    },
     "shipping": {
       "type": "number",
       "default": 0

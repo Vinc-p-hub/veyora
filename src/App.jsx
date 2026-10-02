@@ -45,6 +45,8 @@ import Users from '@/pages/admin/Users';
 import SupportAdmin from '@/pages/admin/SupportAdmin';
 import Logs from '@/pages/admin/Logs';
 import GithubPage from '@/pages/admin/Github';
+import PromotionsAdmin from '@/pages/admin/Promotions';
+import { PromotionsProvider } from '@/lib/PromotionsContext';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import ForgotPassword from '@/pages/ForgotPassword';
@@ -82,6 +84,7 @@ const AuthenticatedApp = () => {
     <LanguageProvider>
       <RegionProvider>
         <PricingProvider>
+          <PromotionsProvider>
           <CartProvider>
             <Routes>
               {/* Auth pages — standalone, outside the marketplace layout */}
@@ -130,6 +133,7 @@ const AuthenticatedApp = () => {
                 <Route path="sources" element={<SourcesPage />} />
                 <Route path="analytics" element={<AnalyticsPage />} />
                 <Route path="pricing" element={<PricingRules />} />
+                <Route path="promotions" element={<PromotionsAdmin />} />
                 <Route path="currency-settings" element={<CurrencySettings />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="cms" element={<Cms />} />
@@ -142,6 +146,7 @@ const AuthenticatedApp = () => {
               <Route path="*" element={<PageNotFound />} />
             </Routes>
           </CartProvider>
+          </PromotionsProvider>
         </PricingProvider>
       </RegionProvider>
     </LanguageProvider>

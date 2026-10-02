@@ -5,7 +5,6 @@ import { useCart } from "@/lib/CartContext";
 import SearchBar from "@/components/SearchBar";
 import RegionLangMenu from "@/components/RegionLangMenu";
 import CategoryNav from "@/components/CategoryNav";
-import { useRegion } from "@/lib/RegionContext";
 import { useLang } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
