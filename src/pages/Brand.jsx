@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import ProductCard from "@/components/ProductCard";
-import { applySeo } from "@/lib/seo";
+import { applySeo, itemListLd, seoTitle } from "@/lib/seo";
 
 // SEO brand landing page — real published products for one brand only.
 export default function Brand() {
@@ -32,12 +32,17 @@ export default function Brand() {
   }, [brandName]);
 
   useEffect(() => {
+    const shown = products.slice(0, 20);
+    const path = `/brand/${encodeURIComponent(brandName)}`;
     applySeo({
-      title: `${brandName} — premium ${brandName} products on VEYRO`,
-      description: `Shop ${brandName} on VEYRO — verified partner merchants, transparent pricing, real stock and flexible installment plans.`,
-      path: `/brand/${encodeURIComponent(brandName)}`,
+      title: seoTitle(`Buy ${brandName} Online`, "Best Prices, Deals & Installments"),
+      description: `Buy ${brandName} online at VEYRO${shown.length ? ` — ${shown.length} products` : ""} from verified merchants. Transparent prices, real stock, worldwide delivery and flexible installments with the total always visible.`,
+      path,
+      image: shown[0]?.image_url,
+      breadcrumbs: [{ name: "Home", path: "/" }, { name: brandName, path }],
+      jsonLd: itemListLd(`${brandName} on VEYRO`, shown),
     });
-  }, [brandName]);
+  }, [brandName, products]);
 
   return (
     <div className="px-4 md:px-8 py-6 md:py-10 max-w-[1400px] mx-auto">

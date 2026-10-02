@@ -36,6 +36,17 @@ export default async function (req) {
 
     if (!cartItems.length) return Response.json({ error: "Cart empty" }, { status: 400 });
 
+    // Market control: a country the Super Admin has blocked (Market control)
+    // can never be sold to — no price, no plan, no order.
+    const marketCfg = await admin.entities.CountryConfig.filter({ code: countryCode }, null, 1).catch(() => []);
+    if (marketCfg[0] && marketCfg[0].enabled === false) {
+      return Response.json({
+        ok: false,
+        blocked_country: true,
+        error: "VEYRO does not deliver to this country yet.",
+      });
+    }
+
     const country = getCountry(countryCode);
     const currency = CURRENCIES[country.currency] || CURRENCIES.USD;
 

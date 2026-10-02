@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import {
-  COUNTRIES, CURRENCIES, registerCountry, registerCurrency, getCountry, getCurrency,
+  COUNTRIES, CURRENCIES, registerCountry, registerCurrency, getCurrency,
 } from "@/lib/countries";
 
 const RegionContext = createContext(null);
@@ -11,6 +11,7 @@ export function RegionProvider({ children }) {
   const [countryCode, setCountryCode] = useState(() => {
     return localStorage.getItem(STORAGE_KEY) || "US";
   });
+  const [blockedCodes, setBlockedCodes] = useState(() => new Set());
   const [overridesVersion, setOverridesVersion] = useState(0);
 
   useEffect(() => {
@@ -18,7 +19,9 @@ export function RegionProvider({ children }) {
   }, [countryCode]);
 
   // Merge Super-Admin-managed countries & currencies (data) into the default
-  // registry — adding a new market never requires a code change.
+  // registry — adding a new market never requires a code change. Countries the
+  // Super Admin has deactivated (Market control) are collected separately and
+  // removed from the storefront entirely.
   useEffect(() => {
     let cancelled = false;
     Promise.all([
@@ -31,19 +34,25 @@ export function RegionProvider({ children }) {
           registerCurrency(r.code, { code: r.code, symbol: r.symbol, rate: r.rate });
         }
       });
-      countries
-        .filter((c) => c.enabled !== false)
-        .forEach((c) =>
-          registerCountry({
-            code: c.code,
-            name: c.name,
-            currency: c.currency,
-            flag: c.flag,
-            shipping: c.shipping,
-            taxRate: c.tax_rate,
-            providers: c.providers,
-          })
-        );
+      const blocked = new Set();
+      countries.forEach((c) => {
+        const code = String(c.code || "").toUpperCase();
+        if (!code) return;
+        if (c.enabled === false) {
+          blocked.add(code);
+          return;
+        }
+        registerCountry({
+          code: c.code,
+          name: c.name,
+          currency: c.currency,
+          flag: c.flag,
+          shipping: c.shipping,
+          taxRate: c.tax_rate,
+          providers: c.providers,
+        });
+      });
+      setBlockedCodes(blocked);
       setOverridesVersion((v) => v + 1);
     });
     return () => {
@@ -51,8 +60,16 @@ export function RegionProvider({ children }) {
     };
   }, []);
 
-  const country = getCountry(countryCode);
+  // Markets VEYRO actually sells to — the full registry minus every blocked
+  // country. Only these can ever be selected for delivery.
+  const markets = COUNTRIES.filter((c) => !blockedCodes.has(c.code));
+  const country = markets.find((c) => c.code === countryCode) || markets[0] || COUNTRIES[0];
   const currency = getCurrency(country.currency);
+
+  // A blocked country can never stay selected in the storefront.
+  useEffect(() => {
+    if (country.code !== countryCode) setCountryCode(country.code);
+  }, [country.code, countryCode]);
 
   return (
     <RegionContext.Provider
@@ -62,7 +79,8 @@ export function RegionProvider({ children }) {
         setCountryCode,
         country,
         currency,
-        countries: COUNTRIES,
+        countries: markets,
+        allCountries: COUNTRIES,
         currencies: CURRENCIES,
       }}
     >

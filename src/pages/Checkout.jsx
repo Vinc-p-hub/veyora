@@ -34,6 +34,7 @@ export default function Checkout() {
   const [data, setData] = useState(null); // server-authoritative revalidation
   const [revalidating, setRevalidating] = useState(true);
   const [couponCode, setCouponCode] = useState(""); // validated server-side only
+  const [blockedCountry, setBlockedCountry] = useState(false); // VEYRO does not sell here
   const { promoFor } = usePromotions();
   const unitOf = (i) => promoFor(i)?.price ?? (i.customer_price || 0);
 
@@ -51,7 +52,15 @@ export default function Checkout() {
         plan_id: planId,
         coupon_code: couponCode,
       })
-      .then((res) => setData(res.data))
+      .then((res) => {
+        // Server-side market control — a blocked country is refused here.
+        if (res.data?.blocked_country) {
+          setBlockedCountry(true);
+          return;
+        }
+        setBlockedCountry(false);
+        setData(res.data);
+      })
       .catch(() => {})
       .finally(() => setRevalidating(false));
   }, [cartKey, country.code, planId, couponCode]);
@@ -90,6 +99,20 @@ export default function Checkout() {
     );
   }
 
+  if (blockedCountry) {
+    return (
+      <div className="px-4 md:px-8 py-16 max-w-2xl mx-auto text-center">
+        <h1 className="font-display font-bold text-2xl">We don't deliver to {country.name} yet</h1>
+        <p className="text-sm text-text-muted mt-2">
+          Pick another delivery country at the top of the page to continue your order.
+        </p>
+        <Link to="/category" className="inline-flex mt-4 px-5 py-3 rounded-lg bg-noon text-noon-fg text-sm font-medium">
+          Browse catalog
+        </Link>
+      </div>
+    );
+  }
+
   if (items.length === 0) {
     return (
       <div className="px-4 md:px-8 py-16 max-w-2xl mx-auto text-center">
@@ -118,6 +141,11 @@ export default function Checkout() {
         coupon_code: couponCode,
       });
       d = res.data;
+      if (d?.blocked_country) {
+        setPlacing(false);
+        setBlockedCountry(true);
+        return;
+      }
       setData(d);
     } catch (_e) {
       // Live check unreachable — the order proceeds on the real VEYRO prices

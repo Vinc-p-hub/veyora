@@ -9,7 +9,7 @@ import { formatPrice } from "@/lib/pricing";
 import { usePricing } from "@/lib/PricingContext";
 import { usePromotions } from "@/lib/PromotionsContext";
 import { useSiteText } from "@/lib/useSiteText";
-import { applySeo } from "@/lib/seo";
+import { applySeo, seoTitle } from "@/lib/seo";
 import ProductOffers from "@/components/ProductOffers";
 import CustomerReviews from "@/components/reviews/CustomerReviews";
 import SourceReviews from "@/components/reviews/SourceReviews";
@@ -102,10 +102,19 @@ export default function ProductDetail() {
       },
     };
     applySeo({
-      title: `${product.seo_title || `${product.brand} ${product.name}`} | VEYRO`,
+      title: product.seo_title || seoTitle(
+        `${product.brand ? `${product.brand} ` : ""}${product.name}`,
+        ["Price, Specs & Installments", "Price & Specs", "Price"]
+      ),
       description: product.meta_description ||
-        `Buy ${product.name}${product.brand ? ` by ${product.brand}` : ""} on VEYRO — transparent pricing, verified sellers and flexible installment plans.`,
+        `Buy ${product.brand ? `${product.brand} ` : ""}${product.name} at VEYRO — transparent pricing, verified sellers, ${product.delivery_days || 5}-day delivery and flexible installments. Total price always visible.`,
       path: `/product/${product.slug}`,
+      image: product.image_url,
+      breadcrumbs: [
+        { name: "Home", path: "/" },
+        { name: product.category, path: `/category?cat=${encodeURIComponent(product.category)}` },
+        { name: product.name, path: `/product/${product.slug}` },
+      ],
       jsonLd,
     });
   }, [product, country.code, promoFor]);

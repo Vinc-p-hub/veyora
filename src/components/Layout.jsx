@@ -6,6 +6,7 @@ import SearchBar from "@/components/SearchBar";
 import RegionLangMenu from "@/components/RegionLangMenu";
 import CategoryNav from "@/components/CategoryNav";
 import { useLang } from "@/lib/i18n";
+import { useAuth } from "@/lib/AuthContext";
 import { cn } from "@/lib/utils";
 
 // Public marketplace navigation — the Super Admin console (/admin) is
@@ -30,6 +31,7 @@ function HeaderAction({ to, icon: Icon, label, onClick, badge }) {
 
 function Footer() {
   const { t, tCat } = useLang();
+  const { user } = useAuth();
   return (
     <footer className="bg-noon text-noon-fg mt-10">
       <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-10 grid grid-cols-2 md:grid-cols-5 gap-8">
@@ -63,6 +65,12 @@ function Footer() {
             <Link to="/financing-info" className="block hover:underline">{t("footer.financing")}</Link>
             <Link to="/support" className="block hover:underline">{t("footer.help")}</Link>
             <Link to="/contact" className="block hover:underline">Contact us</Link>
+            {!user && (
+              <>
+                <Link to="/login" className="block hover:underline font-semibold">{t("profile.loginCta")}</Link>
+                <Link to="/register" className="block hover:underline">{t("profile.registerCta")}</Link>
+              </>
+            )}
           </div>
         </div>
         <div>
@@ -81,7 +89,7 @@ function Footer() {
           </div>
         </div>
       </div>
-      <div className="border-t border-black/10 py-4 text-center text-[11px] font-medium">
+      <div className="border-t border-black/10 py-4 pb-20 md:pb-4 text-center text-[11px] font-medium">
         © 2026 VEYRO — Premium electronics, paid your way.
       </div>
     </footer>
@@ -90,6 +98,7 @@ function Footer() {
 
 export default function Layout() {
   const { count } = useCart();
+  const { user } = useAuth();
   const { t, tCat } = useLang();
   const location = useLocation();
   const catParam = new URLSearchParams(location.search).get("cat");
@@ -99,7 +108,7 @@ export default function Layout() {
     { to: "/category", label: t("nav.search"), icon: SearchIcon, search: true },
     { to: "/category", label: t("nav.categories"), icon: LayoutGrid },
     { to: "/orders", label: t("nav.orders"), icon: Package },
-    { to: "/profile", label: t("nav.account"), icon: User },
+    { to: user ? "/profile" : "/login", label: user ? t("nav.account") : t("profile.loginCta"), icon: User },
   ];
 
   return (
@@ -118,7 +127,18 @@ export default function Layout() {
             <div className="flex items-center gap-4 md:gap-5 shrink-0 ms-auto">
               <RegionLangMenu />
               <div className="hidden md:flex items-center gap-5">
-                <HeaderAction to="/profile" icon={User} label={t("nav.account")} />
+                {user ? (
+                  <HeaderAction to="/profile" icon={User} label={t("nav.account")} />
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Link to="/login" className="px-4 py-2 rounded-lg bg-noon-fg text-white text-xs font-semibold hover:opacity-90 transition no-tap-highlight">
+                      {t("profile.loginCta")}
+                    </Link>
+                    <Link to="/register" className="px-4 py-2 rounded-lg border border-noon-fg/25 text-xs font-semibold hover:border-noon-fg/60 transition no-tap-highlight">
+                      {t("profile.registerCta")}
+                    </Link>
+                  </div>
+                )}
                 <HeaderAction to="/orders" icon={Package} label={t("nav.orders")} />
                 <HeaderAction to="/wishlist" icon={Heart} label={t("nav.wishlist")} />
                 <HeaderAction to="/cart" icon={ShoppingBag} label={t("footer.cart")} badge={count} />
@@ -139,14 +159,14 @@ export default function Layout() {
         <CategoryNav />
       </header>
 
-      <main className="flex-1 min-w-0 pb-16 md:pb-0">
+      <main className="flex-1 min-w-0">
         <Outlet />
       </main>
 
       <Footer />
 
       {/* Mobile bottom nav: Home / Search / Categories / Orders / Account */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-border-hairline flex items-center justify-around h-16 px-2">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-border-hairline flex items-center justify-around h-16 px-2 pb-[env(safe-area-inset-bottom)]">
         {NAV.map((item, idx) => {
           const active =
             idx === 0 ? location.pathname === "/" :

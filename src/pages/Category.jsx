@@ -5,7 +5,7 @@ import { base44 } from "@/api/base44Client";
 import ProductCard from "@/components/ProductCard";
 import { useRegion } from "@/lib/RegionContext";
 import { useLang } from "@/lib/i18n";
-import { applySeo } from "@/lib/seo";
+import { applySeo, itemListLd, seoTitle } from "@/lib/seo";
 
 const CATEGORIES = [
   "Laptops", "Smartphones", "Tablets", "Headphones & Earbuds", "TVs & Monitors",
@@ -76,12 +76,33 @@ export default function Category() {
   // title, meta description and canonical URL.
   useEffect(() => {
     const label = cat ? cat : q ? `"${q}"` : "All products";
+    const shown = visible.slice(0, 20);
+    const crumbs = [{ name: "Home", path: "/" }];
+    if (cat) crumbs.push({ name: cat, path: `/category?cat=${encodeURIComponent(cat)}` });
+    if (brand) crumbs.push({ name: brand, path: `/category?brand=${encodeURIComponent(brand)}` });
+    if (q) crumbs.push({ name: `Search: ${q}`, path: `/category?q=${encodeURIComponent(q)}` });
+    // Title targets what people actually type: "buy laptops online",
+    // "iphone 18 pro price"… Keyword first, brand last.
+    const query = q ? q.charAt(0).toUpperCase() + q.slice(1) : "";
+    const keyword = cat && brand
+      ? `Buy ${brand} ${cat} Online`
+      : cat
+        ? `Buy ${cat} Online`
+        : brand
+          ? `Buy ${brand} Online`
+          : query || "Buy Electronics Online";
+    const extra = cat || brand ? "Best Prices & Installments" : "Prices, Deals & Installments";
+    const human = cat || brand || query || "electronics";
+    const count = visible.length;
     applySeo({
-      title: `${label} | VEYRO Premium Electronics`,
-      description: `Shop ${label.toLowerCase()} on VEYRO — premium electronics marketplace with verified partner merchants, transparent pricing, real stock and flexible installments.`,
+      title: seoTitle(keyword, extra),
+      description: `Buy ${human} online at VEYRO${count ? ` — ${count} products` : ""} from verified merchants. Transparent prices, real stock, worldwide delivery and flexible installments with the total always visible.`,
       path: `${window.location.pathname}${window.location.search}`,
+      image: shown[0]?.image_url,
+      breadcrumbs: crumbs,
+      jsonLd: itemListLd(label, shown),
     });
-  }, [cat, q, brand]);
+  }, [cat, q, brand, visible]);
 
   const setParam = (key, val) => {
     const next = new URLSearchParams(params);

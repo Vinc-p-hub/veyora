@@ -2,13 +2,135 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="https://base44.com/logo_v2.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="VEYRO — Premium Electronics. Discover ultra-performance tech with flexible installment plans." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="mask-icon" href="/favicon.svg" color="#FEEE00" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <title>Buy Electronics Online — Smartphones, Laptops, Audio &amp; More | VEYRO</title>
+    <meta
+      name="description"
+      content="VEYRO is the international premium electronics marketplace: buy smartphones, laptops, audio, gaming and smart home from verified merchants — transparent prices, real stock and flexible installments with the total always visible."
+    />
+    <meta
+      name="keywords"
+      content="premium electronics, buy electronics online, electronics marketplace, smartphones, laptops, tablets, headphones, gaming, smartwatches, cameras, buy iPhone, buy MacBook, electronics installment plans"
+    />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="theme-color" content="#FEEE00" />
+    <meta name="application-name" content="VEYRO" />
+
+    <!-- Open Graph / Twitter — absolute URLs are filled in at runtime so they
+         always match the domain actually serving the storefront. -->
+    <meta property="og:site_name" content="VEYRO" />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="Buy Electronics Online — Smartphones, Laptops, Audio & More | VEYRO"
+    />
+    <meta
+      property="og:description"
+      content="Buy electronics online at VEYRO — smartphones, laptops, audio, gaming and smart home from verified merchants. Transparent prices, real stock and flexible installments with the total always visible."
+    />
+    <meta property="og:image" content="https://media.base44.com/images/public/6aae3bd1fa32640256bb8573/d4fab25ef_iphone-18-pro-model-unselect-gallery-1-202609.webp" />
+    <meta property="og:image:alt" content="Premium electronics on VEYRO" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="1200" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Buy Electronics Online — Smartphones, Laptops, Audio & More | VEYRO"
+    />
+    <meta
+      name="twitter:description"
+      content="Premium electronics from verified merchants — transparent prices, real stock and flexible installments with the total always visible."
+    />
+    <meta name="twitter:image" content="https://media.base44.com/images/public/6aae3bd1fa32640256bb8573/d4fab25ef_iphone-18-pro-model-unselect-gallery-1-202609.webp" />
+    <meta name="format-detection" content="telephone=no" />
+
+    <script>
+      // International SEO head: canonical, hreflang alternates for every served
+      // language, and the site-wide Organization + WebSite structured data.
+      // Built from location.origin so a custom domain never leaves stale URLs.
+      (function () {
+        var origin = location.origin;
+        var langs = ["en", "fr", "pt", "es", "ar"];
+        function link(rel, href, hreflang) {
+          var el = document.createElement("link");
+          el.rel = rel;
+          el.href = href;
+          if (hreflang) el.hreflang = hreflang;
+          document.head.appendChild(el);
+        }
+        function meta(attr, key, content) {
+          var el = document.createElement("meta");
+          el.setAttribute(attr, key);
+          el.setAttribute("content", content);
+          document.head.appendChild(el);
+        }
+        link("canonical", origin + "/");
+        langs.forEach(function (l) {
+          link("alternate", l === "en" ? origin + "/" : origin + "/?lang=" + l, l);
+        });
+        link("alternate", origin + "/", "x-default");
+        meta("property", "og:url", origin + "/");
+        meta("property", "og:locale", "en");
+        langs.forEach(function (l) {
+          if (l !== "en") meta("property", "og:locale:alternate", l);
+        });
+
+        var graph = {
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "Organization",
+              "@id": origin + "/#organization",
+              name: "VEYRO",
+              alternateName: "VEYRO Premium Electronics",
+              url: origin + "/",
+              description:
+                "VEYRO is an international premium electronics marketplace offering smartphones, laptops, audio, gaming and smart home products from verified merchants, with transparent pricing and flexible installment plans.",
+              slogan: "Premium electronics, paid your way.",
+              areaServed: "Worldwide",
+              logo: {
+                "@type": "ImageObject",
+                url: origin + "/favicon.svg",
+                caption: "VEYRO",
+              },
+              image: origin + "/favicon.svg",
+              knowsLanguage: langs,
+              contactPoint: {
+                "@type": "ContactPoint",
+                contactType: "customer support",
+                url: origin + "/contact",
+                availableLanguage: langs,
+              },
+            },
+            {
+              "@type": "WebSite",
+              "@id": origin + "/#website",
+              name: "VEYRO",
+              url: origin + "/",
+              inLanguage: langs,
+              publisher: { "@id": origin + "/#organization" },
+              potentialAction: {
+                "@type": "SearchAction",
+                target: origin + "/category?q={search_term_string}",
+                "query-input": "required name=search_term_string",
+              },
+            },
+          ],
+        };
+        var s = document.createElement("script");
+        s.type = "application/ld+json";
+        s.setAttribute("data-seo-site", "true");
+        s.textContent = JSON.stringify(graph);
+        document.head.appendChild(s);
+      })();
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <title>VEYRO — Premium Electronics</title>
   </head>
   <body>
     <div id="root"></div>

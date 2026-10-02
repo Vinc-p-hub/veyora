@@ -2,6 +2,7 @@
 // t(key, vars) falls back to English then to the raw key, so missing translations
 // never break the UI. Language persists in localStorage and drives <html dir="rtl">.
 import React, { createContext, useContext, useCallback, useEffect, useState } from "react";
+import { setSeoLanguage } from "@/lib/seo";
 
 export const LANGUAGES = [
   { code: "en", label: "English", flag: "🇬🇧", dir: "ltr" },
@@ -544,6 +545,10 @@ const STORAGE_KEY = "veyro_lang_v1";
 
 export function LanguageProvider({ children }) {
   const [lang, setLangState] = useState(() => {
+    // A crawlable ?lang=xx URL (the hreflang alternate) wins over the remembered
+    // preference, so every language has a real indexable URL.
+    const fromUrl = new URLSearchParams(window.location.search).get("lang");
+    if (fromUrl && DICT[fromUrl]) return fromUrl;
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved && DICT[saved] ? saved : "en";
   });
@@ -560,6 +565,7 @@ export function LanguageProvider({ children }) {
     const meta = LANGUAGES.find((l) => l.code === lang) || LANGUAGES[0];
     document.documentElement.lang = lang;
     document.documentElement.dir = meta.dir;
+    setSeoLanguage(lang);
   }, [lang]);
 
   const t = useCallback(

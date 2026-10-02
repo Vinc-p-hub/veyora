@@ -1,7 +1,8 @@
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
+import ProtectedRoute from '@/components/ProtectedRoute';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -46,6 +47,7 @@ import SupportAdmin from '@/pages/admin/SupportAdmin';
 import Logs from '@/pages/admin/Logs';
 import GithubPage from '@/pages/admin/Github';
 import PromotionsAdmin from '@/pages/admin/Promotions';
+import Markets from '@/pages/admin/Markets';
 import { PromotionsProvider } from '@/lib/PromotionsContext';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
@@ -120,7 +122,10 @@ const AuthenticatedApp = () => {
                 <Route path="/reviews-policy" element={<LegalPage doc="reviews-policy" />} />
                 <Route path="/cookie-policy" element={<LegalPage doc="cookie-policy" />} />
               </Route>
-              {/* Super Admin console — completely separated from the public marketplace */}
+              {/* Super Admin console — completely separated from the public marketplace.
+                  Sign-in is required, and after logging in the visitor lands back on
+                  the console instead of the storefront. */}
+              <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login?returnTo=%2Fadmin" replace />} />}>
               <Route path="/admin" element={<Admin />}>
                 <Route index element={<Overview />} />
                 <Route path="approval-queue" element={<ApprovalQueue />} />
@@ -134,6 +139,7 @@ const AuthenticatedApp = () => {
                 <Route path="analytics" element={<AnalyticsPage />} />
                 <Route path="pricing" element={<PricingRules />} />
                 <Route path="promotions" element={<PromotionsAdmin />} />
+                <Route path="markets" element={<Markets />} />
                 <Route path="currency-settings" element={<CurrencySettings />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="cms" element={<Cms />} />
@@ -142,6 +148,7 @@ const AuthenticatedApp = () => {
                 <Route path="support" element={<SupportAdmin />} />
                 <Route path="logs" element={<Logs />} />
                 <Route path="github" element={<GithubPage />} />
+              </Route>
               </Route>
               <Route path="*" element={<PageNotFound />} />
             </Routes>

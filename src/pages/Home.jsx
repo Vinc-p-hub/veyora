@@ -11,6 +11,7 @@ import { Image } from "@/components/ui/image";
 import ProductCard from "@/components/ProductCard";
 import NewArrivalsSection from "@/components/NewArrivalsSection";
 import DealsSection from "@/components/DealsSection";
+import { applySeo, itemListLd, seoTitle } from "@/lib/seo";
 
 // Landing priority: flagship smartphones & laptops first, then computers and
 // brand accessories — with the latest crawler arrivals front and center.
@@ -78,6 +79,21 @@ export default function Home() {
       .finally(() => setLoading(false));
   }, []);
 
+  // SEO: the storefront landing page — a unique international title, meta
+  // description, Open Graph image and a real ItemList of the products actually
+  // shown on the page (never invented entries).
+  useEffect(() => {
+    const items = (products.length ? products : newest).slice(0, 20);
+    applySeo({
+      title: seoTitle("Buy Electronics Online", "Smartphones, Laptops, Audio & More"),
+      description:
+        "Buy electronics online at VEYRO — smartphones, laptops, audio, gaming and smart home from verified merchants. Transparent prices, real stock and flexible installments with the total always visible.",
+      path: "/",
+      image: items[0]?.image_url,
+      jsonLd: itemListLd("Premium electronics on VEYRO", items),
+    });
+  }, [products, newest]);
+
   // Real product image per category — straight from the live crawled catalog.
   const categoryImage = useMemo(() => {
     const map = new Map();
@@ -128,11 +144,11 @@ export default function Home() {
           className="grid md:grid-cols-3 gap-3"
         >
           {/* Today's top deals card */}
-          <div className="md:col-span-2 rounded-xl bg-emerald-200 p-5 md:p-8 flex flex-col md:flex-row gap-5 md:gap-8 min-h-[300px] md:min-h-[340px]">
+          <div className="md:col-span-2 rounded-xl bg-emerald-200 p-4 md:p-8 flex flex-col md:flex-row gap-4 md:gap-8 min-h-[300px] md:min-h-[340px]">
             <div className="flex-1 flex flex-col justify-between min-w-0">
               <div>
-                <span className="inline-flex items-center justify-center w-14 h-14 bg-noon rotate-45 rounded-lg shrink-0 mb-4">
-                  <span className="-rotate-45 font-display font-extrabold text-2xl leading-none">%</span>
+                <span className="inline-flex items-center justify-center w-12 h-12 md:w-14 md:h-14 bg-noon rotate-45 rounded-lg shrink-0 mb-3 md:mb-4">
+                  <span className="-rotate-45 font-display font-extrabold text-xl md:text-2xl leading-none">%</span>
                 </span>
                 <h1 className="text-display font-extrabold text-2xl md:text-4xl uppercase leading-tight">
                   {t("home.heroTitle1")}<br />{t("home.heroTitle2")}
@@ -142,9 +158,9 @@ export default function Home() {
               {hero && heroPlan && (
                 <Link
                   to={`/product/${hero.slug}`}
-                  className="mt-4 flex items-center gap-3 bg-white rounded-lg p-3 max-w-md hover:shadow-lg hover:-translate-y-0.5 transition duration-300"
+                  className="mt-4 flex items-center gap-2.5 md:gap-3 bg-white rounded-lg p-2.5 md:p-3 max-w-md hover:shadow-lg hover:-translate-y-0.5 transition duration-300"
                 >
-                  <img src={hero.image_url} alt={hero.name} className="w-16 h-16 md:w-20 md:h-20 object-cover rounded-lg bg-surface-secondary" />
+                  <img src={hero.image_url} alt={hero.name} className="w-14 h-14 md:w-20 md:h-20 shrink-0 object-cover rounded-lg bg-surface-secondary" />
                   <div className="flex-1 min-w-0">
                     <div className="text-[10px] uppercase text-text-muted">{hero.brand}</div>
                     <div className="text-sm font-semibold truncate">{hero.name}</div>
@@ -161,7 +177,7 @@ export default function Home() {
                   <div className="font-display font-bold text-sm md:text-base shrink-0">{formatPrice(hero.customer_price, currency)}</div>
                 </Link>
               )}
-              <Link to="/category" className="mt-4 inline-flex items-center gap-2 self-start px-6 py-2.5 rounded-lg bg-noon-fg text-white text-sm font-semibold hover:opacity-90 transition">
+              <Link to="/category" className="mt-4 inline-flex items-center justify-center gap-2 self-stretch md:self-start px-6 py-3 md:py-2.5 rounded-lg bg-noon-fg text-white text-sm font-semibold hover:opacity-90 transition">
                 {t("home.shopNow")} <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
@@ -253,14 +269,14 @@ export default function Home() {
         {/* Categories — real product imagery from the live catalog */}
         <section>
           <h2 className="font-display font-bold text-lg md:text-xl mb-4">{t("home.topCategories")}</h2>
-          <div className="flex gap-3 md:gap-6 overflow-x-auto scrollbar-hide pb-1">
+          <div className="-mx-4 px-4 md:mx-0 md:px-0 flex gap-3 md:gap-6 overflow-x-auto scrollbar-hide pb-1 snap-x snap-mandatory scroll-px-4">
             {CATEGORIES.map((c) => {
               const realImg = categoryImage.get(c.name);
               return (
                 <Link
                   key={c.name}
                   to={`/category?cat=${encodeURIComponent(c.name)}`}
-                  className="flex flex-col items-center gap-2 shrink-0 no-tap-highlight group w-20 md:w-24"
+                  className="flex flex-col items-center gap-2 shrink-0 snap-start no-tap-highlight group w-20 md:w-24"
                 >
                   <span className="w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden bg-white border border-border-hairline flex items-center justify-center group-hover:border-accent-cyan group-hover:shadow-md transition">
                     {realImg ? (

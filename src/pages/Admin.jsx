@@ -33,7 +33,8 @@ const MENU = [
   { to: "/admin/pricing", label: "Pricing & rules", icon: Percent },
   { to: "/admin/promotions", label: "Promotions", icon: BadgePercent },
   { to: "/admin/currency-settings", label: "Currencies", icon: Coins },
-  { to: "/admin/settings", label: "Countries", icon: Globe },
+  { to: "/admin/markets", label: "Markets", icon: Globe },
+  { to: "/admin/settings", label: "Country settings", icon: Globe },
   { to: "/admin/cms", label: "CMS & Hero", icon: Images },
   { to: "/admin/reviews", label: "Reviews", icon: Star },
   { to: "/admin/users", label: "Users & roles", icon: Users },
@@ -43,7 +44,7 @@ const MENU = [
 ];
 
 export default function Admin() {
-  const { user } = useAuth();
+  const { user, isLoadingAuth } = useAuth();
   const isAdmin =
     user?.role === "admin" &&
     ALLOWED_EMAILS.includes(String(user?.email || "").toLowerCase());
@@ -63,21 +64,49 @@ export default function Admin() {
     }
   }, [user, isAdmin, bootstrapped]);
 
+  // Never show the denial screen while the session is still being resolved.
+  if (isLoadingAuth) {
+    return (
+      <div className="min-h-screen bg-surface-primary flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-surface-primary flex items-center justify-center px-4">
         <div className="max-w-md text-center">
           <Lock className="w-10 h-10 mx-auto text-text-muted mb-4" />
           <h1 className="font-display font-bold text-xl">Restricted area</h1>
-          <p className="text-sm text-text-muted mt-2">
-            VEYRO Operations is a private console. Access is granted by server-side role
-            verification only — if your account is authorized it has been elevated
-            automatically, reload the page.
-          </p>
-          <button onClick={() => base44.auth.logout("/login")}
-            className="mt-6 px-5 py-2.5 rounded-lg border border-border-hairline text-sm hover:border-accent-cyan/40">
-            Sign in with a staff account
-          </button>
+          {user ? (
+            <>
+              <p className="text-sm text-text-muted mt-2">
+                You are signed in as{" "}
+                <span className="text-text-primary font-medium">{user.email}</span>, which is not
+                an authorized VEYRO operations account.
+              </p>
+              <button
+                onClick={() => base44.auth.logout("/login?returnTo=%2Fadmin")}
+                className="mt-6 px-5 py-2.5 rounded-lg border border-border-hairline text-sm hover:border-accent-cyan/40"
+              >
+                Sign out and use a staff account
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-text-muted mt-2">
+                VEYRO Operations is a private console. Sign in with an authorized staff account to
+                continue.
+              </p>
+              <a
+                href="/login?returnTo=%2Fadmin"
+                className="mt-6 inline-block px-5 py-2.5 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90"
+              >
+                Sign in to VEYRO Ops
+              </a>
+            </>
+          )}
         </div>
       </div>
     );
