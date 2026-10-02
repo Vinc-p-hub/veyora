@@ -12,6 +12,10 @@ const FALLBACK_IMG =
     '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect width="120" height="120" fill="#F0F0F3"/><text x="60" y="64" font-size="12" fill="#787C8D" text-anchor="middle" font-family="sans-serif">VEYRO</text></svg>'
   );
 
+// Suggestion results are kept per query + country so re-typing text the visitor
+// already searched never fires another server search.
+const suggestCache = new Map();
+
 export default function SearchBar() {
   const navigate = useNavigate();
   const { country, currency } = useRegion();
@@ -24,20 +28,31 @@ export default function SearchBar() {
 
   // Debounced search-as-you-type — server-side engine with synonyms + typo tolerance
   useEffect(() => {
-    if (q.trim().length < 1) {
+    const needle = q.trim();
+    if (needle.length < 2) {
       setData(null);
       setLoading(false);
       return;
     }
+    const key = `${needle}|${country.code}`;
+    const cached = suggestCache.get(key);
+    if (cached) {
+      setData(cached);
+      setOpen(true);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       try {
         const res = await base44.functions.invoke("searchProducts", {
-          q,
+          q: needle,
           country: country.code,
           mode: "suggest",
           limit: 6,
         });
+        if (suggestCache.size > 40) suggestCache.clear();
+        suggestCache.set(key, res.data);
         setData(res.data);
         setOpen(true);
       } catch {
@@ -45,8 +60,8 @@ export default function SearchBar() {
       } finally {
         setLoading(false);
       }
-    }, 120);
-    return () => clearTimeout(t);
+    }, 350);
+    return () => clearTimeout(timer);
   }, [q, country.code]);
 
   // close on outside click
@@ -82,7 +97,7 @@ export default function SearchBar() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          onFocus={() => q.trim().length >= 1 && setOpen(true)}
+          onFocus={() => q.trim().length >= 2 && setOpen(true)}
           placeholder={t("header.searchPlaceholder")}
           className="flex-1 min-w-0 bg-white border border-border-hairline border-r-0 rounded-l-lg px-4 py-2.5 md:py-3 text-sm placeholder:text-text-muted focus:outline-none focus:border-noon-fg/40"
         />
@@ -95,7 +110,7 @@ export default function SearchBar() {
         </button>
       </form>
 
-      {open && q.trim().length >= 1 && (
+      {open && q.trim().length >= 2 && (
         <div className="absolute left-0 right-0 top-full mt-1.5 bg-surface-card border border-border-hairline rounded-lg shadow-2xl z-50 max-h-[70vh] overflow-auto">
           {loading && !data && (
             <div className="flex items-center gap-2 px-4 py-3 text-sm text-text-muted">

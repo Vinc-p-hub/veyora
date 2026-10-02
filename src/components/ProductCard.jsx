@@ -53,7 +53,9 @@ export default function ProductCard({ product, compact }) {
       <div className="flex flex-col p-2.5 flex-1">
         <div className="text-[10px] uppercase text-text-muted">{product.brand}</div>
         <div className="text-xs font-medium leading-snug mt-0.5 line-clamp-2">{product.name}</div>
-        {!compact && (
+        {/* Rating shown only once real reviews exist — a seeded score on a
+            product nobody reviewed would be invented data. */}
+        {!compact && (product.reviews_count || 0) > 0 && (
           <div className="flex items-center gap-1 mt-1 text-[11px] text-text-muted">
             <Star className="w-3 h-3 fill-badge-premium text-badge-premium" />
             {product.rating} <span className="text-text-muted/70">({product.reviews_count})</span>

@@ -5,7 +5,8 @@ import { useCart } from "@/lib/CartContext";
 import { useRegion } from "@/lib/RegionContext";
 import { usePricing } from "@/lib/PricingContext";
 import { useLang } from "@/lib/i18n";
-import { PAYMENT_PROVIDERS, ACTIVE_PROVIDERS } from "@/lib/countries";
+import { PAYMENT_PROVIDERS } from "@/lib/countries";
+import { useConnectedProviders } from "@/lib/useConnectedProviders";
 import { formatPrice } from "@/lib/pricing";
 import { base44 } from "@/api/base44Client";
 import { useSiteText } from "@/lib/useSiteText";
@@ -24,10 +25,17 @@ export default function Checkout() {
   const getText = useSiteText();
 
   const [planId, setPlanId] = useState(params.get("plan") || "plan_5");
-  // Storefront payment methods are filtered by the ACTIVE_PROVIDERS allowlist
-  // (currently NexaPay only) — country provider data stays intact in the registry.
-  const activeProviders = ACTIVE_PROVIDERS.filter((p) => PAYMENT_PROVIDERS[p]);
-  const [provider, setProvider] = useState(activeProviders[0]);
+  // Storefront payment methods mirror the providers switched on in the back
+  // office — nothing else is offered at checkout.
+  const connected = useConnectedProviders();
+  const activeProviders = connected.map((p) => ({
+    id: p.id,
+    name: PAYMENT_PROVIDERS[p.id]?.name || p.label,
+    desc: PAYMENT_PROVIDERS[p.id]?.desc || p.region,
+    badge: PAYMENT_PROVIDERS[p.id]?.badge || "",
+  }));
+  const [provider, setProvider] = useState(null);
+  const selected = activeProviders.some((p) => p.id === provider) ? provider : activeProviders[0]?.id;
   const [form, setForm] = useState({ name: "", email: "", address: "", city: "", postal: "" });
   const [placing, setPlacing] = useState(false);
   const [payingOrder, setPayingOrder] = useState(null); // live NexaPay payment step
@@ -198,17 +206,19 @@ export default function Checkout() {
         total: finalTotals.total,
         currency: d.currency,
         country: country.code,
-        payment_provider: provider,
+        payment_provider: selected,
         down_payment: d.plan?.downPayment || finalTotals.total,
         installment_count: d.plan?.installmentCount || 0,
         installment_amount: d.plan?.installmentAmount || 0,
         price_snapshot: d.snapshot, // immutable — future price changes never touch this order
-        status: provider === "nexapay" ? "PENDING_PAYMENT" : "PAID",
+        // No payment is captured on the client's word — the order stays pending
+        // until the provider's signed webhook confirms it server-side.
+        status: "PENDING_PAYMENT",
         address: { line: form.address, city: form.city, postal: form.postal },
         tracking_number: "TRK" + Math.random().toString(36).slice(2, 10).toUpperCase(),
       });
       clearCart();
-      if (provider === "nexapay") {
+      if (selected === "nexapay") {
         // The order stays PENDING_PAYMENT until the signed NexaPay webhook
         // confirms the payment server-side — never on the client's word.
         setPlacing(false);
@@ -274,32 +284,32 @@ export default function Checkout() {
 
           <section className="bg-surface-card border border-border-hairline rounded-lg p-5">
             <h2 className="font-display font-semibold text-lg mb-1">Payment method</h2>
-            <p className="text-xs text-text-muted mb-4">Available providers for {country.name}</p>
+            <p className="text-xs text-text-muted mb-4">Payment methods currently connected to VEYRO</p>
             <div className="space-y-2.5">
-              {activeProviders.map((pid) => {
-                const p = PAYMENT_PROVIDERS[pid];
-                return (
-                  <button
-                    key={pid}
-                    onClick={() => setProvider(pid)}
-                    className={cn(
-                      "w-full flex items-center justify-between p-3.5 rounded-lg border transition",
-                      provider === pid ? "border-accent-cyan bg-accent-cyan/5" : "border-border-hairline hover:border-accent-cyan/30"
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center", provider === pid ? "border-accent-cyan" : "border-border-hairline")}>
-                        {provider === pid && <div className="w-2.5 h-2.5 rounded-full bg-accent-cyan" />}
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium">{p.name}</div>
-                        <div className="text-xs text-text-muted">{p.desc}</div>
-                      </div>
+              {activeProviders.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setProvider(p.id)}
+                  className={cn(
+                    "w-full flex items-center justify-between p-3.5 rounded-lg border transition",
+                    selected === p.id ? "border-accent-cyan bg-accent-cyan/5" : "border-border-hairline hover:border-accent-cyan/30"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center", selected === p.id ? "border-accent-cyan" : "border-border-hairline")}>
+                      {selected === p.id && <div className="w-2.5 h-2.5 rounded-full bg-accent-cyan" />}
                     </div>
-                    <span className="text-[10px] text-mono text-text-muted px-2 py-1 rounded-md border border-border-hairline">{p.badge}</span>
-                  </button>
-                );
-              })}
+                    <div>
+                      <div className="text-sm font-medium">{p.name}</div>
+                      <div className="text-xs text-text-muted">{p.desc}</div>
+                    </div>
+                  </div>
+                  {p.badge && <span className="text-[10px] text-mono text-text-muted px-2 py-1 rounded-md border border-border-hairline">{p.badge}</span>}
+                </button>
+              ))}
+              {activeProviders.length === 0 && (
+                <p className="text-xs text-text-muted">No payment method is available right now.</p>
+              )}
             </div>
           </section>
         </div>

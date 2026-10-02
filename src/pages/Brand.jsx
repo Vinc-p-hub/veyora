@@ -27,6 +27,7 @@ export default function Brand() {
           setProducts(all.filter((p) => String(p.brand || "").toLowerCase() === brandName.toLowerCase()));
         }
       })
+      .catch(() => {})
       .finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
   }, [brandName]);

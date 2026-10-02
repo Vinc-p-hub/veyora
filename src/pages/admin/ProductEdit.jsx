@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowDown, ArrowUp, ImagePlus, Star, Trash2 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { cn } from "@/lib/utils";
+import ProductReviews from "@/components/admin/reviews/ProductReviews";
 
 const CATEGORIES = [
   "Laptops", "Smartphones", "Tablets", "Headphones & Earbuds", "TVs & Monitors", "Cameras",
@@ -252,6 +253,9 @@ export default function ProductEdit() {
           </button>
         </div>
       </section>
+
+      {/* Reviews — manual entry + file import, effective on the storefront */}
+      <ProductReviews product={p} />
     </div>
   );
 }

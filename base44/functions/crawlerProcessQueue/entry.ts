@@ -15,6 +15,8 @@ export default async function (req) {
       admin: base44.asServiceRole,
       actor: { id: user.id, email: user.email },
       maxJobs,
+      // Scoped run: only this source's jobs are claimed, other sites stay queued.
+      sourceId: body.source_id || null,
     });
     return Response.json({ ok: true, ...result });
   } catch (error) {

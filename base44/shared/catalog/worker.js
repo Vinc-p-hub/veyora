@@ -6,7 +6,7 @@
 // admin = service-role client. actor = { id, email } | null.
 import {
   canonicalizeUrl, slugify, normalizeTitle, normalizePrice, normalizeCurrency,
-  normalizeStock, normalizeBrand, inferCategory, extractVariantInfo,
+  normalizeStock, normalizeBrand, inferCategory, canonicalCategory, extractVariantInfo,
 } from "./normalize.js";
 import { validateProduct } from "./validate.js";
 import { matchProduct } from "./match.js";
@@ -69,14 +69,18 @@ function diffUpdate(existing, record) {
   return { update, changed };
 }
 
-export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
+// sourceId scopes the run to ONE source's jobs (the per-source "Run" button).
+// Without it the whole queue is processed — the global "Process queue now"
+// button and the background orchestrator.
+export async function processQueueBatch({ admin, actor, maxJobs = 25, sourceId = null }) {
   const now = new Date();
+  const scope = sourceId ? { source_id: sourceId } : {};
 
   // --- queue: reclaim stale locks, claim due jobs by priority ---
   const [runningJobs, queuedAll, retryingAll] = await Promise.all([
-    admin.entities.CrawlerJob.filter({ status: "RUNNING" }, null, 200),
-    admin.entities.CrawlerJob.filter({ status: "QUEUED" }, "priority", 500),
-    admin.entities.CrawlerJob.filter({ status: "RETRYING" }, "scheduled_at", 200),
+    admin.entities.CrawlerJob.filter({ status: "RUNNING", ...scope }, null, 200),
+    admin.entities.CrawlerJob.filter({ status: "QUEUED", ...scope }, "priority", 500),
+    admin.entities.CrawlerJob.filter({ status: "RETRYING", ...scope }, "scheduled_at", 200),
   ]);
   const stale = runningJobs.filter((j) => j.locked_at && now - new Date(j.locked_at) > STALE_LOCK_MS);
   if (stale.length) {
@@ -174,7 +178,7 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
       let compareAt = normalizePrice(raw.compare_at_price);
       if (compareAt != null && cur.code !== "USD" && cur.rate) compareAt = round2(compareAt / cur.rate);
       raw.brand = normalizeBrand(raw.brand, raw.title);
-      raw.category = raw.category || inferCategory(`${raw.title} ${raw.brand || ""}`);
+      raw.category = canonicalCategory(raw.category, raw.title, raw.brand);
       raw.stock_status = normalizeStock(raw.stock);
       raw.url = raw.url || job.url;
       raw.canonical_url = canonicalizeUrl(raw.url, source.base_url) || raw.url;
@@ -483,6 +487,8 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25 }) {
   // --- freshness: enqueue refresh for stale offers (bounded) ---
   const staleOffers = offers
     .filter((o) => !o.stale && o.last_checked && now - new Date(o.last_checked) > STALE_OFFER_MS)
+    // A single-source run never enqueues refresh jobs for the other sources.
+    .filter((o) => !sourceId || o.source_id === sourceId)
     .slice(0, 5);
   if (staleOffers.length) {
     await admin.entities.CrawlerJob.bulkCreate(

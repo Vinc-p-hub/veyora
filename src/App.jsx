@@ -48,6 +48,7 @@ import Logs from '@/pages/admin/Logs';
 import GithubPage from '@/pages/admin/Github';
 import PromotionsAdmin from '@/pages/admin/Promotions';
 import Markets from '@/pages/admin/Markets';
+import PaymentProviders from '@/pages/admin/PaymentProviders';
 import { PromotionsProvider } from '@/lib/PromotionsContext';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
@@ -140,6 +141,7 @@ const AuthenticatedApp = () => {
                 <Route path="pricing" element={<PricingRules />} />
                 <Route path="promotions" element={<PromotionsAdmin />} />
                 <Route path="markets" element={<Markets />} />
+                <Route path="payment-providers" element={<PaymentProviders />} />
                 <Route path="currency-settings" element={<CurrencySettings />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="cms" element={<Cms />} />

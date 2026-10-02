@@ -58,14 +58,16 @@ export default function CrawlerPanel({ onChanged }) {
     load();
   }, [load]);
 
-  const runSource = async (id) => {
+  // Runs ONE source only: discovery targets that source and the queue step is
+  // scoped to its jobs, so no other site is touched.
+  const runSource = async (source) => {
     setBusy(true);
     setMsg(null);
     try {
-      const disc = await base44.functions.invoke("crawlerRunSource", { source_id: id });
-      const proc = await base44.functions.invoke("crawlerProcessQueue", { max_jobs: 40 });
+      const disc = await base44.functions.invoke("crawlerRunSource", { source_id: source.id });
+      const proc = await base44.functions.invoke("crawlerProcessQueue", { max_jobs: 40, source_id: source.id });
       setMsg(
-        `Discovered ${disc.data.discovered} (enqueued ${disc.data.enqueued}) · processed ${proc.data.processed} (completed ${proc.data.completed}, retried ${proc.data.retried}, failed ${proc.data.failed})`
+        `${source.name} — discovered ${disc.data.discovered} (enqueued ${disc.data.enqueued}) · processed ${proc.data.processed} (completed ${proc.data.completed}, retried ${proc.data.retried}, failed ${proc.data.failed})`
       );
       await load();
       if (onChanged) await onChanged();
@@ -245,7 +247,7 @@ export default function CrawlerPanel({ onChanged }) {
                         <MessageSquare className="w-3 h-3" />
                       </button>
                       <button
-                        onClick={() => runSource(s.id)}
+                        onClick={() => runSource(s)}
                         disabled={busy || !s.enabled}
                         className="px-2.5 py-1.5 rounded-md border border-border-hairline flex items-center gap-1 hover:border-accent-cyan/40 disabled:opacity-40"
                       >

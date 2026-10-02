@@ -51,6 +51,7 @@ export const PAYMENT_PROVIDERS = {
   flutterwave: { id: "flutterwave", name: "Flutterwave", desc: "Cards · Mobile Money · Bank transfer", badge: "Africa" },
   paystack: { id: "paystack", name: "Paystack", desc: "Cards · Bank · USSD", badge: "Africa" },
   payunit: { id: "payunit", name: "PayUnit", desc: "MTN MoMo · Orange Money · Cards", badge: "Central Africa" },
+  campay: { id: "campay", name: "Campay", desc: "MTN MoMo · Orange Money wallet", badge: "Central Africa" },
   mpesa: { id: "mpesa", name: "M-Pesa", desc: "Safaricom mobile money", badge: "East Africa" },
   mtn_momo: { id: "mtn_momo", name: "MTN MoMo", desc: "MTN Mobile Money wallet", badge: "Africa" },
   orange_money: { id: "orange_money", name: "Orange Money", desc: "Orange mobile money wallet", badge: "Africa" },
@@ -201,10 +202,6 @@ export const COUNTRIES = RAW_COUNTRIES.map((row) => {
     providers: providers ? providers.split(",") : def.providers,
   };
 });
-
-// Frontend-only allowlist — the storefront currently exposes ONLY NexaPay.
-// The full catalog and per-country provider data above stay intact (admin / future use).
-export const ACTIVE_PROVIDERS = ["nexapay"];
 
 export const LANGUAGES = [
   { code: "en", label: "English", dir: "ltr" },

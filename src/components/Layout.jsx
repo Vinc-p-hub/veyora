@@ -3,6 +3,7 @@ import { Link, useLocation, Outlet } from "react-router-dom";
 import { ShoppingBag, User, Compass, LayoutGrid, Package, Search as SearchIcon, Heart } from "lucide-react";
 import { useCart } from "@/lib/CartContext";
 import SearchBar from "@/components/SearchBar";
+import FooterPaymentLogos from "@/components/FooterPaymentLogos";
 import RegionLangMenu from "@/components/RegionLangMenu";
 import CategoryNav from "@/components/CategoryNav";
 import { useLang } from "@/lib/i18n";
@@ -38,7 +39,7 @@ function Footer() {
         <div className="col-span-2 md:col-span-1">
           <span className="font-display font-extrabold text-xl">veyro</span>
           <p className="text-xs mt-3 opacity-80 leading-relaxed">{t("footer.tagline")}</p>
-          <div className="text-[11px] mt-3 font-medium">Stripe · Flutterwave · Paystack · M-Pesa · Alipay · Crypto</div>
+
         </div>
         <div>
           <h4 className="font-semibold text-sm mb-3">{t("footer.electronics")}</h4>
@@ -89,8 +90,13 @@ function Footer() {
           </div>
         </div>
       </div>
-      <div className="border-t border-black/10 py-4 pb-20 md:pb-4 text-center text-[11px] font-medium">
-        © 2026 VEYRO — Premium electronics, paid your way.
+      <div className="border-t border-black/10 py-5 pb-20 md:pb-5">
+        <div className="max-w-[1400px] mx-auto px-4 md:px-8 flex flex-col md:flex-row items-center gap-4 md:justify-between">
+          <FooterPaymentLogos />
+          <div className="text-[11px] font-medium text-center md:text-end">
+            © 2026 VEYRO — Premium electronics, paid your way.
+          </div>
+        </div>
       </div>
     </footer>
   );

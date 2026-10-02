@@ -29,6 +29,8 @@ export default function Category() {
   const [corrected, setCorrected] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showFilters, setShowFilters] = useState(false);
+  const [error, setError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
   const q = params.get("q") || "";
   const cat = params.get("cat") || "";
@@ -37,6 +39,7 @@ export default function Category() {
 
   useEffect(() => {
     setLoading(true);
+    setError("");
     setFallback([]);
     setCorrected(null);
     if (q) {
@@ -48,6 +51,10 @@ export default function Category() {
           setFallback(res.data.fallback || []);
           setCorrected(res.data.corrected || null);
         })
+        .catch(() => {
+          setProducts([]);
+          setError("The catalog is momentarily unavailable. Please try again in a few seconds.");
+        })
         .finally(() => setLoading(false));
     } else {
       const filter = { status: "PUBLISHED" };
@@ -56,9 +63,13 @@ export default function Category() {
       const sortField = sort === "price_low" ? "customer_price" : sort === "price_high" ? "-customer_price" : "-premium_score";
       base44.entities.Product.filter(filter, sortField, 60)
         .then(setProducts)
+        .catch(() => {
+          setProducts([]);
+          setError("The catalog is momentarily unavailable. Please try again in a few seconds.");
+        })
         .finally(() => setLoading(false));
     }
-  }, [q, cat, brand, sort, country.code]);
+  }, [q, cat, brand, sort, country.code, reloadKey]);
 
   // client-side refinement of server-ranked results
   const visible = useMemo(() => {
@@ -135,6 +146,18 @@ export default function Category() {
           </button>
         </div>
       </div>
+
+      {error && (
+        <div className="mb-4 flex items-center justify-between gap-3 p-3 rounded-lg bg-surface-card border border-border-hairline">
+          <p className="text-sm text-text-muted">{error}</p>
+          <button
+            onClick={() => setReloadKey((k) => k + 1)}
+            className="shrink-0 px-3 py-1.5 rounded-lg bg-noon text-noon-fg text-xs font-semibold"
+          >
+            Try again
+          </button>
+        </div>
+      )}
 
       {corrected && (
         <button

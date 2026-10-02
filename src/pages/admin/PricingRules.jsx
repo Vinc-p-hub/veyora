@@ -51,6 +51,7 @@ export default function PricingRules() {
         setSources(srcs);
       })
       .catch(() => setMsg("Could not load pricing configuration."))
+      .catch(() => {})
       .finally(() => setLoading(false));
   };
 

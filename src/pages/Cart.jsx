@@ -5,6 +5,7 @@ import { useCart } from "@/lib/CartContext";
 import { useRegion } from "@/lib/RegionContext";
 import { formatPrice } from "@/lib/pricing";
 import { usePromotions } from "@/lib/PromotionsContext";
+import CartUpsell from "@/components/cart/CartUpsell";
 
 export default function Cart() {
   const { items, updateQty, removeItem } = useCart();
@@ -17,15 +18,19 @@ export default function Cart() {
 
   if (items.length === 0) {
     return (
-      <div className="px-4 md:px-8 py-16 max-w-2xl mx-auto text-center">
-        <div className="w-16 h-16 rounded-lg bg-surface-card border border-border-hairline flex items-center justify-center mx-auto mb-5">
-          <ShoppingBag className="w-7 h-7 text-text-muted" />
+      <div className="px-4 md:px-8 py-16 max-w-[1100px] mx-auto">
+        <div className="max-w-2xl mx-auto text-center">
+          <div className="w-16 h-16 rounded-lg bg-surface-card border border-border-hairline flex items-center justify-center mx-auto mb-5">
+            <ShoppingBag className="w-7 h-7 text-text-muted" />
+          </div>
+          <h1 className="font-display font-bold text-2xl">Your cart is empty</h1>
+          <p className="text-sm text-text-muted mt-2">Discover premium electronics and split the cost into installments.</p>
+          <Link to="/category" className="inline-flex items-center gap-2 mt-6 px-5 py-3 rounded-lg bg-noon text-noon-fg font-medium text-sm">
+            Browse catalog <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
-        <h1 className="font-display font-bold text-2xl">Your cart is empty</h1>
-        <p className="text-sm text-text-muted mt-2">Discover premium electronics and split the cost into installments.</p>
-        <Link to="/category" className="inline-flex items-center gap-2 mt-6 px-5 py-3 rounded-lg bg-noon text-noon-fg font-medium text-sm">
-          Browse catalog <ArrowRight className="w-4 h-4" />
-        </Link>
+        {/* An empty cart is prime cross-sell space */}
+        <CartUpsell />
       </div>
     );
   }
@@ -79,6 +84,9 @@ export default function Cart() {
           </div>
         </div>
       </div>
+
+      {/* Cross-sell built from the live catalog */}
+      <CartUpsell />
     </div>
   );
 }

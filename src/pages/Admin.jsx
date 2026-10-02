@@ -6,7 +6,7 @@ import React, { useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import {
   Shield, LayoutDashboard, AlertTriangle, Database, Package, Handshake, Cpu,
-  BarChart3, Coins, Globe, Users, Headphones, ScrollText, Lock, LogOut, Percent, Tag, Images, Star, Github, Boxes, BadgePercent,
+  BarChart3, Coins, Globe, Users, Headphones, ScrollText, Lock, LogOut, Percent, Tag, Images, Star, Github, Boxes, BadgePercent, CreditCard,
 } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
@@ -33,6 +33,7 @@ const MENU = [
   { to: "/admin/pricing", label: "Pricing & rules", icon: Percent },
   { to: "/admin/promotions", label: "Promotions", icon: BadgePercent },
   { to: "/admin/currency-settings", label: "Currencies", icon: Coins },
+  { to: "/admin/payment-providers", label: "Payment providers", icon: CreditCard },
   { to: "/admin/markets", label: "Markets", icon: Globe },
   { to: "/admin/settings", label: "Country settings", icon: Globe },
   { to: "/admin/cms", label: "CMS & Hero", icon: Images },
@@ -45,9 +46,12 @@ const MENU = [
 
 export default function Admin() {
   const { user, isLoadingAuth } = useAuth();
+  // Console access: a super admin appointed from the back office (server-set
+  // staff_role) — or one of the founder accounts.
   const isAdmin =
     user?.role === "admin" &&
-    ALLOWED_EMAILS.includes(String(user?.email || "").toLowerCase());
+    (user?.staff_role === "SUPER_ADMIN" ||
+      ALLOWED_EMAILS.includes(String(user?.email || "").toLowerCase()));
   const [bootstrapped, setBootstrapped] = useState(false);
 
   // Server-side role bootstrap: designated accounts are elevated only after the

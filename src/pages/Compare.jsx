@@ -34,6 +34,7 @@ export default function Compare() {
     setLoading(true);
     Promise.all(ids.map((id) => base44.entities.Product.get(id).catch(() => null)))
       .then((res) => setProducts(res.filter(Boolean)))
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, [ids.join(",")]);
 

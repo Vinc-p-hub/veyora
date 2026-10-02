@@ -8,11 +8,12 @@ import Stars from "@/components/reviews/Stars";
 // verbatim from the partner site (text, author, rating, original URL). The
 // review is stored as a SourceReview tied to its source. Nothing is ever
 // generated or rewritten here.
-export default function ManualSourceReviewForm({ onCreated }) {
+export default function ManualSourceReviewForm({ onCreated, productId: lockedProductId = "", productName: lockedProductName = "" }) {
+  const locked = !!lockedProductId;
   const [open, setOpen] = useState(false);
   const [products, setProducts] = useState([]);
   const [sources, setSources] = useState([]);
-  const [productId, setProductId] = useState("");
+  const [productId, setProductId] = useState(lockedProductId);
   const [query, setQuery] = useState("");
   const [rating, setRating] = useState(5);
   const [text, setText] = useState("");
@@ -24,13 +25,16 @@ export default function ManualSourceReviewForm({ onCreated }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    base44.entities.Product.filter({ status: "PUBLISHED" }, "name", 500)
-      .then((list) => setProducts(list))
-      .catch(() => {});
+    // Opened from a product page: the product is fixed, so no catalog is loaded.
+    if (!locked) {
+      base44.entities.Product.filter({ status: "PUBLISHED" }, "name", 500)
+        .then((list) => setProducts(list))
+        .catch(() => {});
+    }
     base44.entities.CrawlerSource.list("name", 100)
       .then((list) => setSources(list.filter((s) => s.enabled)))
       .catch(() => {});
-  }, []);
+  }, [locked]);
 
   const matches = useMemo(() => {
     const qp = query.trim().toLowerCase();
@@ -40,7 +44,7 @@ export default function ManualSourceReviewForm({ onCreated }) {
       .slice(0, 6);
   }, [products, query]);
 
-  const selected = products.find((p) => p.id === productId);
+  const selected = locked ? { id: lockedProductId, name: lockedProductName } : products.find((p) => p.id === productId);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -63,7 +67,7 @@ export default function ManualSourceReviewForm({ onCreated }) {
         status: "ACTIVE",
         imported_at: new Date().toISOString(),
       });
-      setProductId(""); setQuery(""); setRating(5); setText("");
+      setProductId(lockedProductId); setQuery(""); setRating(5); setText("");
       setAuthor(""); setSourceName(""); setReviewDate(""); setReviewUrl("");
       setOpen(false);
       onCreated?.();
@@ -92,28 +96,36 @@ export default function ManualSourceReviewForm({ onCreated }) {
         <button type="button" onClick={() => setOpen(false)} className="text-text-muted hover:text-text-primary"><X className="w-4 h-4" /></button>
       </div>
 
-      {/* Product picker */}
+      {/* Product picker — locked when the form is opened from a product page */}
       <div className="relative">
-        <input
-          value={selected ? selected.name : query}
-          onChange={(e) => { setProductId(""); setQuery(e.target.value); }}
-          placeholder="Search the product…"
-          className="w-full px-3 py-2 rounded-lg border border-border-hairline text-xs"
-        />
-        {query && !selected && matches.length > 0 && (
-          <div className="absolute z-10 inset-x-0 top-full mt-1 rounded-lg border border-border-hairline bg-white shadow-lg max-h-48 overflow-auto">
-            {matches.map((p) => (
-              <button
-                type="button"
-                key={p.id}
-                onClick={() => { setProductId(p.id); setQuery(p.name); }}
-                className="block w-full text-left px-3 py-2 text-xs hover:bg-surface-primary"
-              >
-                <span className="font-medium">{p.name}</span>
-                <span className="text-text-muted"> · {p.brand}</span>
-              </button>
-            ))}
+        {locked ? (
+          <div className="w-full px-3 py-2 rounded-lg border border-border-hairline bg-surface-card text-xs">
+            On <span className="font-medium">{lockedProductName}</span>
           </div>
+        ) : (
+          <>
+            <input
+              value={selected ? selected.name : query}
+              onChange={(e) => { setProductId(""); setQuery(e.target.value); }}
+              placeholder="Search the product…"
+              className="w-full px-3 py-2 rounded-lg border border-border-hairline text-xs"
+            />
+            {query && !selected && matches.length > 0 && (
+              <div className="absolute z-10 inset-x-0 top-full mt-1 rounded-lg border border-border-hairline bg-white shadow-lg max-h-48 overflow-auto">
+                {matches.map((p) => (
+                  <button
+                    type="button"
+                    key={p.id}
+                    onClick={() => { setProductId(p.id); setQuery(p.name); }}
+                    className="block w-full text-left px-3 py-2 text-xs hover:bg-surface-primary"
+                  >
+                    <span className="font-medium">{p.name}</span>
+                    <span className="text-text-muted"> · {p.brand}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
 

@@ -16,6 +16,7 @@ export default function AnalyticsPanel() {
         setQueries(q);
         setLogs(l);
       })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 

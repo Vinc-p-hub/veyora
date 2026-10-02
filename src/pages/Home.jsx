@@ -76,6 +76,7 @@ export default function Home() {
           return true;
         }));
       })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 

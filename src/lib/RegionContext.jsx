@@ -12,7 +12,7 @@ export function RegionProvider({ children }) {
     return localStorage.getItem(STORAGE_KEY) || "US";
   });
   const [blockedCodes, setBlockedCodes] = useState(() => new Set());
-  const [overridesVersion, setOverridesVersion] = useState(0);
+  const [, setOverridesVersion] = useState(0);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, countryCode);
@@ -73,7 +73,6 @@ export function RegionProvider({ children }) {
 
   return (
     <RegionContext.Provider
-      key={overridesVersion}
       value={{
         countryCode,
         setCountryCode,

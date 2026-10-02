@@ -42,6 +42,7 @@ export default function ProductDetail() {
         const byId = await base44.entities.Product.get(slug).catch(() => null);
         setProduct(byId && byId.status === "PUBLISHED" ? byId : null);
       })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, [slug]);
 
@@ -244,9 +245,13 @@ export default function ProductDetail() {
             <div className="text-xs uppercase tracking-widest text-text-muted">{product.brand}</div>
             <h1 className="font-display font-bold text-2xl md:text-4xl mt-1.5 leading-tight">{product.name}</h1>
             <div className="flex items-center gap-3 mt-3 text-sm text-text-muted">
-              <span className="flex items-center gap-1"><Star className="w-4 h-4 fill-badge-premium text-badge-premium" /> {product.rating}</span>
-              <span>· {product.reviews_count} reviews</span>
-              <span>· Match {Math.round(product.match_confidence * 100)}%</span>
+              {(product.reviews_count || 0) > 0 && (
+                <>
+                  <span className="flex items-center gap-1"><Star className="w-4 h-4 fill-badge-premium text-badge-premium" /> {product.rating}</span>
+                  <span>· {product.reviews_count} reviews</span>
+                </>
+              )}
+              <span>Match {Math.round(product.match_confidence * 100)}%</span>
             </div>
           </div>
 

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { CreditCard, ShieldCheck, Check } from "lucide-react";
 import { base44 } from "@/api/base44Client";
-import { PAYMENT_PROVIDERS, ACTIVE_PROVIDERS } from "@/lib/countries";
+import { PAYMENT_PROVIDERS } from "@/lib/countries";
+import { useConnectedProviders } from "@/lib/useConnectedProviders";
 import { useLang } from "@/lib/i18n";
 import { useRegion } from "@/lib/RegionContext";
 import { useToast } from "@/components/ui/use-toast";
@@ -23,7 +24,14 @@ export default function PaymentMethods() {
     toast({ description: t("payment.preferredSet") });
   };
 
-  const available = ACTIVE_PROVIDERS.map((p) => PAYMENT_PROVIDERS[p]).filter(Boolean);
+  // Only the providers switched on in the back office are offered here.
+  const connected = useConnectedProviders();
+  const available = connected.map((p) => ({
+    id: p.id,
+    name: PAYMENT_PROVIDERS[p.id]?.name || p.label,
+    desc: PAYMENT_PROVIDERS[p.id]?.desc || p.region,
+    badge: PAYMENT_PROVIDERS[p.id]?.badge || "",
+  }));
 
   return (
     <div className="max-w-3xl mx-auto px-4 md:px-8 py-8 space-y-6">
@@ -43,7 +51,7 @@ export default function PaymentMethods() {
               <CreditCard className="w-5 h-5 text-text-primary" />
             </div>
             <div className="flex-1">
-              <div className="text-sm font-semibold flex items-center gap-2">{p.name} <span className="text-[9px] uppercase tracking-widest bg-noon text-noon-fg px-1.5 py-0.5 rounded">{p.badge}</span></div>
+              <div className="text-sm font-semibold flex items-center gap-2">{p.name} {p.badge && <span className="text-[9px] uppercase tracking-widest bg-noon text-noon-fg px-1.5 py-0.5 rounded">{p.badge}</span>}</div>
               <div className="text-xs text-text-muted mt-0.5">{p.desc}</div>
             </div>
             {preferred === p.id ? (
