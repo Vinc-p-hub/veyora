@@ -13,6 +13,7 @@ import { useSiteText } from "@/lib/useSiteText";
 import { cn } from "@/lib/utils";
 import NexaPayWidget from "@/components/payments/NexaPayWidget";
 import PayPalCheckout from "@/components/payments/PayPalCheckout";
+import { useAuth } from "@/lib/AuthContext";
 import CouponField from "@/components/checkout/CouponField";
 import { usePromotions } from "@/lib/PromotionsContext";
 
@@ -28,6 +29,7 @@ export default function Checkout() {
   const [planId, setPlanId] = useState(params.get("plan") || "plan_5");
   // Storefront payment methods mirror the providers switched on in the back
   // office — nothing else is offered at checkout.
+  const { user } = useAuth();
   const connected = useConnectedProviders();
   const activeProviders = connected.map((p) => ({
     id: p.id,
@@ -141,6 +143,11 @@ export default function Checkout() {
 
   const placeOrder = async () => {
     if (!form.name || !form.email || !form.address) return;
+    // Stock is committed server-side for signed-in customers only.
+    if (!user) {
+      navigate("/login?returnTo=" + encodeURIComponent("/checkout"));
+      return;
+    }
     setPlacing(true);
     // Final server-side gate — offer, price, supplier availability and the
     // internal VEYRO allocation are re-verified live and the allocation is
