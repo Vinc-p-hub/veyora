@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Heart, CreditCard, LifeBuoy, MapPin, Globe, Check, Loader2, UserCircle2 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { useLang, LANGUAGES } from "@/lib/i18n";
 import { useRegion } from "@/lib/RegionContext";
@@ -10,7 +9,7 @@ import { useToast } from "@/components/ui/use-toast";
 const EMPTY_ADDRESS = { label: "", name: "", street: "", city: "", country: "", phone: "" };
 
 export default function Profile() {
-  const { user, isLoadingAuth } = useAuth();
+  const { user, isLoadingAuth, updateProfile } = useAuth();
   const { t, lang, setLang } = useLang();
   const { countryCode, setCountryCode, country, countries, currency } = useRegion();
   const { toast } = useToast();
@@ -23,12 +22,10 @@ export default function Profile() {
 
   useEffect(() => {
     if (!user) return;
-    base44.auth.me().then((data) => {
-      setMe(data);
-      setFullName(data.full_name || "");
-      setPhone(data.phone || "");
-      setAddresses(Array.isArray(data.addresses) ? data.addresses : []);
-    });
+    setMe(user);
+    setFullName(user.full_name || "");
+    setPhone(user.phone || "");
+    setAddresses(Array.isArray(user.addresses) ? user.addresses : []);
   }, [user?.id]);
 
   // Signed-out visitors get a clear sign-in entry point instead of an empty account page.
@@ -55,7 +52,7 @@ export default function Profile() {
   const save = async () => {
     setSaving(true);
     try {
-      await base44.auth.updateMe({ full_name: fullName, phone, addresses });
+      await updateProfile({ full_name: fullName, phone, addresses });
       toast({ description: t("profile.savedMsg") });
     } finally {
       setSaving(false);
@@ -67,13 +64,13 @@ export default function Profile() {
     const list = [...addresses, { ...newAddress, country: newAddress.country || countryCode }];
     setAddresses(list);
     setNewAddress(EMPTY_ADDRESS);
-    base44.auth.updateMe({ addresses: list }).then(() => toast({ description: t("profile.savedMsg") }));
+    updateProfile({ addresses: list }).then(() => toast({ description: t("profile.savedMsg") }));
   };
 
   const removeAddress = (i) => {
     const list = addresses.filter((_, idx) => idx !== i);
     setAddresses(list);
-    base44.auth.updateMe({ addresses: list }).then(() => toast({ description: t("profile.savedMsg") }));
+    updateProfile({ addresses: list }).then(() => toast({ description: t("profile.savedMsg") }));
   };
 
   return (

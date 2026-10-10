@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,8 +8,20 @@ import { Lock, Loader2, AlertTriangle } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 
 export default function ResetPassword() {
-  const [searchParams] = useSearchParams();
-  const resetToken = searchParams.get("token");
+  // The recovery link signs the user into a temporary session (handled by supabase-js).
+  const [recoveryReady, setRecoveryReady] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || session) setRecoveryReady(true);
+    });
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) setRecoveryReady(true);
+      setChecking(false);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -25,7 +37,9 @@ export default function ResetPassword() {
     }
     setLoading(true);
     try {
-      await base44.auth.resetPassword({ resetToken, newPassword });
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+      if (updateError) throw updateError;
+      await supabase.auth.signOut();
       window.location.href = "/login";
     } catch (err) {
       setError(err.message || "Failed to reset password");
@@ -34,7 +48,9 @@ export default function ResetPassword() {
     }
   };
 
-  if (!resetToken) {
+  if (checking) return null;
+
+  if (!recoveryReady) {
     return (
       <AuthLayout
         icon={AlertTriangle}

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { CreditCard, ShieldCheck, Check } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
 import { PAYMENT_PROVIDERS } from "@/lib/countries";
 import { useConnectedProviders } from "@/lib/useConnectedProviders";
 import { useLang } from "@/lib/i18n";
@@ -12,14 +12,15 @@ export default function PaymentMethods() {
   const { t } = useLang();
   const { country } = useRegion();
   const { toast } = useToast();
+  const { user, updateProfile } = useAuth();
   const [preferred, setPreferred] = useState(null);
 
   useEffect(() => {
-    base44.auth.me().then((me) => setPreferred(me.preferred_payment_provider || null)).catch(() => {});
-  }, []);
+    setPreferred(user?.preferred_payment_provider || null);
+  }, [user?.preferred_payment_provider]);
 
   const setAsPreferred = async (id) => {
-    await base44.auth.updateMe({ preferred_payment_provider: id });
+    await updateProfile({ preferred_payment_provider: id });
     setPreferred(id);
     toast({ description: t("payment.preferredSet") });
   };

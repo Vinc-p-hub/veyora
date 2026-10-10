@@ -2,13 +2,12 @@
 // No public header/footer, no customer chrome: direct URL access only.
 // Access is granted exclusively by the server (ensureStaffRoles verifies the
 // authenticated email against the designated SUPER_ADMIN accounts server-side).
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import {
   Shield, LayoutDashboard, AlertTriangle, Database, Package, Handshake, Cpu,
   BarChart3, Coins, Globe, Users, Headphones, ScrollText, Lock, LogOut, Percent, Tag, Images, Star, Github, Boxes, BadgePercent, CreditCard,
 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
 import { cn } from "@/lib/utils";
 
@@ -45,28 +44,13 @@ const MENU = [
 ];
 
 export default function Admin() {
-  const { user, isLoadingAuth } = useAuth();
+  const { user, isLoadingAuth, logout } = useAuth();
   // Console access: a super admin appointed from the back office (server-set
   // staff_role) — or one of the founder accounts.
   const isAdmin =
     user?.role === "admin" &&
     (user?.staff_role === "SUPER_ADMIN" ||
       ALLOWED_EMAILS.includes(String(user?.email || "").toLowerCase()));
-  const [bootstrapped, setBootstrapped] = useState(false);
-
-  // Server-side role bootstrap: designated accounts are elevated only after the
-  // backend verifies the authenticated email. A client-side match is never enough.
-  useEffect(() => {
-    if (user && !isAdmin && !bootstrapped) {
-      setBootstrapped(true);
-      base44.functions
-        .invoke("ensureStaffRoles", {})
-        .then((res) => {
-          if (res.data?.reload) window.location.reload();
-        })
-        .catch(() => {});
-    }
-  }, [user, isAdmin, bootstrapped]);
 
   // Never show the denial screen while the session is still being resolved.
   if (isLoadingAuth) {
@@ -91,7 +75,7 @@ export default function Admin() {
                 an authorized VEYRO operations account.
               </p>
               <button
-                onClick={() => base44.auth.logout("/login?returnTo=%2Fadmin")}
+                onClick={() => logout("/login?returnTo=%2Fadmin")}
                 className="mt-6 px-5 py-2.5 rounded-lg border border-border-hairline text-sm hover:border-accent-cyan/40"
               >
                 Sign out and use a staff account
@@ -127,7 +111,7 @@ export default function Admin() {
             <div className="text-[10px] opacity-60 mt-0.5">{user.staff_role || "ADMIN"}</div>
           </div>
           <button
-            onClick={() => base44.auth.logout("/login")}
+            onClick={() => logout("/login")}
             className="ms-auto p-2 rounded-lg hover:bg-white/10"
             title="Sign out"
           >

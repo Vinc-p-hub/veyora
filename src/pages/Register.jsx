@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,7 +29,21 @@ export default function Register() {
     }
     setLoading(true);
     try {
-      await base44.auth.register({ email, password });
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: window.location.origin + safeReturnTo() },
+      });
+      if (signUpError) throw signUpError;
+      // Existing address: Supabase returns an obfuscated user with no identities.
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        throw new Error("An account with this email already exists");
+      }
+      // Email confirmation disabled -> already signed in.
+      if (data.session) {
+        window.location.href = safeReturnTo();
+        return;
+      }
       setShowOtp(true);
     } catch (err) {
       setError(err.message || "Registration failed");
@@ -42,10 +56,12 @@ export default function Register() {
     setError("");
     setLoading(true);
     try {
-      const result = await base44.auth.verifyOtp({ email, otpCode });
-      if (result?.access_token) {
-        base44.auth.setToken(result.access_token);
-      }
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email,
+        token: otpCode,
+        type: "signup",
+      });
+      if (verifyError) throw verifyError;
       window.location.href = safeReturnTo();
     } catch (err) {
       setError(err.message || "Invalid verification code");
@@ -57,7 +73,8 @@ export default function Register() {
   const handleResend = async () => {
     setError("");
     try {
-      await base44.auth.resendOtp(email);
+      const { error: resendError } = await supabase.auth.resend({ type: "signup", email });
+      if (resendError) throw resendError;
       toast({
         title: "Code sent",
         description: "Check your email for the new code.",
@@ -67,8 +84,13 @@ export default function Register() {
     }
   };
 
-  const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", safeReturnTo());
+  const handleGoogle = async () => {
+    setError("");
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin + safeReturnTo() },
+    });
+    if (oauthError) setError(oauthError.message);
   };
 
   if (showOtp) {
