@@ -12,6 +12,7 @@ import { api } from "@/api/client";
 import { useSiteText } from "@/lib/useSiteText";
 import { cn } from "@/lib/utils";
 import NexaPayWidget from "@/components/payments/NexaPayWidget";
+import PayPalCheckout from "@/components/payments/PayPalCheckout";
 import CouponField from "@/components/checkout/CouponField";
 import { usePromotions } from "@/lib/PromotionsContext";
 
@@ -96,13 +97,21 @@ export default function Checkout() {
           <span className="text-mono">
             {payingOrder.total.toLocaleString(undefined, { maximumFractionDigits: 2 })} {payingOrder.currency}
           </span>{" "}
-          — your order is confirmed once NexaPay verifies the payment.
+          — your order is confirmed once the payment is verified.
         </p>
-        <NexaPayWidget
-          key={payingOrder.orderNumber}
-          orderNumber={payingOrder.orderNumber}
-          onPaid={() => navigate(`/orders?placed=${payingOrder.orderNumber}`)}
-        />
+        {payingOrder.provider === "paypal" ? (
+          <PayPalCheckout
+            key={payingOrder.orderNumber}
+            orderNumber={payingOrder.orderNumber}
+            onPaid={() => navigate(`/orders?placed=${payingOrder.orderNumber}`)}
+          />
+        ) : (
+          <NexaPayWidget
+            key={payingOrder.orderNumber}
+            orderNumber={payingOrder.orderNumber}
+            onPaid={() => navigate(`/orders?placed=${payingOrder.orderNumber}`)}
+          />
+        )}
       </div>
     );
   }
@@ -218,7 +227,11 @@ export default function Checkout() {
         tracking_number: "TRK" + Math.random().toString(36).slice(2, 10).toUpperCase(),
       });
       clearCart();
-      if (selected === "nexapay") {
+      if (selected === "paypal") {
+        // The server creates and captures the PayPal order; PAID only after a verified capture.
+        setPlacing(false);
+        setPayingOrder({ orderNumber, currency: d.currency, total: finalTotals.total, provider: "paypal" });
+      } else if (selected === "nexapay") {
         // The order stays PENDING_PAYMENT until the signed NexaPay webhook
         // confirms the payment server-side — never on the client's word.
         setPlacing(false);

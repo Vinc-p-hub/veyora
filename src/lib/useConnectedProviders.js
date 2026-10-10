@@ -17,7 +17,7 @@ export function useConnectedProviders() {
     }
     if (!pending) {
       pending = api.functions
-        .invoke("pspPublicProviders", {})
+        .invoke("paypal", { action: "providers" })
         .then((res) => {
           cache = res.data?.providers || [];
           return cache;
