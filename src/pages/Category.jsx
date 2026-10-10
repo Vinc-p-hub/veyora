@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { SlidersHorizontal, Sparkles } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import ProductCard from "@/components/ProductCard";
 import { useRegion } from "@/lib/RegionContext";
 import { useLang } from "@/lib/i18n";
@@ -44,7 +44,7 @@ export default function Category() {
     setCorrected(null);
     if (q) {
       // Server-side search: synonyms, typo tolerance, premium/availability ranking
-      base44.functions
+      api.functions
         .invoke("searchProducts", { q, country: country.code, mode: "search", limit: 60 })
         .then((res) => {
           setProducts(res.data.products || []);
@@ -61,7 +61,7 @@ export default function Category() {
       if (cat) filter.category = cat;
       if (brand) filter.brand = brand;
       const sortField = sort === "price_low" ? "customer_price" : sort === "price_high" ? "-customer_price" : "-premium_score";
-      base44.entities.Product.filter(filter, sortField, 60)
+      api.entities.Product.filter(filter, sortField, 60)
         .then(setProducts)
         .catch(() => {
           setProducts([]);

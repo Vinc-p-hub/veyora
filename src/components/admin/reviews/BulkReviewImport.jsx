@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import { FileUp, Loader2, Download } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
 
 // Downloadable CSV template (modèle): the exact columns the importer expects,
@@ -42,8 +42,8 @@ export default function BulkReviewImport() {
     setResult(null);
     setUnmatched([]);
     try {
-      const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
-      const res = await base44.functions.invoke("reviewImport", {
+      const { file_url } = await api.integrations.Core.UploadPublicFile({ file });
+      const res = await api.functions.invoke("reviewImport", {
         file_url,
         source_name: sourceName.trim(),
       });

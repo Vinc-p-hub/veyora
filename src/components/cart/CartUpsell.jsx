@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useCart } from "@/lib/CartContext";
 import UpsellCard from "@/components/cart/UpsellCard";
 
@@ -35,7 +35,7 @@ export default function CartUpsell() {
   const [products, setProducts] = useState([]);
 
   useEffect(() => {
-    base44.entities.Product.filter({ status: "PUBLISHED" }, "-premium_score", 80)
+    api.entities.Product.filter({ status: "PUBLISHED" }, "-premium_score", 80)
       .then(setProducts)
       .catch(() => {});
   }, []);

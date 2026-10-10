@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Package, Plus, Trash2, Pencil, Upload, Check, Rocket, Loader2, Video } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Image } from "@/components/ui/image";
 import { cn } from "@/lib/utils";
@@ -48,7 +48,7 @@ export default function ManualProductEditor() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const all = await base44.entities.Product.list("-created_date", 200);
+      const all = await api.entities.Product.list("-created_date", 200);
       setRows(all.filter((p) => !p.source_id));
     } finally {
       setLoading(false);
@@ -57,7 +57,7 @@ export default function ManualProductEditor() {
 
   useEffect(() => {
     load();
-    base44.entities.SiteSetting.filter({ key: "stock_allocation_default" }, null, 1)
+    api.entities.SiteSetting.filter({ key: "stock_allocation_default" }, null, 1)
       .then((r) => setAlloc(parseInt(r[0]?.value) || 10))
       .catch(() => {});
   }, [load]);
@@ -71,7 +71,7 @@ export default function ManualProductEditor() {
     try {
       const urls = [];
       for (const file of files.slice(0, 8)) {
-        const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
+        const { file_url } = await api.integrations.Core.UploadPublicFile({ file });
         urls.push(file_url);
       }
       setImages((prev) => [...prev, ...urls]);
@@ -88,7 +88,7 @@ export default function ManualProductEditor() {
     try {
       const urls = [];
       for (const file of files.slice(0, 3 - videos.length)) {
-        const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
+        const { file_url } = await api.integrations.Core.UploadPublicFile({ file });
         urls.push(file_url);
       }
       setVideos((prev) => [...prev, ...urls].slice(0, 3));
@@ -136,10 +136,10 @@ export default function ManualProductEditor() {
     setSaving(true);
     try {
       if (editing) {
-        await base44.entities.Product.update(draft.id, buildBase());
+        await api.entities.Product.update(draft.id, buildBase());
         toast({ description: "Draft updated." });
       } else {
-        await base44.entities.Product.create({ ...buildBase(), status: "DRAFT" });
+        await api.entities.Product.create({ ...buildBase(), status: "DRAFT" });
         toast({ description: "Draft created — validate then publish." });
       }
       setDraft(EMPTY);
@@ -167,13 +167,13 @@ export default function ManualProductEditor() {
     try {
       let id;
       if (editing) {
-        await base44.entities.Product.update(draft.id, { ...buildBase(), status: "VALIDATED" });
+        await api.entities.Product.update(draft.id, { ...buildBase(), status: "VALIDATED" });
         id = draft.id;
       } else {
-        const created = await base44.entities.Product.create({ ...buildBase(), status: "VALIDATED" });
+        const created = await api.entities.Product.create({ ...buildBase(), status: "VALIDATED" });
         id = created.id;
       }
-      const record = await base44.entities.Product.get(id);
+      const record = await api.entities.Product.get(id);
       setDraft(EMPTY);
       setImages([]);
       setVideos([]);
@@ -187,7 +187,7 @@ export default function ManualProductEditor() {
   const validate = async (p) => {
     if (!p.image_url) { toast({ description: "Upload at least one image before validating." }); return; }
     if (!p.customer_price) { toast({ description: "Set a price before validating." }); return; }
-    await base44.entities.Product.update(p.id, { status: "VALIDATED", review_reason: null });
+    await api.entities.Product.update(p.id, { status: "VALIDATED", review_reason: null });
     toast({ description: "Product validated — ready to publish." });
     load();
   };
@@ -195,7 +195,7 @@ export default function ManualProductEditor() {
   // PUBLISH: the manual product becomes a real catalog product, gets the
   // internal VEYRO allocation (+10 default) and lands in New Arrivals if flagged.
   const publish = async (p) => {
-    await base44.entities.Product.update(p.id, {
+    await api.entities.Product.update(p.id, {
       status: "PUBLISHED",
       premium_status: "APPROVED",
       premium_score: p.specifications || p.badge ? 97 : 92,
@@ -211,7 +211,7 @@ export default function ManualProductEditor() {
   };
 
   const removeImage = (i) => setImages((prev) => prev.filter((_, x) => x !== i));
-  const remove = async (p) => { await base44.entities.Product.delete(p.id); load(); };
+  const remove = async (p) => { await api.entities.Product.delete(p.id); load(); };
   const startEdit = (p) => {
     setDraft({
       id: p.id, slug: p.slug, name: p.name, brand: p.brand, category: p.category,

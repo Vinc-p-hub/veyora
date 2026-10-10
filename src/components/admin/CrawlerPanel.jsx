@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Check, ExternalLink, Play, Pause, RefreshCw, RotateCcw, XCircle, Activity, Cpu, Plus, MessageSquare } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import AddSourceDialog from "./AddSourceDialog";
 import SourceDiscovery from "./SourceDiscovery";
 import { cn } from "@/lib/utils";
@@ -44,8 +44,8 @@ export default function CrawlerPanel({ onChanged }) {
     setLoading(true);
     try {
       const [s, j] = await Promise.all([
-        base44.entities.CrawlerSource.list("-created_date", 50),
-        base44.entities.CrawlerJob.list("-updated_date", 200),
+        api.entities.CrawlerSource.list("-created_date", 50),
+        api.entities.CrawlerJob.list("-updated_date", 200),
       ]);
       setSources(s);
       setJobs(j);
@@ -64,8 +64,8 @@ export default function CrawlerPanel({ onChanged }) {
     setBusy(true);
     setMsg(null);
     try {
-      const disc = await base44.functions.invoke("crawlerRunSource", { source_id: source.id });
-      const proc = await base44.functions.invoke("crawlerProcessQueue", { max_jobs: 40, source_id: source.id });
+      const disc = await api.functions.invoke("crawlerRunSource", { source_id: source.id });
+      const proc = await api.functions.invoke("crawlerProcessQueue", { max_jobs: 40, source_id: source.id });
       setMsg(
         `${source.name} — discovered ${disc.data.discovered} (enqueued ${disc.data.enqueued}) · processed ${proc.data.processed} (completed ${proc.data.completed}, retried ${proc.data.retried}, failed ${proc.data.failed})`
       );
@@ -84,10 +84,10 @@ export default function CrawlerPanel({ onChanged }) {
     try {
       let totalDiscovered = 0;
       for (const s of sources.filter((x) => x.enabled)) {
-        const disc = await base44.functions.invoke("crawlerRunSource", { source_id: s.id });
+        const disc = await api.functions.invoke("crawlerRunSource", { source_id: s.id });
         totalDiscovered += disc.data.enqueued || 0;
       }
-      const proc = await base44.functions.invoke("crawlerProcessQueue", { max_jobs: 40 });
+      const proc = await api.functions.invoke("crawlerProcessQueue", { max_jobs: 40 });
       setMsg(`Enqueued ${totalDiscovered} · processed ${proc.data.processed} (completed ${proc.data.completed}, failed ${proc.data.failed})`);
       await load();
       if (onChanged) await onChanged();
@@ -102,7 +102,7 @@ export default function CrawlerPanel({ onChanged }) {
     setBusy(true);
     setMsg(null);
     try {
-      const res = await base44.functions.invoke("crawlerProcessQueue", { max_jobs: 40 });
+      const res = await api.functions.invoke("crawlerProcessQueue", { max_jobs: 40 });
       setMsg(`Processed ${res.data.processed} · completed ${res.data.completed} · retried ${res.data.retried} · failed ${res.data.failed}`);
       await load();
       if (onChanged) await onChanged();
@@ -114,7 +114,7 @@ export default function CrawlerPanel({ onChanged }) {
   };
 
   const toggleSource = async (s) => {
-    await base44.entities.CrawlerSource.update(s.id, s.enabled ? { enabled: false, status: "PAUSED" } : { enabled: true, status: "ACTIVE" });
+    await api.entities.CrawlerSource.update(s.id, s.enabled ? { enabled: false, status: "PAUSED" } : { enabled: true, status: "ACTIVE" });
     load();
   };
 
@@ -124,16 +124,16 @@ export default function CrawlerPanel({ onChanged }) {
     if (!s.reviews_enabled && !window.confirm(
       `Enable public review import for ${s.name}?\n\nOnly do this if the merchant publishes public reviews AND their reuse is permitted (check their terms / robots.txt). Only real existing reviews will be imported, verbatim.`
     )) return;
-    await base44.entities.CrawlerSource.update(s.id, { reviews_enabled: !s.reviews_enabled });
+    await api.entities.CrawlerSource.update(s.id, { reviews_enabled: !s.reviews_enabled });
     load();
   };
 
   const retryJob = async (j) => {
-    await base44.entities.CrawlerJob.update(j.id, { status: "QUEUED", scheduled_at: new Date().toISOString(), attempts: 0, last_error: null });
+    await api.entities.CrawlerJob.update(j.id, { status: "QUEUED", scheduled_at: new Date().toISOString(), attempts: 0, last_error: null });
     load();
   };
   const cancelJob = async (j) => {
-    await base44.entities.CrawlerJob.update(j.id, { status: "CANCELLED" });
+    await api.entities.CrawlerJob.update(j.id, { status: "CANCELLED" });
     load();
   };
 

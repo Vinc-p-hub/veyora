@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, ArrowDown, ArrowUp, ImagePlus, Star, Trash2 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
 import ProductReviews from "@/components/admin/reviews/ProductReviews";
 
@@ -31,8 +31,8 @@ export default function ProductEdit() {
     setLoading(true);
     try {
       const [prod, moves] = await Promise.all([
-        base44.entities.Product.get(id),
-        base44.entities.StockMovement.filter({ product_id: id }, "-created_date", 20).catch(() => []),
+        api.entities.Product.get(id),
+        api.entities.StockMovement.filter({ product_id: id }, "-created_date", 20).catch(() => []),
       ]);
       setP(prod);
       setMovements(moves);
@@ -53,7 +53,7 @@ export default function ProductEdit() {
   const saveFields = async () => {
     setSaving(true); setMsg("");
     try {
-      await base44.entities.Product.update(p.id, {
+      await api.entities.Product.update(p.id, {
         name: p.name, brand: p.brand, model: p.model || "", sku: p.sku || "",
         category: p.category, description: p.description || "",
         customer_price: Number(p.customer_price) || 0,
@@ -70,13 +70,13 @@ export default function ProductEdit() {
     setSaving(true); setMsg("");
     try {
       const newVeyro = Math.max(0, Math.floor(Number(p.veyro_stock) || 0));
-      await base44.entities.Product.update(p.id, {
+      await api.entities.Product.update(p.id, {
         veyro_stock: newVeyro,
         reserved_stock: Math.max(0, Math.floor(Number(p.reserved_stock) || 0)),
         available_to_sell: Math.max(0, Math.floor(Number(p.available_to_sell) || 0)),
       });
       if (newVeyro !== origVeyroStock) {
-        await base44.entities.StockMovement.create({
+        await api.entities.StockMovement.create({
           product_id: p.id,
           product_name: p.name,
           qty: newVeyro - origVeyroStock,
@@ -100,7 +100,7 @@ export default function ProductEdit() {
     const g = [...new Set(nextGallery.filter(Boolean))];
     const data = { gallery: g, image_status: g.length ? "COMPLETE" : p.image_status };
     if (mainUrl) data.image_url = mainUrl;
-    await base44.entities.Product.update(p.id, data);
+    await api.entities.Product.update(p.id, data);
     setP((x) => ({ ...x, ...data }));
   };
 

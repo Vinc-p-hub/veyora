@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Star, ShieldCheck, Truck, RefreshCw, Check, ChevronRight, Heart, Play } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useRegion } from "@/lib/RegionContext";
 import { useCart } from "@/lib/CartContext";
 import { useLang } from "@/lib/i18n";
@@ -35,11 +35,11 @@ export default function ProductDetail() {
 
   useEffect(() => {
     setLoading(true);
-    base44.entities.Product.filter({ slug, status: "PUBLISHED" }, null, 1)
+    api.entities.Product.filter({ slug, status: "PUBLISHED" }, null, 1)
       .then(async (res) => {
         if (res[0]) return setProduct(res[0]);
         // Older cart links point to the product id instead of the slug.
-        const byId = await base44.entities.Product.get(slug).catch(() => null);
+        const byId = await api.entities.Product.get(slug).catch(() => null);
         setProduct(byId && byId.status === "PUBLISHED" ? byId : null);
       })
       .catch(() => {})
@@ -48,11 +48,11 @@ export default function ProductDetail() {
 
   useEffect(() => {
     if (!product?.id) return;
-    base44.entities.WishlistItem.filter({ product_id: product.id })
+    api.entities.WishlistItem.filter({ product_id: product.id })
       .then((items) => setWishlisted(items.length > 0))
       .catch(() => {});
     // Real seller offers for this canonical product — multi-seller comparison.
-    base44.entities.Offer.filter({ product_id: product.id })
+    api.entities.Offer.filter({ product_id: product.id })
       .then((rows) => setOffers(rows.filter((o) => !o.stale && o.stock_status !== "OUT_OF_STOCK")))
       .catch(() => {});
   }, [product?.id]);
@@ -161,12 +161,12 @@ export default function ProductDetail() {
   };
 
   const toggleWishlist = async () => {
-    const items = await base44.entities.WishlistItem.filter({ product_id: product.id });
+    const items = await api.entities.WishlistItem.filter({ product_id: product.id });
     if (items.length) {
-      await base44.entities.WishlistItem.delete(items[0].id);
+      await api.entities.WishlistItem.delete(items[0].id);
       setWishlisted(false);
     } else {
-      await base44.entities.WishlistItem.create({
+      await api.entities.WishlistItem.create({
         product_id: product.id,
         product_slug: product.slug,
         price_at_add: price,

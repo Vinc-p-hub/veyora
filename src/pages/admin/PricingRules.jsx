@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Save, Plus, Trash2, Settings2 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
 import PriceSimulator from "@/components/admin/pricing/PriceSimulator";
 import PricingHistory from "@/components/admin/pricing/PricingHistory";
@@ -42,8 +42,8 @@ export default function PricingRules() {
   const load = () => {
     setLoading(true);
     Promise.all([
-      base44.functions.invoke("pricingEngine", { mode: "get" }),
-      base44.entities.CrawlerSource.list(null, 100).catch(() => []),
+      api.functions.invoke("pricingEngine", { mode: "get" }),
+      api.entities.CrawlerSource.list(null, 100).catch(() => []),
     ])
       .then(([res, srcs]) => {
         setConfig({ ...DEFAULT_CONFIG, ...res.data.config });
@@ -61,9 +61,9 @@ export default function PricingRules() {
     setSaving(true);
     setMsg(null);
     try {
-      const res = await base44.functions.invoke("pricingEngine", { mode: "update", config });
+      const res = await api.functions.invoke("pricingEngine", { mode: "update", config });
       setMsg(`Saved — ${res.data.changed} parameter(s) updated and logged to the change history.`);
-      const refreshed = await base44.functions.invoke("pricingEngine", { mode: "get" });
+      const refreshed = await api.functions.invoke("pricingEngine", { mode: "get" });
       setHistory(refreshed.data.history || []);
     } catch (e) {
       setMsg(e.response?.data?.error || e.message || "Save failed");

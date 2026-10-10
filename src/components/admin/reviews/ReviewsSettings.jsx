@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
 
 // Super Admin review switches — stored as SiteSetting records ("true"/"false").
@@ -17,7 +17,7 @@ export default function ReviewsSettings({ onChanged }) {
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
-    const list = await base44.entities.SiteSetting.list(null, 100);
+    const list = await api.entities.SiteSetting.list(null, 100);
     setRows(list);
   };
 
@@ -34,8 +34,8 @@ export default function ReviewsSettings({ onChanged }) {
     setBusy(true);
     const next = valueOf(s.key) === "true" ? "false" : "true";
     const row = (rows || []).find((r) => r.key === s.key);
-    if (row) await base44.entities.SiteSetting.update(row.id, { value: next });
-    else await base44.entities.SiteSetting.create({ key: s.key, value: next, description: s.desc });
+    if (row) await api.entities.SiteSetting.update(row.id, { value: next });
+    else await api.entities.SiteSetting.create({ key: s.key, value: next, description: s.desc });
     await load();
     setBusy(false);
     if (onChanged) onChanged();

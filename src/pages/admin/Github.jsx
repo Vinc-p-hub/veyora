@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Github, RefreshCw, Star, GitPullRequest, ExternalLink, Lock } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
 
 // GitHub integration — shared connector. One click synchronizes the connected
@@ -13,10 +13,10 @@ export default function GithubPage() {
   const [status, setStatus] = useState(null);
 
   const load = useCallback(() => {
-    base44.entities.GithubProject.list("-pushed_at", 200)
+    api.entities.GithubProject.list("-pushed_at", 200)
       .then((rows) => setProjects(rows))
       .catch(() => setProjects([]));
-    base44.entities.GithubPullRequest.filter({ state: "OPEN" }, "-updated_at", 200)
+    api.entities.GithubPullRequest.filter({ state: "OPEN" }, "-updated_at", 200)
       .then((rows) => setPrs(rows))
       .catch(() => setPrs([]));
   }, []);
@@ -27,7 +27,7 @@ export default function GithubPage() {
     setSyncing(true);
     setStatus(null);
     try {
-      const res = await base44.functions.invoke("githubSync", {});
+      const res = await api.functions.invoke("githubSync", {});
       setStatus(
         `${res.data.repos} repositories synced · ${res.data.open_prs} open pull requests`
       );

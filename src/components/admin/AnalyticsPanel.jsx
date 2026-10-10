@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Search, ClipboardList, TrendingDown } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 
 export default function AnalyticsPanel() {
   const [queries, setQueries] = useState([]);
@@ -9,8 +9,8 @@ export default function AnalyticsPanel() {
 
   useEffect(() => {
     Promise.all([
-      base44.entities.SearchQuery.list("-created_date", 200),
-      base44.entities.AuditLog.list("-created_date", 50),
+      api.entities.SearchQuery.list("-created_date", 200),
+      api.entities.AuditLog.list("-created_date", 50),
     ])
       .then(([q, l]) => {
         setQueries(q);

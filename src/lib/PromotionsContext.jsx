@@ -2,7 +2,7 @@
 // display on cards, product pages, cart and checkout. Coupon codes are never
 // loaded here: they are validated server-side only.
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { bestPromoFor, freeShippingFor } from "@/lib/promotions";
 
 const PromotionsContext = createContext(null);
@@ -11,7 +11,7 @@ export function PromotionsProvider({ children }) {
   const [promos, setPromos] = useState([]);
 
   useEffect(() => {
-    base44.entities.Promotion.filter({ kind: "AUTOMATIC", active: true }, "-priority", 100)
+    api.entities.Promotion.filter({ kind: "AUTOMATIC", active: true }, "-priority", 100)
       .then((rows) => setPromos(rows || []))
       .catch(() => {});
   }, []);

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ShieldCheck, RefreshCw, AlertTriangle } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 
 const NEXAPAY_ORIGIN = "https://thankful-nexa-pay-flow.base44.app";
 
@@ -20,7 +20,7 @@ export default function NexaPayWidget({ orderNumber, onPaid }) {
     setError("");
     setPhase("paying");
     try {
-      const res = await base44.functions.invoke("pspCreateIntent", {
+      const res = await api.functions.invoke("pspCreateIntent", {
         order_number: orderNumber,
         provider: "nexapay",
         force_new: forceNew,
@@ -52,7 +52,7 @@ export default function NexaPayWidget({ orderNumber, onPaid }) {
     pollRef.current = setInterval(async () => {
       tries += 1;
       try {
-        const orders = await base44.entities.Order.filter({ order_number: orderNumber }, null, 1);
+        const orders = await api.entities.Order.filter({ order_number: orderNumber }, null, 1);
         const status = orders[0]?.status;
         if (status === "PAID") {
           clearInterval(pollRef.current);

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Globe, Plus, Trash2, Pencil, Wallet, Check, Package } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useToast } from "@/components/ui/use-toast";
 import { PAYMENT_PROVIDERS, listCountries } from "@/lib/countries";
 import MarketplaceCopy from "@/components/admin/MarketplaceCopy";
@@ -25,7 +25,7 @@ export default function Settings() {
   // granted per product when the supplier confirms availability. Never a claim
   // about the supplier's real stock.
   useEffect(() => {
-    base44.entities.SiteSetting.filter({ key: "stock_allocation_default" }, null, 1)
+    api.entities.SiteSetting.filter({ key: "stock_allocation_default" }, null, 1)
       .then((rows) => setAllocDefault(String(rows[0]?.value ?? "10")))
       .catch(() => {});
   }, []);
@@ -34,9 +34,9 @@ export default function Settings() {
     const v = String(Math.max(0, parseInt(allocDefault) || 0));
     setAllocSaving(true);
     try {
-      const rows = await base44.entities.SiteSetting.filter({ key: "stock_allocation_default" }, null, 1);
-      if (rows[0]) await base44.entities.SiteSetting.update(rows[0].id, { value: v });
-      else await base44.entities.SiteSetting.create({
+      const rows = await api.entities.SiteSetting.filter({ key: "stock_allocation_default" }, null, 1);
+      if (rows[0]) await api.entities.SiteSetting.update(rows[0].id, { value: v });
+      else await api.entities.SiteSetting.create({
         key: "stock_allocation_default",
         value: v,
         description: "Internal VEYRO sellable allocation granted per product when the supplier confirms availability (commercial ceiling — never real supplier stock)",
@@ -50,7 +50,7 @@ export default function Settings() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setConfigs(await base44.entities.CountryConfig.list("code", 300));
+      setConfigs(await api.entities.CountryConfig.list("code", 300));
     } finally {
       setLoading(false);
     }
@@ -81,8 +81,8 @@ export default function Settings() {
         enabled: true,
       };
       const existing = configs.find((c) => c.code === code);
-      if (existing) await base44.entities.CountryConfig.update(existing.id, payload);
-      else await base44.entities.CountryConfig.create(payload);
+      if (existing) await api.entities.CountryConfig.update(existing.id, payload);
+      else await api.entities.CountryConfig.create(payload);
       setDraft(EMPTY);
       toast({ description: `Country ${code} saved — live in the region selector.` });
       await load();
@@ -92,11 +92,11 @@ export default function Settings() {
   };
 
   const toggleEnabled = async (c) => {
-    await base44.entities.CountryConfig.update(c.id, { enabled: !c.enabled });
+    await api.entities.CountryConfig.update(c.id, { enabled: !c.enabled });
     load();
   };
   const remove = async (c) => {
-    await base44.entities.CountryConfig.delete(c.id);
+    await api.entities.CountryConfig.delete(c.id);
     load();
   };
 

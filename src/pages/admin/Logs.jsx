@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { ScrollText } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 
 // Immutable audit trail — every role assignment and crawler run is logged here.
 export default function Logs() {
@@ -10,7 +10,7 @@ export default function Logs() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setLogs(await base44.entities.AuditLog.list("-created_date", 100));
+      setLogs(await api.entities.AuditLog.list("-created_date", 100));
     } finally {
       setLoading(false);
     }

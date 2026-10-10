@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Tag } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
 
 const STOCK_COLOR = {
@@ -27,9 +27,9 @@ export default function Offers() {
     setLoading(true);
     try {
       const [o, p, s] = await Promise.all([
-        base44.entities.Offer.list("-last_checked", 500),
-        base44.entities.Product.list("-created_date", 500),
-        base44.entities.Seller.list("name", 200),
+        api.entities.Offer.list("-last_checked", 500),
+        api.entities.Product.list("-created_date", 500),
+        api.entities.Seller.list("name", 200),
       ]);
       setOffers(o);
       setProducts(p);

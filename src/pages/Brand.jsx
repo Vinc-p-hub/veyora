@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import ProductCard from "@/components/ProductCard";
 import { applySeo, itemListLd, seoTitle } from "@/lib/seo";
 
@@ -16,13 +16,13 @@ export default function Brand() {
     setLoading(true);
     // Exact match first; case-insensitive fallback for URLs built by hand or
     // by search engines (e.g. /brand/apple).
-    base44.entities.Product.filter({ status: "PUBLISHED", brand: brandName }, "-premium_score", 60)
+    api.entities.Product.filter({ status: "PUBLISHED", brand: brandName }, "-premium_score", 60)
       .then(async (rows) => {
         if (cancelled) return;
         if (rows.length) {
           setProducts(rows);
         } else {
-          const all = await base44.entities.Product.filter({ status: "PUBLISHED" }, "-premium_score", 200);
+          const all = await api.entities.Product.filter({ status: "PUBLISHED" }, "-premium_score", 200);
           if (cancelled) return;
           setProducts(all.filter((p) => String(p.brand || "").toLowerCase() === brandName.toLowerCase()));
         }

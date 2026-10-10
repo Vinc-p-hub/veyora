@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Heart, TrendingDown, TrendingUp, Loader2 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useLang } from "@/lib/i18n";
 import { useRegion } from "@/lib/RegionContext";
 import { formatPrice } from "@/lib/pricing";
@@ -21,9 +21,9 @@ export default function Wishlist() {
 
   const load = useCallback(async () => {
     try {
-      const list = await base44.entities.WishlistItem.list("-created_date", 100);
+      const list = await api.entities.WishlistItem.list("-created_date", 100);
       const products = await Promise.all(
-        list.map((i) => base44.entities.Product.get(i.product_id).catch(() => null))
+        list.map((i) => api.entities.Product.get(i.product_id).catch(() => null))
       );
       setItems(list.map((i, idx) => ({ ...i, product: products[idx] })));
     } finally {
@@ -33,12 +33,12 @@ export default function Wishlist() {
 
   useEffect(() => {
     load();
-    const unsubscribe = base44.entities.WishlistItem.subscribe(() => load());
+    const unsubscribe = api.entities.WishlistItem.subscribe(() => load());
     return unsubscribe;
   }, [load]);
 
   const remove = async (id) => {
-    await base44.entities.WishlistItem.delete(id);
+    await api.entities.WishlistItem.delete(id);
   };
 
   return (

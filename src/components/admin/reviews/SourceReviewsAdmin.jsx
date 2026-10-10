@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ExternalLink, Search } from "lucide-react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
 import Stars from "@/components/reviews/Stars";
 import ManualSourceReviewForm from "@/components/admin/reviews/ManualSourceReviewForm";
@@ -17,14 +17,14 @@ export default function SourceReviewsAdmin() {
   const [busyId, setBusyId] = useState(null);
 
   const load = useCallback(async () => {
-    const list = await base44.entities.SourceReview.list("-created_date", 200);
+    const list = await api.entities.SourceReview.list("-created_date", 200);
     setReviews(list);
     const ids = [...new Set(list.map((r) => r.product_id))].slice(0, 100);
     const names = {};
     await Promise.all(
       ids.map(async (id) => {
         try {
-          const p = await base44.entities.Product.get(id);
+          const p = await api.entities.Product.get(id);
           names[id] = { name: p.name, slug: p.slug };
         } catch (_e) {
           names[id] = { name: null, slug: null };
@@ -42,7 +42,7 @@ export default function SourceReviewsAdmin() {
     if (action === "DELETE" && !window.confirm("Permanently delete this imported review?")) return;
     setBusyId(review.id);
     try {
-      await base44.functions.invoke("reviewModerate", { review_id: review.id, action, scope: "source" });
+      await api.functions.invoke("reviewModerate", { review_id: review.id, action, scope: "source" });
       await load();
     } finally {
       setBusyId(null);

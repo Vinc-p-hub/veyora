@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Users as UsersIcon, UserPlus, Shield, ShieldCheck, ShieldOff } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useAuth } from "@/lib/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
@@ -27,7 +27,7 @@ export default function Users() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setUsers(await base44.entities.User.list("-created_date", 200));
+      setUsers(await api.entities.User.list("-created_date", 200));
     } catch {
       setUsers([]);
     } finally {
@@ -50,7 +50,7 @@ export default function Users() {
     if (!assignEmail.trim()) return;
     setBusy(true);
     try {
-      const res = await base44.functions.invoke("ensureStaffRoles", {
+      const res = await api.functions.invoke("ensureStaffRoles", {
         assign_email: assignEmail.trim(),
         staff_role: assignRole,
       });
@@ -69,7 +69,7 @@ export default function Users() {
     if (!emails.length) return;
     setBusy(true);
     try {
-      const res = await base44.functions.invoke(
+      const res = await api.functions.invoke(
         "ensureStaffRoles",
         kind === "revoke" ? { revoke_emails: emails } : { assign_emails: emails, staff_role: "SUPER_ADMIN" }
       );
@@ -98,7 +98,7 @@ export default function Users() {
     if (!inviteEmail.trim()) return;
     setBusy(true);
     try {
-      await base44.users.inviteUser(inviteEmail.trim(), inviteRole);
+      await api.functions.invoke("inviteUser", { email: inviteEmail.trim(), role: inviteRole });
       toast({ description: `Invitation sent to ${inviteEmail}.` });
       setInviteEmail("");
     } catch (e) {

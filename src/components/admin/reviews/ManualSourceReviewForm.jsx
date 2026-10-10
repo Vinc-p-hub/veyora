@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Plus, X } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
 import Stars from "@/components/reviews/Stars";
 
@@ -27,11 +27,11 @@ export default function ManualSourceReviewForm({ onCreated, productId: lockedPro
   useEffect(() => {
     // Opened from a product page: the product is fixed, so no catalog is loaded.
     if (!locked) {
-      base44.entities.Product.filter({ status: "PUBLISHED" }, "name", 500)
+      api.entities.Product.filter({ status: "PUBLISHED" }, "name", 500)
         .then((list) => setProducts(list))
         .catch(() => {});
     }
-    base44.entities.CrawlerSource.list("name", 100)
+    api.entities.CrawlerSource.list("name", 100)
       .then((list) => setSources(list.filter((s) => s.enabled)))
       .catch(() => {});
   }, [locked]);
@@ -55,7 +55,7 @@ export default function ManualSourceReviewForm({ onCreated, productId: lockedPro
     setSaving(true);
     try {
       const source = sources.find((s) => s.name === sourceName);
-      await base44.entities.SourceReview.create({
+      await api.entities.SourceReview.create({
         product_id: productId,
         source_id: source?.id || "",
         source_name: sourceName.trim(),

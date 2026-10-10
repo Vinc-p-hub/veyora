@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { promoStatus } from "@/lib/promotions";
 import PromoStrategy from "@/components/admin/promotions/PromoStrategy";
 import PromotionRow from "@/components/admin/promotions/PromotionRow";
@@ -11,7 +11,7 @@ export default function Promotions() {
   const [promos, setPromos] = useState(null);
   const [editing, setEditing] = useState(null); // null = closed, object = new/edit
 
-  const load = () => base44.entities.Promotion.list("-created_date", 200).then(setPromos);
+  const load = () => api.entities.Promotion.list("-created_date", 200).then(setPromos);
   useEffect(() => { load(); }, []);
 
   const save = async (record) => {
@@ -19,15 +19,15 @@ export default function Promotions() {
       (p) => p.id !== editing.id && p.kind === "COUPON" && String(p.code || "").toUpperCase() === record.code
     );
     if (duplicate) throw new Error("This coupon code already exists.");
-    if (editing.id) await base44.entities.Promotion.update(editing.id, record);
-    else await base44.entities.Promotion.create({ ...record, usage_count: 0 });
+    if (editing.id) await api.entities.Promotion.update(editing.id, record);
+    else await api.entities.Promotion.create({ ...record, usage_count: 0 });
     setEditing(null);
     await load();
   };
-  const toggle = async (p) => { await base44.entities.Promotion.update(p.id, { active: !p.active }); load(); };
+  const toggle = async (p) => { await api.entities.Promotion.update(p.id, { active: !p.active }); load(); };
   const remove = async (p) => {
     if (!window.confirm(`Delete "${p.name}"?`)) return;
-    await base44.entities.Promotion.delete(p.id);
+    await api.entities.Promotion.delete(p.id);
     load();
   };
 

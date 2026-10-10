@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import {
   COUNTRIES, CURRENCIES, registerCountry, registerCurrency, getCurrency,
 } from "@/lib/countries";
@@ -25,8 +25,8 @@ export function RegionProvider({ children }) {
   useEffect(() => {
     let cancelled = false;
     Promise.all([
-      base44.entities.CurrencyRate.list(null, 300).catch(() => []),
-      base44.entities.CountryConfig.list(null, 300).catch(() => []),
+      api.entities.CurrencyRate.list(null, 300).catch(() => []),
+      api.entities.CountryConfig.list(null, 300).catch(() => []),
     ]).then(([rates, countries]) => {
       if (cancelled) return;
       rates.forEach((r) => {

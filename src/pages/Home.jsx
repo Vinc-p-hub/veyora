@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useRegion } from "@/lib/RegionContext";
 import { useLang } from "@/lib/i18n";
 import { formatPrice } from "@/lib/pricing";
@@ -61,9 +61,9 @@ export default function Home() {
 
   useEffect(() => {
     Promise.all([
-      base44.entities.Product.filter({ status: "PUBLISHED" }, "-premium_score", 20),
-      base44.entities.Product.filter({ status: "PUBLISHED" }, "-created_date", 100),
-      base44.entities.HeroSlide.filter({ active: true }, "sort_order", 10).catch(() => []),
+      api.entities.Product.filter({ status: "PUBLISHED" }, "-premium_score", 20),
+      api.entities.Product.filter({ status: "PUBLISHED" }, "-created_date", 100),
+      api.entities.HeroSlide.filter({ active: true }, "sort_order", 10).catch(() => []),
     ])
       .then(([top, latest, cmsSlides]) => {
         setProducts(top);

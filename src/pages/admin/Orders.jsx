@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Package } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useRegion } from "@/lib/RegionContext";
 import { formatPrice } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
@@ -18,7 +18,7 @@ export default function Orders() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setOrders(await base44.entities.Order.list("-created_date", 100));
+      setOrders(await api.entities.Order.list("-created_date", 100));
     } finally {
       setLoading(false);
     }
@@ -27,7 +27,7 @@ export default function Orders() {
   useEffect(() => { load(); }, [load]);
 
   const setStatus = async (o, status) => {
-    await base44.entities.Order.update(o.id, { status });
+    await api.entities.Order.update(o.id, { status });
     setOrders((list) => list.map((x) => (x.id === o.id ? { ...x, status } : x)));
   };
 

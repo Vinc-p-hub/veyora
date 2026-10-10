@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Loader2, Trash2 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 
 // Credential form for one provider. Values typed here are sent straight to the
 // server; the page never reads them back.
@@ -15,7 +15,7 @@ export default function ProviderForm({ provider, onSaved }) {
     setSaving(true);
     setError("");
     try {
-      const res = await base44.functions.invoke("pspCredentials", payload);
+      const res = await api.functions.invoke("pspCredentials", payload);
       if (res.data?.error) {
         setError(res.data.error);
         return;

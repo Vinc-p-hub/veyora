@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Coins, Plus, Trash2 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useToast } from "@/components/ui/use-toast";
 
 // Currency rate management (CurrencyRate records override the built-in registry
@@ -15,7 +15,7 @@ export default function CurrencySettings() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setRates(await base44.entities.CurrencyRate.list("code", 200));
+      setRates(await api.entities.CurrencyRate.list("code", 200));
     } finally {
       setLoading(false);
     }
@@ -31,9 +31,9 @@ export default function CurrencySettings() {
     try {
       const existing = rates.find((r) => r.code === code);
       if (existing) {
-        await base44.entities.CurrencyRate.update(existing.id, { symbol: draft.symbol || existing.symbol, rate });
+        await api.entities.CurrencyRate.update(existing.id, { symbol: draft.symbol || existing.symbol, rate });
       } else {
-        await base44.entities.CurrencyRate.create({ code, symbol: draft.symbol || "$", rate, updated_by: "admin" });
+        await api.entities.CurrencyRate.create({ code, symbol: draft.symbol || "$", rate, updated_by: "admin" });
       }
       setDraft({ code: "", symbol: "", rate: "" });
       toast({ description: `Currency ${code} saved — active app-wide.` });
@@ -44,7 +44,7 @@ export default function CurrencySettings() {
   };
 
   const remove = async (r) => {
-    await base44.entities.CurrencyRate.delete(r.id);
+    await api.entities.CurrencyRate.delete(r.id);
     load();
   };
 

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Handshake, Play, ExternalLink } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
 import SellersPanel from "@/components/admin/SellersPanel";
 
@@ -15,7 +15,7 @@ export default function Partners() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setSources(await base44.entities.CrawlerSource.list("-created_date", 50));
+      setSources(await api.entities.CrawlerSource.list("-created_date", 50));
     } finally {
       setLoading(false);
     }
@@ -27,7 +27,7 @@ export default function Partners() {
     setBusy(true);
     setMsg(null);
     try {
-      const res = await base44.functions.invoke("crawlerRunSource", { source_id: s.id });
+      const res = await api.functions.invoke("crawlerRunSource", { source_id: s.id });
       setMsg(`${s.name}: ${res.data.discovered} URLs discovered, ${res.data.enqueued} jobs enqueued — process them from the Crawler sources console.`);
       await load();
     } catch (e) {

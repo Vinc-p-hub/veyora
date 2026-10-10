@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 
 // The payment methods the storefront may offer — resolved server-side from the
 // providers switched on in the back office. Fetched once per session and shared
@@ -16,7 +16,7 @@ export function useConnectedProviders() {
       return;
     }
     if (!pending) {
-      pending = base44.functions
+      pending = api.functions
         .invoke("pspPublicProviders", {})
         .then((res) => {
           cache = res.data?.providers || [];

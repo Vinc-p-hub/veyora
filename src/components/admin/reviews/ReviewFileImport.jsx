@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import { FileUp, Loader2 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
 
 // Bulk import of real reviews from a file (CSV, Excel or JSON). The file is
@@ -21,8 +21,8 @@ export default function ReviewFileImport({ product, onImported }) {
     setError("");
     setResult(null);
     try {
-      const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
-      const res = await base44.functions.invoke("reviewImport", {
+      const { file_url } = await api.integrations.Core.UploadPublicFile({ file });
+      const res = await api.functions.invoke("reviewImport", {
         product_id: product.id,
         file_url,
         source_name: sourceName.trim(),

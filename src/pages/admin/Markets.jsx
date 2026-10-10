@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Globe, Search, Ban, Check, ShieldCheck } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useToast } from "@/components/ui/use-toast";
 import { listCountries } from "@/lib/countries";
 import { cn } from "@/lib/utils";
@@ -19,7 +19,7 @@ export default function Markets() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setConfigs(await base44.entities.CountryConfig.list("code", 300));
+      setConfigs(await api.entities.CountryConfig.list("code", 300));
     } finally {
       setLoading(false);
     }
@@ -57,8 +57,8 @@ export default function Markets() {
         enabled,
       });
     }
-    if (toUpdate.length) await base44.entities.CountryConfig.bulkUpdate(toUpdate);
-    if (toCreate.length) await base44.entities.CountryConfig.bulkCreate(toCreate);
+    if (toUpdate.length) await api.entities.CountryConfig.bulkUpdate(toUpdate);
+    if (toCreate.length) await api.entities.CountryConfig.bulkCreate(toCreate);
     await load();
   };
 

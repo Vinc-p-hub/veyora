@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { MessageSquareText, Save } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useToast } from "@/components/ui/use-toast";
 
 const DEFAULT_NOTICE =
@@ -18,7 +18,7 @@ export default function MarketplaceCopy() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const rows = await base44.entities.SiteSetting.filter({ key: "marketplace_notice" }, null, 1);
+      const rows = await api.entities.SiteSetting.filter({ key: "marketplace_notice" }, null, 1);
       if (rows[0]) {
         setRecordId(rows[0].id);
         setValue(rows[0].value || DEFAULT_NOTICE);
@@ -38,9 +38,9 @@ export default function MarketplaceCopy() {
         value: value.trim() || DEFAULT_NOTICE,
         description: "Marketplace notice shown on product pages and checkout",
       };
-      if (recordId) await base44.entities.SiteSetting.update(recordId, payload);
+      if (recordId) await api.entities.SiteSetting.update(recordId, payload);
       else {
-        const created = await base44.entities.SiteSetting.create(payload);
+        const created = await api.entities.SiteSetting.create(payload);
         setRecordId(created.id);
       }
       toast({ description: "Marketplace notice updated — live on the storefront." });

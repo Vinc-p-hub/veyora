@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { INPUT } from "./promoForm";
 
 export default function ProductPicker({ selected, onChange }) {
@@ -7,7 +7,7 @@ export default function ProductPicker({ selected, onChange }) {
   const [q, setQ] = useState("");
 
   useEffect(() => {
-    base44.entities.Product.filter({ status: "PUBLISHED" }, "name", 1000).then(setProducts);
+    api.entities.Product.filter({ status: "PUBLISHED" }, "name", 1000).then(setProducts);
   }, []);
 
   const toggle = (id) => onChange(selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]);

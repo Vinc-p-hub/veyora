@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { GitCompare, Loader2, Plus, X } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useLang } from "@/lib/i18n";
 import { useRegion } from "@/lib/RegionContext";
 import { formatPrice, buildInstallmentPlan } from "@/lib/pricing";
@@ -32,7 +32,7 @@ export default function Compare() {
       return;
     }
     setLoading(true);
-    Promise.all(ids.map((id) => base44.entities.Product.get(id).catch(() => null)))
+    Promise.all(ids.map((id) => api.entities.Product.get(id).catch(() => null)))
       .then((res) => setProducts(res.filter(Boolean)))
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -47,7 +47,7 @@ export default function Compare() {
     setSearching(true);
     const timer = setTimeout(async () => {
       try {
-        const res = await base44.functions.invoke("searchProducts", {
+        const res = await api.functions.invoke("searchProducts", {
           q, country: country.code, mode: "suggest", limit: 6,
         });
         setSuggestions((res.data.products || []).filter((p) => !ids.includes(p.id)));

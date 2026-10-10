@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Images, Plus, Trash2, Pencil, ArrowUp, ArrowDown, Upload } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Image } from "@/components/ui/image";
 import ManualProductEditor from "@/components/admin/ManualProductEditor";
@@ -24,7 +24,7 @@ export default function Cms() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setSlides(await base44.entities.HeroSlide.list("sort_order", 50));
+      setSlides(await api.entities.HeroSlide.list("sort_order", 50));
     } finally {
       setLoading(false);
     }
@@ -39,7 +39,7 @@ export default function Cms() {
     if (!file) return;
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
+      const { file_url } = await api.integrations.Core.UploadPublicFile({ file });
       setDraft((d) => ({ ...d, [key]: file_url }));
     } finally {
       setUploading(false);
@@ -60,8 +60,8 @@ export default function Cms() {
         active_to: draft.active_to || undefined,
         sort_order: editing ? draft.sort_order : slides.length,
       };
-      if (editing) await base44.entities.HeroSlide.update(draft.id, payload);
-      else await base44.entities.HeroSlide.create(payload);
+      if (editing) await api.entities.HeroSlide.update(draft.id, payload);
+      else await api.entities.HeroSlide.create(payload);
       setDraft(EMPTY);
       toast({ description: "Hero slide saved — live on the storefront." });
       await load();
@@ -70,8 +70,8 @@ export default function Cms() {
     }
   };
 
-  const toggle = async (s) => { await base44.entities.HeroSlide.update(s.id, { active: !s.active }); load(); };
-  const remove = async (s) => { await base44.entities.HeroSlide.delete(s.id); load(); };
+  const toggle = async (s) => { await api.entities.HeroSlide.update(s.id, { active: !s.active }); load(); };
+  const remove = async (s) => { await api.entities.HeroSlide.delete(s.id); load(); };
 
   const move = async (s, dir) => {
     const idx = slides.findIndex((x) => x.id === s.id);
@@ -79,7 +79,7 @@ export default function Cms() {
     if (j < 0 || j >= slides.length) return;
     const reordered = [...slides];
     [reordered[idx], reordered[j]] = [reordered[j], reordered[idx]];
-    await base44.entities.HeroSlide.bulkUpdate(reordered.map((x, i) => ({ id: x.id, sort_order: i })));
+    await api.entities.HeroSlide.bulkUpdate(reordered.map((x, i) => ({ id: x.id, sort_order: i })));
     load();
   };
 

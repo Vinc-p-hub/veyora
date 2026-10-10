@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 
 // Loads the dashboard dataset once, then keeps it live: any change on the
 // orders, catalog, crawler queue/sources or PSP webhooks schedules a reload
@@ -14,13 +14,13 @@ export default function useAdminDashboard() {
     if (!silent) setLoading(true);
     try {
       const [orders, products, sources, jobs, events, rates, providerRes] = await Promise.all([
-        base44.entities.Order.list("-created_date", 500),
-        base44.entities.Product.list("-created_date", 500),
-        base44.entities.CrawlerSource.list("-created_date", 50),
-        base44.entities.CrawlerJob.list("-updated_date", 300),
-        base44.entities.PspWebhookEvent.list("-created_date", 50).catch(() => []),
-        base44.entities.CurrencyRate.list(null, 200).catch(() => []),
-        base44.functions.invoke("pspCredentials", {}).catch(() => null),
+        api.entities.Order.list("-created_date", 500),
+        api.entities.Product.list("-created_date", 500),
+        api.entities.CrawlerSource.list("-created_date", 50),
+        api.entities.CrawlerJob.list("-updated_date", 300),
+        api.entities.PspWebhookEvent.list("-created_date", 50).catch(() => []),
+        api.entities.CurrencyRate.list(null, 200).catch(() => []),
+        api.functions.invoke("pspCredentials", {}).catch(() => null),
       ]);
       setData({
         orders,
@@ -45,11 +45,11 @@ export default function useAdminDashboard() {
       debounce.current = setTimeout(() => load(true), 1200);
     };
     const unsubs = [
-      base44.entities.Order.subscribe(schedule),
-      base44.entities.Product.subscribe(schedule),
-      base44.entities.CrawlerJob.subscribe(schedule),
-      base44.entities.CrawlerSource.subscribe(schedule),
-      base44.entities.PspWebhookEvent.subscribe(schedule),
+      api.entities.Order.subscribe(schedule),
+      api.entities.Product.subscribe(schedule),
+      api.entities.CrawlerJob.subscribe(schedule),
+      api.entities.CrawlerSource.subscribe(schedule),
+      api.entities.PspWebhookEvent.subscribe(schedule),
     ];
     return () => {
       clearTimeout(debounce.current);

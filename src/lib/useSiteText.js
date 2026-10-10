@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 
 // Configurable storefront copy (Marketplace notice etc.) — defaults live in
 // code, the Super Admin overrides them as SiteSetting records.
@@ -7,7 +7,7 @@ let settingsPromise = null;
 
 function loadSettings() {
   if (!settingsPromise) {
-    settingsPromise = base44.entities.SiteSetting.list(null, 100).catch(() => []);
+    settingsPromise = api.entities.SiteSetting.list(null, 100).catch(() => []);
   }
   return settingsPromise;
 }

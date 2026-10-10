@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { PlayCircle, Calculator } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { listCountries } from "@/lib/countries";
 
 const CATEGORIES = [
@@ -20,7 +20,7 @@ export default function PriceSimulator({ planOptions, defaultPlanId }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    base44.entities.CrawlerSource.list(null, 100).then(setSources).catch(() => {});
+    api.entities.CrawlerSource.list(null, 100).then(setSources).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -31,7 +31,7 @@ export default function PriceSimulator({ planOptions, defaultPlanId }) {
     setBusy(true);
     setError(null);
     try {
-      const res = await base44.functions.invoke("pricingEngine", { mode: "simulate", ...input, source_id: input.source_id || null });
+      const res = await api.functions.invoke("pricingEngine", { mode: "simulate", ...input, source_id: input.source_id || null });
       setResult(res.data);
     } catch (e) {
       setError(e.response?.data?.error || e.message || "Simulation failed");

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Check, X, AlertTriangle } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useRegion } from "@/lib/RegionContext";
 import { formatPrice } from "@/lib/pricing";
 
@@ -15,7 +15,7 @@ export default function ApprovalQueue() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const list = await base44.entities.Product.list("-created_date", 200);
+      const list = await api.entities.Product.list("-created_date", 200);
       setReview(list.filter((p) => p.status === "REVIEW"));
     } finally {
       setLoading(false);
@@ -26,13 +26,13 @@ export default function ApprovalQueue() {
 
   const approve = async (id) => {
     setBusy(true);
-    await base44.entities.Product.update(id, { status: "PUBLISHED", review_reason: null });
+    await api.entities.Product.update(id, { status: "PUBLISHED", review_reason: null });
     setReview((r) => r.filter((x) => x.id !== id));
     setBusy(false);
   };
   const reject = async (id) => {
     setBusy(true);
-    await base44.entities.Product.update(id, { status: "REJECTED" });
+    await api.entities.Product.update(id, { status: "REJECTED" });
     setReview((r) => r.filter((x) => x.id !== id));
     setBusy(false);
   };

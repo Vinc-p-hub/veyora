@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Search } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useRegion } from "@/lib/RegionContext";
 import { formatPrice } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,7 @@ export default function Products() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const list = await base44.entities.Product.list("-created_date", 200);
+      const list = await api.entities.Product.list("-created_date", 200);
       setProducts(list);
     } finally {
       setLoading(false);
@@ -31,7 +31,7 @@ export default function Products() {
     .filter((p) => !q || `${p.name} ${p.brand} ${p.category}`.toLowerCase().includes(q.toLowerCase()));
 
   const setStatus = async (p, status) => {
-    await base44.entities.Product.update(p.id, { status });
+    await api.entities.Product.update(p.id, { status });
     setProducts((list) => list.map((x) => (x.id === p.id ? { ...x, status } : x)));
   };
 
@@ -40,7 +40,7 @@ export default function Products() {
   const saveAlloc = async (p) => {
     const n = Math.max(0, Math.floor(Number(alloc.value) || 0));
     setAlloc(null);
-    await base44.entities.Product.update(p.id, {
+    await api.entities.Product.update(p.id, {
       veyro_allocated_stock: n,
       available_to_sell: n,
       stock_changed_at: new Date().toISOString(),

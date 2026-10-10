@@ -8,7 +8,7 @@ import { useLang } from "@/lib/i18n";
 import { PAYMENT_PROVIDERS } from "@/lib/countries";
 import { useConnectedProviders } from "@/lib/useConnectedProviders";
 import { formatPrice } from "@/lib/pricing";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useSiteText } from "@/lib/useSiteText";
 import { cn } from "@/lib/utils";
 import NexaPayWidget from "@/components/payments/NexaPayWidget";
@@ -53,7 +53,7 @@ export default function Checkout() {
   useEffect(() => {
     if (!items.length) return;
     setRevalidating(true);
-    base44.functions
+    api.functions
       .invoke("checkoutRevalidate", {
         items: items.map((i) => ({ product_id: i.id, qty: i.qty })),
         country_code: country.code,
@@ -140,7 +140,7 @@ export default function Checkout() {
     let d = data;
     const orderNumber = "VYR-" + Date.now().toString(36).toUpperCase().slice(-8);
     try {
-      const res = await base44.functions.invoke("checkoutRevalidate", {
+      const res = await api.functions.invoke("checkoutRevalidate", {
         items: items.map((i) => ({ product_id: i.id, qty: i.qty })),
         country_code: country.code,
         plan_id: planId,
@@ -183,7 +183,7 @@ export default function Checkout() {
     const finalItems = (d.items || []).filter((i) => i.available);
     const finalTotals = d.totals || { subtotal: 0, shipping: 0, tax: 0, total: 0 };
     try {
-      await base44.entities.Order.create({
+      await api.entities.Order.create({
         order_number: orderNumber,
         customer_email: form.email,
         customer_name: form.name,

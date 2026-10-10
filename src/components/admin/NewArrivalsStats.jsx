@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Sparkles, Smartphone, Laptop, TrendingDown, TrendingUp, RefreshCw } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
 
 const DAY = 86400000;
@@ -21,7 +21,7 @@ export default function NewArrivalsStats() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    base44.entities.Product.list("-created_date", 500)
+    api.entities.Product.list("-created_date", 500)
       .then(setProducts)
       .catch(() => setError(true));
   }, []);

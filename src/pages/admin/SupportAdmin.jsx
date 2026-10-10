@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Headphones } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +18,7 @@ export default function SupportAdmin() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setTickets(await base44.entities.SupportTicket.list("-created_date", 100));
+      setTickets(await api.entities.SupportTicket.list("-created_date", 100));
     } finally {
       setLoading(false);
     }
@@ -29,7 +29,7 @@ export default function SupportAdmin() {
   const update = async (t, patch) => {
     setBusy(true);
     try {
-      await base44.entities.SupportTicket.update(t.id, patch);
+      await api.entities.SupportTicket.update(t.id, patch);
       toast({ description: `Ticket ${t.subject}: updated.` });
       await load();
     } finally {

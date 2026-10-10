@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { X, Sparkles } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
 
 const ADAPTERS = [
@@ -53,7 +53,7 @@ export default function AddSourceDialog({ onDone, onCancel }) {
     setBulkBusy(true);
     setErr(null);
     try {
-      const res = await base44.functions.invoke("sourceAutodetect", { base_urls: urls });
+      const res = await api.functions.invoke("sourceAutodetect", { base_urls: urls });
       const results = res.data?.results || [];
       let added = 0;
       let blocked = 0;
@@ -67,7 +67,7 @@ export default function AddSourceDialog({ onDone, onCancel }) {
           continue;
         }
         if (r.status === "ok") {
-          await base44.entities.CrawlerSource.create({
+          await api.entities.CrawlerSource.create({
             name,
             base_url: r.base_url,
             adapter: "SITEMAP_JSONLD",
@@ -83,7 +83,7 @@ export default function AddSourceDialog({ onDone, onCancel }) {
           });
           added++;
         } else if (r.status === "not_allowed") {
-          await base44.entities.CrawlerSource.create({
+          await api.entities.CrawlerSource.create({
             name,
             base_url: r.base_url,
             adapter: "SITEMAP_JSONLD",
@@ -133,7 +133,7 @@ export default function AddSourceDialog({ onDone, onCancel }) {
     }
     setSaving(true);
     try {
-      await base44.entities.CrawlerSource.create({
+      await api.entities.CrawlerSource.create({
         name: f.name.trim(),
         base_url: f.base_url.trim().replace(/\/+$/, ""),
         adapter: f.adapter,

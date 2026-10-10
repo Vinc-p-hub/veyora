@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { History } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 
 // Admin action history — every approval, rejection, hide or deletion of a
 // review is audit-logged (REVIEW_CUSTOMER_* / REVIEW_SOURCE_*).
@@ -8,7 +8,7 @@ export default function ModerationLogPanel() {
   const [logs, setLogs] = useState(null);
 
   useEffect(() => {
-    base44.entities.AuditLog.list("-created_date", 200)
+    api.entities.AuditLog.list("-created_date", 200)
       .then((rows) => setLogs(rows.filter((l) => (l.action || "").startsWith("REVIEW_"))))
       .catch(() => setLogs([]));
   }, []);

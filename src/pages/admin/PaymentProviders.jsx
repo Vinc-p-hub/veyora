@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { CreditCard, ShieldCheck } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useToast } from "@/components/ui/use-toast";
 import ProviderCard from "@/components/admin/psp/ProviderCard";
 import { invalidateConnectedProviders } from "@/lib/useConnectedProviders";
@@ -17,7 +17,7 @@ export default function PaymentProviders() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await base44.functions.invoke("pspCredentials", { action: "list" });
+      const res = await api.functions.invoke("pspCredentials", { action: "list" });
       if (res.data?.error) {
         setError(res.data.error);
       } else {

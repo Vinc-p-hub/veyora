@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Store, ExternalLink } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
 
 // Seller management — real partner sellers created by the catalog pipeline
@@ -15,8 +15,8 @@ export default function SellersPanel() {
     setLoading(true);
     try {
       const [s, o] = await Promise.all([
-        base44.entities.Seller.list("name", 200),
-        base44.entities.Offer.list(null, 1000),
+        api.entities.Seller.list("name", 200),
+        api.entities.Offer.list(null, 1000),
       ]);
       setSellers(s);
       setOffers(o);
@@ -28,7 +28,7 @@ export default function SellersPanel() {
   useEffect(() => { load(); }, [load]);
 
   const toggle = async (s) => {
-    await base44.entities.Seller.update(s.id, { active: !s.active });
+    await api.entities.Seller.update(s.id, { active: !s.active });
     load();
   };
 

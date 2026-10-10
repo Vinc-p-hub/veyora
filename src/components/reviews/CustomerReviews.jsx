@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { BadgeCheck, Flag, Pencil, PenLine, UserCheck } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useAuth } from "@/lib/AuthContext";
 import { useLang } from "@/lib/i18n";
 import { Image } from "@/components/ui/image";
@@ -29,7 +29,7 @@ export default function CustomerReviews({ product }) {
     setOwnReview(null);
     setEligible(false);
     setShowForm(false);
-    base44.entities.SiteSetting.list(null, 100)
+    api.entities.SiteSetting.list(null, 100)
       .then((rows) => {
         if (!live) return;
         const map = Object.fromEntries((rows || []).map((r) => [r.key, r.value]));
@@ -40,11 +40,11 @@ export default function CustomerReviews({ product }) {
         });
       })
       .catch(() => {});
-    base44.entities.Review.filter({ product_id: product.id, status: "PUBLISHED" }, "-created_date", 50)
+    api.entities.Review.filter({ product_id: product.id, status: "PUBLISHED" }, "-created_date", 50)
       .then((rows) => live && setReviews(rows))
       .catch(() => live && setReviews([]));
     if (!user) return;
-    base44.entities.Order.list("-created_date", 100)
+    api.entities.Order.list("-created_date", 100)
       .then((orders) => {
         if (!live) return;
         setEligible(
@@ -55,11 +55,11 @@ export default function CustomerReviews({ product }) {
       })
       .catch(() => {});
     // Customer-service invitation also unlocks review writing (no purchase needed).
-    base44.entities.ReviewInvitation.filter({ email: (user.email || "").toLowerCase(), product_id: product.id, status: "PENDING" })
+    api.entities.ReviewInvitation.filter({ email: (user.email || "").toLowerCase(), product_id: product.id, status: "PENDING" })
       .then((rows) => live && rows.length > 0 && setEligible(true))
       .catch(() => {});
     // Own review in any status (PENDING / PUBLISHED / HIDDEN…) — read rule allows the author.
-    base44.entities.Review.filter({ product_id: product.id }, "-created_date", 50)
+    api.entities.Review.filter({ product_id: product.id }, "-created_date", 50)
       .then((rows) => live && setOwnReview(rows.find((r) => r.created_by_id === user.id) || null))
       .catch(() => {});
     return () => {
@@ -71,7 +71,7 @@ export default function CustomerReviews({ product }) {
 
   const report = async (id) => {
     try {
-      await base44.functions.invoke("reviewReport", { review_id: id });
+      await api.functions.invoke("reviewReport", { review_id: id });
       setReported(id);
     } catch (_e) {
       /* reported state untouched */

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Search, Loader2 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useRegion } from "@/lib/RegionContext";
 import { useLang } from "@/lib/i18n";
 import { formatPrice } from "@/lib/pricing";
@@ -45,7 +45,7 @@ export default function SearchBar() {
     setLoading(true);
     const timer = setTimeout(async () => {
       try {
-        const res = await base44.functions.invoke("searchProducts", {
+        const res = await api.functions.invoke("searchProducts", {
           q: needle,
           country: country.code,
           mode: "suggest",

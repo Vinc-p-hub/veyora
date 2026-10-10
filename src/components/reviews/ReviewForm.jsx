@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Star, X } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useLang } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +21,7 @@ export default function ReviewForm({ product, existing, photosEnabled, onDone })
     if (!file || photos.length >= 3 || busy) return;
     setBusy(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadPublicFile({ file });
+      const { file_url } = await api.integrations.Core.UploadPublicFile({ file });
       setPhotos((p) => [...p, file_url]);
     } catch (_e) {
       setError(t("common.error"));
@@ -38,7 +38,7 @@ export default function ReviewForm({ product, existing, photosEnabled, onDone })
     if (!text.trim()) return setError(t("reviews.reviewText"));
     setBusy(true);
     try {
-      await base44.functions.invoke("reviewSubmit", {
+      await api.functions.invoke("reviewSubmit", {
         product_id: product.id,
         rating,
         title,

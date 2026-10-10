@@ -2,7 +2,7 @@
 // (mode "display": plan structure only, never margins). Cards, product pages
 // and checkout mirror the exact plan structure the server charges.
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { DEFAULT_DISPLAY_CONFIG, buildPlanFromConfig, getPlanOptionsFromConfig } from "@/lib/pricing";
 
 const PricingContext = createContext(null);
@@ -12,7 +12,7 @@ export function PricingProvider({ children }) {
 
   useEffect(() => {
     let cancelled = false;
-    base44.functions
+    api.functions
       .invoke("pricingEngine", { mode: "display" })
       .then((res) => {
         if (!cancelled && res.data?.config) setConfig({ ...DEFAULT_DISPLAY_CONFIG, ...res.data.config });

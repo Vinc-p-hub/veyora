@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { LifeBuoy, Loader2, Send, CheckCircle2 } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useAuth } from "@/lib/AuthContext";
 import { useLang } from "@/lib/i18n";
 import { useToast } from "@/components/ui/use-toast";
@@ -24,7 +24,7 @@ export default function Support() {
   const [tickets, setTickets] = useState([]);
 
   const loadTickets = () => {
-    base44.entities.SupportTicket.list("-created_date", 20).then(setTickets).catch(() => {});
+    api.entities.SupportTicket.list("-created_date", 20).then(setTickets).catch(() => {});
   };
   useEffect(loadTickets, []);
 
@@ -33,7 +33,7 @@ export default function Support() {
     if (!subject.trim() || !message.trim()) return;
     setSending(true);
     try {
-      await base44.entities.SupportTicket.create({
+      await api.entities.SupportTicket.create({
         subject: subject.trim(),
         message: message.trim(),
         email: user?.email,

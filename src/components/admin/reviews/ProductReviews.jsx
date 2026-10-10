@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { ExternalLink, Star } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
 import Stars from "@/components/reviews/Stars";
 import ManualSourceReviewForm from "@/components/admin/reviews/ManualSourceReviewForm";
@@ -15,7 +15,7 @@ export default function ProductReviews({ product }) {
   const [msg, setMsg] = useState("");
 
   const load = useCallback(async () => {
-    const list = await base44.entities.SourceReview.filter({ product_id: product.id }, "-created_date", 200);
+    const list = await api.entities.SourceReview.filter({ product_id: product.id }, "-created_date", 200);
     setReviews(list);
   }, [product.id]);
 
@@ -27,7 +27,7 @@ export default function ProductReviews({ product }) {
     if (action === "DELETE" && !window.confirm("Permanently delete this review?")) return;
     setBusyId(review.id);
     try {
-      await base44.functions.invoke("reviewModerate", { review_id: review.id, action, scope: "source" });
+      await api.functions.invoke("reviewModerate", { review_id: review.id, action, scope: "source" });
       await load();
     } finally {
       setBusyId(null);

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Radar, Plus, ShieldX } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
 
 // SOURCE DISCOVERY & REVIEW — paste candidate merchant URLs (e.g. from brand
@@ -27,7 +27,7 @@ export default function SourceDiscovery({ onAdded }) {
     setErr(null);
     setDone(new Set());
     try {
-      const res = await base44.functions.invoke("sourceAutodetect", { base_urls: urls });
+      const res = await api.functions.invoke("sourceAutodetect", { base_urls: urls });
       setResults(res.data?.results || []);
     } catch (e) {
       setErr(e.response?.data?.error || e.message || "Detection failed.");
@@ -41,7 +41,7 @@ export default function SourceDiscovery({ onAdded }) {
   };
 
   const approve = async (r, i) => {
-    await base44.entities.CrawlerSource.create({
+    await api.entities.CrawlerSource.create({
       name: hostname(r.base_url),
       base_url: r.base_url,
       adapter: "SITEMAP_JSONLD",
@@ -60,7 +60,7 @@ export default function SourceDiscovery({ onAdded }) {
   };
 
   const block = async (r, i) => {
-    await base44.entities.CrawlerSource.create({
+    await api.entities.CrawlerSource.create({
       name: hostname(r.base_url),
       base_url: r.base_url,
       adapter: "SITEMAP_JSONLD",

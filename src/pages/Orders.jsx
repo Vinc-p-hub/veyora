@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { Package, CreditCard, Clock, Check, Truck } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useRegion } from "@/lib/RegionContext";
 import { formatPrice } from "@/lib/pricing";
 import NexaPayWidget from "@/components/payments/NexaPayWidget";
@@ -31,7 +31,7 @@ export default function Orders() {
     if (!em) return;
     setLoading(true);
     localStorage.setItem("veyro_email", em);
-    const res = await base44.entities.Order.filter({ customer_email: em }, "-created_date", 50);
+    const res = await api.entities.Order.filter({ customer_email: em }, "-created_date", 50);
     setOrders(res);
     setSearched(true);
     setLoading(false);

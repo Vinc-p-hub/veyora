@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { MailPlus, Search, Ban } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { cn } from "@/lib/utils";
 
 // Customer-service review invitations — invite REAL buyers (by email) to
@@ -22,8 +22,8 @@ export default function InviteBuyersPanel() {
 
   const load = useCallback(async () => {
     const [prods, invs] = await Promise.all([
-      base44.entities.Product.filter({ status: "PUBLISHED" }, "name", 200).catch(() => []),
-      base44.entities.ReviewInvitation.list("-created_date", 100).catch(() => []),
+      api.entities.Product.filter({ status: "PUBLISHED" }, "name", 200).catch(() => []),
+      api.entities.ReviewInvitation.list("-created_date", 100).catch(() => []),
     ]);
     setProducts(prods);
     setInvitations(invs);
@@ -50,7 +50,7 @@ export default function InviteBuyersPanel() {
     setBusy(true);
     setMsg(null);
     try {
-      const res = await base44.functions.invoke("reviewInvite", { product_id: productId, emails: list });
+      const res = await api.functions.invoke("reviewInvite", { product_id: productId, emails: list });
       setMsg(
         `${res.data.invited} invitation(s) created. No email is sent yet — contact the buyer(s) directly with the product link for now.`
       );
@@ -64,7 +64,7 @@ export default function InviteBuyersPanel() {
   };
 
   const cancel = async (inv) => {
-    await base44.entities.ReviewInvitation.update(inv.id, { status: "CANCELLED" });
+    await api.entities.ReviewInvitation.update(inv.id, { status: "CANCELLED" });
     load();
   };
 

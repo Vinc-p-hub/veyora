@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Package, TrendingUp } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useRegion } from "@/lib/RegionContext";
 import { useLang } from "@/lib/i18n";
 import AnalyticsPanel from "@/components/admin/AnalyticsPanel";
@@ -19,8 +19,8 @@ export default function AnalyticsPage() {
     setLoading(true);
     try {
       const [o, p] = await Promise.all([
-        base44.entities.Order.list("-created_date", 200),
-        base44.entities.Product.filter({ status: "PUBLISHED" }, "-premium_score", 200),
+        api.entities.Order.list("-created_date", 200),
+        api.entities.Product.filter({ status: "PUBLISHED" }, "-premium_score", 200),
       ]);
       setOrders(o);
       setProducts(p);

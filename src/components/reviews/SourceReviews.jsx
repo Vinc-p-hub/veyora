@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ExternalLink, Store } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useLang } from "@/lib/i18n";
 import Stars from "./Stars";
 
@@ -13,7 +13,7 @@ export default function SourceReviews({ product }) {
 
   useEffect(() => {
     let live = true;
-    base44.entities.SourceReview.filter({ product_id: product.id, status: "ACTIVE" }, "-imported_at", 20)
+    api.entities.SourceReview.filter({ product_id: product.id, status: "ACTIVE" }, "-imported_at", 20)
       .then((rows) => live && setReviews(rows))
       .catch(() => live && setReviews([]));
     return () => {

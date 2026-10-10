@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Boxes, History, PackageMinus, PackagePlus, X } from "lucide-react";
-import { base44 } from "@/api/base44Client";
+import { api } from "@/api/client";
 import { useAuth } from "@/lib/AuthContext";
 import { cn } from "@/lib/utils";
 
@@ -19,8 +19,8 @@ export default function Stock() {
 
   const load = useCallback(async () => {
     const [rows, moves] = await Promise.all([
-      base44.entities.Product.list("-created_date", 400),
-      base44.entities.StockMovement.list("-created_date", 50),
+      api.entities.Product.list("-created_date", 400),
+      api.entities.StockMovement.list("-created_date", 50),
     ]);
     setProducts(rows.filter((p) => (Number(p.veyro_stock) || 0) > 0 || (Number(p.reserved_stock) || 0) > 0));
     setMovements(moves);
@@ -47,8 +47,8 @@ export default function Stock() {
     try {
       const oldStock = Number(p.veyro_stock) || 0;
       const newStock = Math.max(0, oldStock + q);
-      await base44.entities.Product.update(p.id, { veyro_stock: newStock });
-      await base44.entities.StockMovement.create({
+      await api.entities.Product.update(p.id, { veyro_stock: newStock });
+      await api.entities.StockMovement.create({
         product_id: p.id,
         product_name: p.name,
         qty: q,
