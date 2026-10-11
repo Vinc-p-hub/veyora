@@ -1,5 +1,5 @@
 // Storefront mirror of the server promotions engine
-// (base44/shared/commerce/promotions.js). DISPLAY ONLY — checkoutRevalidate
+// (supabase/functions/_shared/commerce/promotions.js). DISPLAY ONLY — checkoutRevalidate
 // re-applies every promotion server-side before any order is written.
 
 export function isPromoLive(p, now = new Date()) {

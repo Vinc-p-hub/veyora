@@ -6,7 +6,7 @@ import React from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import {
   Shield, LayoutDashboard, AlertTriangle, Database, Package, Handshake, Cpu,
-  BarChart3, Coins, Globe, Users, Headphones, ScrollText, Lock, LogOut, Percent, Tag, Images, Star, Github, Boxes, BadgePercent, CreditCard,
+  BarChart3, Coins, Globe, Users, Headphones, ScrollText, Lock, LogOut, Percent, Tag, Images, Star, Boxes, BadgePercent, CreditCard,
 } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import { cn } from "@/lib/utils";
@@ -40,7 +40,6 @@ const MENU = [
   { to: "/admin/users", label: "Users & roles", icon: Users },
   { to: "/admin/support", label: "Support", icon: Headphones },
   { to: "/admin/logs", label: "Audit logs", icon: ScrollText },
-  { to: "/admin/github", label: "GitHub", icon: Github },
 ];
 
 export default function Admin() {

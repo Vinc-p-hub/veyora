@@ -11,7 +11,6 @@ import { formatPrice } from "@/lib/pricing";
 import { api } from "@/api/client";
 import { useSiteText } from "@/lib/useSiteText";
 import { cn } from "@/lib/utils";
-import NexaPayWidget from "@/components/payments/NexaPayWidget";
 import PayPalCheckout from "@/components/payments/PayPalCheckout";
 import { useAuth } from "@/lib/AuthContext";
 import CouponField from "@/components/checkout/CouponField";
@@ -41,7 +40,7 @@ export default function Checkout() {
   const selected = activeProviders.some((p) => p.id === provider) ? provider : activeProviders[0]?.id;
   const [form, setForm] = useState({ name: "", email: "", address: "", city: "", postal: "" });
   const [placing, setPlacing] = useState(false);
-  const [payingOrder, setPayingOrder] = useState(null); // live NexaPay payment step
+  const [payingOrder, setPayingOrder] = useState(null); // live PayPal payment step
   const [data, setData] = useState(null); // server-authoritative revalidation
   const [revalidating, setRevalidating] = useState(true);
   const [couponCode, setCouponCode] = useState(""); // validated server-side only
@@ -101,19 +100,11 @@ export default function Checkout() {
           </span>{" "}
           — your order is confirmed once the payment is verified.
         </p>
-        {payingOrder.provider === "paypal" ? (
-          <PayPalCheckout
-            key={payingOrder.orderNumber}
-            orderNumber={payingOrder.orderNumber}
-            onPaid={() => navigate(`/orders?placed=${payingOrder.orderNumber}`)}
-          />
-        ) : (
-          <NexaPayWidget
-            key={payingOrder.orderNumber}
-            orderNumber={payingOrder.orderNumber}
-            onPaid={() => navigate(`/orders?placed=${payingOrder.orderNumber}`)}
-          />
-        )}
+        <PayPalCheckout
+          key={payingOrder.orderNumber}
+          orderNumber={payingOrder.orderNumber}
+          onPaid={() => navigate(`/orders?placed=${payingOrder.orderNumber}`)}
+        />
       </div>
     );
   }
@@ -238,11 +229,6 @@ export default function Checkout() {
         // The server creates and captures the PayPal order; PAID only after a verified capture.
         setPlacing(false);
         setPayingOrder({ orderNumber, currency: d.currency, total: finalTotals.total, provider: "paypal" });
-      } else if (selected === "nexapay") {
-        // The order stays PENDING_PAYMENT until the signed NexaPay webhook
-        // confirms the payment server-side — never on the client's word.
-        setPlacing(false);
-        setPayingOrder({ orderNumber, currency: d.currency, total: finalTotals.total });
       } else {
         navigate(`/orders?placed=${orderNumber}`);
       }

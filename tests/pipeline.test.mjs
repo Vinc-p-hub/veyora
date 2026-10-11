@@ -4,15 +4,15 @@ import assert from "node:assert/strict";
 
 import {
   canonicalizeUrl, slugify, normalizeStock, normalizeCurrency, normalizePrice, inferCategory,
-} from "../base44/shared/catalog/normalize.js";
-import { validateProduct } from "../base44/shared/catalog/validate.js";
-import { matchProduct } from "../base44/shared/catalog/match.js";
-import { enrichFeedRaw, parseProductPage, absolutizeImageUrl, stripHtml, extractJsonLd } from "../base44/shared/catalog/extract.js";
-import { premiumScore } from "../base44/shared/catalog/premium.js";
-import { searchCatalog, normalizeQuery, levenshtein } from "../base44/shared/search/engine.js";
+} from "../supabase/functions/_shared/catalog/normalize.js";
+import { validateProduct } from "../supabase/functions/_shared/catalog/validate.js";
+import { matchProduct } from "../supabase/functions/_shared/catalog/match.js";
+import { enrichFeedRaw, parseProductPage, absolutizeImageUrl, stripHtml, extractJsonLd } from "../supabase/functions/_shared/catalog/extract.js";
+import { premiumScore } from "../supabase/functions/_shared/catalog/premium.js";
+import { searchCatalog, normalizeQuery, levenshtein } from "../supabase/functions/_shared/search/engine.js";
 import {
   computeCustomerPrice, buildInstallmentPlan, getPlanForOption, selectBestOffer, convertPrice,
-} from "../base44/shared/commerce/pricing.js";
+} from "../supabase/functions/_shared/commerce/pricing.js";
 
 const goodProduct = {
   title: "Sony WH-1000XM6",

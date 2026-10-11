@@ -44,7 +44,6 @@ import ReviewsAdmin from '@/pages/admin/ReviewsAdmin';
 import Users from '@/pages/admin/Users';
 import SupportAdmin from '@/pages/admin/SupportAdmin';
 import Logs from '@/pages/admin/Logs';
-import GithubPage from '@/pages/admin/Github';
 import PromotionsAdmin from '@/pages/admin/Promotions';
 import Markets from '@/pages/admin/Markets';
 import PaymentProviders from '@/pages/admin/PaymentProviders';
@@ -137,7 +136,6 @@ const AuthenticatedApp = () => {
                 <Route path="users" element={<Users />} />
                 <Route path="support" element={<SupportAdmin />} />
                 <Route path="logs" element={<Logs />} />
-                <Route path="github" element={<GithubPage />} />
               </Route>
               </Route>
               <Route path="*" element={<PageNotFound />} />
