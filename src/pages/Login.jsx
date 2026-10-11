@@ -25,7 +25,13 @@ export default function Login() {
     try {
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) throw signInError;
-      window.location.href = returnTo;
+      // Admins land on their console unless a specific page was requested.
+      let target = returnTo;
+      if (returnTo === "/") {
+        const { data: prof } = await supabase.from("profiles").select("role, staff_role").maybeSingle();
+        if (prof?.role === "admin") target = "/admin";
+      }
+      window.location.href = target;
     } catch (err) {
       setError(err.message || "Invalid email or password");
     } finally {

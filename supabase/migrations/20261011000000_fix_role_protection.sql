@@ -1,0 +1,2 @@
+-- Applied via MCP. Role protection only applies to API callers (anon/authenticated); server contexts may change roles.
+-- See also: founder backfill + profiles.created_date.

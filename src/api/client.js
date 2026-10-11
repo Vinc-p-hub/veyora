@@ -123,9 +123,22 @@ const entities = new Proxy({}, {
   },
 });
 
+// Some logical functions are actions of one Edge Function (shared code is deployed once).
+const ROUTES = {
+  crawlerRunSource: ['crawler', 'run_source'], crawlerProcessQueue: ['crawler', 'process_queue'],
+  crawlerOrchestrate: ['crawler', 'orchestrate'], catalogNormalize: ['crawler', 'normalize'],
+  sourceAutodetect: ['crawler', 'autodetect'], productImageFill: ['crawler', 'image_fill'],
+  reviewSubmit: ['reviews', 'submit'], reviewReport: ['reviews', 'report'],
+  reviewModerate: ['reviews', 'moderate'], reviewInvite: ['reviews', 'invite'],
+  reviewImport: ['reviews', 'import'],
+  ensureStaffRoles: ['staff', 'ensureRoles'], inviteUser: ['staff', 'invite'],
+};
+
 // Edge Functions: resolves to { data } like an HTTP client; rejects on error.
 const functions = {
-  async invoke(name, body = {}) {
+  async invoke(logicalName, payload = {}) {
+    const [name, action] = ROUTES[logicalName] || [logicalName, null];
+    const body = action ? { action, ...payload } : payload;
     const { data, error } = await supabase.functions.invoke(name, { body });
     if (error) {
       let detail = null;
