@@ -20,7 +20,7 @@ export default function useAdminDashboard() {
         api.entities.CrawlerJob.list("-updated_date", 300),
         api.entities.PspWebhookEvent.list("-created_date", 50).catch(() => []),
         api.entities.CurrencyRate.list(null, 200).catch(() => []),
-        api.functions.invoke("paypal", { action: "providers" }).catch(() => null),
+        api.functions.invoke("payments", { action: "providers" }).catch(() => null),
       ]);
       setData({
         orders,

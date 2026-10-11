@@ -40,7 +40,7 @@ export default function PayPalCheckout({ orderNumber, onPaid }) {
 
     (async () => {
       try {
-        const res = await api.functions.invoke("paypal", { action: "create_order", order_number: orderNumber });
+        const res = await api.functions.invoke("payments", { action: "create", provider: "paypal", order_number: orderNumber });
         const d = res.data || {};
         if (!d.ok) throw new Error(d.error || "Payment could not be started");
         if (cancelled) return;
@@ -51,11 +51,11 @@ export default function PayPalCheckout({ orderNumber, onPaid }) {
 
         buttonsRef.current = paypal.Buttons({
           style: { layout: "vertical", shape: "rect", label: "paypal" },
-          createOrder: () => d.paypal_order_id,
+          createOrder: () => d.external_id,
           onApprove: async (data) => {
             setPhase("confirming");
             try {
-              const cap = await api.functions.invoke("paypal", { action: "capture_order", paypal_order_id: data.orderID });
+              const cap = await api.functions.invoke("payments", { action: "confirm", provider: "paypal", external_id: data.orderID });
               if (cap.data?.ok && !cap.data.pending) onPaid?.();
               else if (cap.data?.pending) setPhase("pending");
               else throw new Error(cap.data?.error || "Payment could not be confirmed");

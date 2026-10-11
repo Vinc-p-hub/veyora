@@ -4,7 +4,7 @@ import { Package, CreditCard, Clock, Check, Truck } from "lucide-react";
 import { api } from "@/api/client";
 import { useRegion } from "@/lib/RegionContext";
 import { formatPrice } from "@/lib/pricing";
-import PayPalCheckout from "@/components/payments/PayPalCheckout";
+import PaymentEmbed, { EMBEDDED_PROVIDERS } from "@/components/payments/PaymentEmbed";
 
 const STATUS_FLOW = ["PAID", "VERIFYING_SUPPLIER", "PROCESSING", "SHIPPED", "IN_TRANSIT", "DELIVERED", "COMPLETED"];
 const STATUS_LABEL = {
@@ -98,10 +98,11 @@ export default function Orders() {
                 </div>
 
                 {/* Pending payment — resume the hosted checkout inline */}
-                {order.status === "PENDING_PAYMENT" && order.payment_provider === "paypal" && (
+                {order.status === "PENDING_PAYMENT" && EMBEDDED_PROVIDERS.includes(order.payment_provider) && (
                   paying && paying.id === order.id ? (
                     <div className="border-b border-border-hairline p-4 bg-surface-secondary">
-                      <PayPalCheckout
+                      <PaymentEmbed
+                        provider={order.payment_provider}
                         key={order.order_number}
                         orderNumber={order.order_number}
                         onPaid={() => { setPaying(null); loadOrders(email); }}
