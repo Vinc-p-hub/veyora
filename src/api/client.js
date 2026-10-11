@@ -131,7 +131,7 @@ const ROUTES = {
   reviewSubmit: ['reviews', 'submit'], reviewReport: ['reviews', 'report'],
   reviewModerate: ['reviews', 'moderate'], reviewInvite: ['reviews', 'invite'],
   reviewImport: ['reviews', 'import'],
-  ensureStaffRoles: ['staff', 'ensureRoles'], inviteUser: ['staff', 'invite'],
+  ensureStaffRoles: ['staff', 'ensure_roles'], inviteUser: ['staff', 'invite'],
 };
 
 // Edge Functions: resolves to { data } like an HTTP client; rejects on error.
