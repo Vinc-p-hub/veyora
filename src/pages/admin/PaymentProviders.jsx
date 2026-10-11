@@ -114,6 +114,13 @@ function ProviderCard({ p, onChanged }) {
         </p>
       )}
 
+      {p.id === "nexapay" && (
+        <p className="text-xs text-text-muted">
+          Webhook URL (sent with every session — payments are confirmed only by NexaPay's signed webhook):{" "}
+          <code className="text-mono select-all">{supabaseUrl}/functions/v1/payments</code>. Paste NexaPay's signing secret above.
+        </p>
+      )}
+
       {error && <div className="p-2.5 rounded-lg bg-destructive/10 text-destructive text-xs">{error}</div>}
 
       <div className="flex flex-wrap items-center gap-2">

@@ -44,12 +44,13 @@ export default function CustomerReviews({ product }) {
       .then((rows) => live && setReviews(rows))
       .catch(() => live && setReviews([]));
     if (!user) return;
-    api.entities.Order.list("-created_date", 100)
-      .then((orders) => {
+    api.functions.invoke("payments", { action: "my_orders" })
+      .then((res) => {
         if (!live) return;
+        const orders = res.data?.orders || [];
         setEligible(
           orders.some(
-            (o) => ELIGIBLE_STATUS.includes(o.status) && (o.items || []).some((it) => it.id === product.id)
+            (o) => ELIGIBLE_STATUS.includes(o.status) && (o.items || []).some((it) => (it.product_id || it.id) === product.id)
           )
         );
       })

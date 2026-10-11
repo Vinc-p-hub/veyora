@@ -12,7 +12,7 @@ import { api } from "@/api/client";
 import { useSiteText } from "@/lib/useSiteText";
 import { cn } from "@/lib/utils";
 import PaymentEmbed, { EMBEDDED_PROVIDERS } from "@/components/payments/PaymentEmbed";
-import { useAuth } from "@/lib/AuthContext";
+import { rememberGuestOrder } from "@/lib/guestOrders";
 import CouponField from "@/components/checkout/CouponField";
 import { usePromotions } from "@/lib/PromotionsContext";
 
@@ -28,7 +28,6 @@ export default function Checkout() {
   const [planId, setPlanId] = useState(params.get("plan") || "plan_5");
   // Storefront payment methods mirror the providers switched on in the back
   // office — nothing else is offered at checkout.
-  const { user } = useAuth();
   const connected = useConnectedProviders();
   const activeProviders = connected.map((p) => ({
     id: p.id,
@@ -136,11 +135,6 @@ export default function Checkout() {
   const placeOrder = async () => {
     if (!form.name || !form.email || !form.address) return;
     if (!selected) return; // no payment method connected: never create an unpayable order
-    // Stock is committed server-side for signed-in customers only.
-    if (!user) {
-      navigate("/login?returnTo=" + encodeURIComponent("/checkout"));
-      return;
-    }
     setPlacing(true);
     // Final server-side gate — offer, price, supplier availability and the
     // internal VEYRO allocation are re-verified live and the allocation is
@@ -153,7 +147,7 @@ export default function Checkout() {
         items: items.map((i) => ({ product_id: i.id, qty: i.qty })),
         country_code: country.code,
         plan_id: planId,
-        commit: true,
+        commit: false, // stock is consumed server-side once the payment is confirmed
         order_number: orderNumber,
         coupon_code: couponCode,
       });
@@ -226,6 +220,7 @@ export default function Checkout() {
         address: { line: form.address, city: form.city, postal: form.postal },
         tracking_number: "TRK" + Math.random().toString(36).slice(2, 10).toUpperCase(),
       });
+      rememberGuestOrder(orderNumber, form.email);
       clearCart();
       if (EMBEDDED_PROVIDERS.includes(selected)) {
         // Embedded payment (no redirect): PAID only after the server verifies the payment with the provider.

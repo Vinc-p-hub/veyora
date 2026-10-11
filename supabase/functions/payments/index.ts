@@ -26,6 +26,14 @@ const PROVIDERS: Record<string, { label: string; region: string; desc: string; d
       { key: "webhook_secret", label: "Webhook signing secret", secret: true, required: false, placeholder: "whsec_… (recommended)" },
     ],
   },
+  nexapay: {
+    label: "NexaPay", region: "Global", desc: "Card & Mobile Money — secure embedded checkout, no redirect",
+    docs: "https://thankful-nexa-pay-flow.base44.app",
+    fields: [
+      { key: "secret_key", label: "Merchant secret key", secret: true, required: true },
+      { key: "webhook_secret", label: "Webhook signing secret", secret: true, required: true },
+    ],
+  },
   paystack: {
     label: "Paystack", region: "Africa", desc: "Cards, bank & mobile money — inline popup, no redirect",
     docs: "https://dashboard.paystack.com/#/settings/developers",
@@ -124,6 +132,7 @@ async function testConnection(id: string, c: Record<string, string>, mode: strin
       const r = await stripeCall(c.secret_key, "balance");
       return r.status === 401 ? "Stripe rejected the secret key" : null;
     }
+    if (id === "nexapay") return null; // NexaPay exposes no key-check endpoint: validated on the first payment
     if (id === "paystack") {
       const want = mode === "LIVE" ? "_live_" : "_test_";
       if (!c.secret_key.includes(want) || !c.public_key.includes(want)) return `Mode is ${mode}: both keys must be ${mode.toLowerCase()} keys (contain "${want}")`;
@@ -133,6 +142,20 @@ async function testConnection(id: string, c: Record<string, string>, mode: strin
   } catch (e) { return (e as Error).message; }
   return "Unknown provider";
 }
+
+const hmacHex = async (secret: string, data: string) => {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const mac = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data)));
+  return Array.from(mac).map((b) => b.toString(16).padStart(2, "0")).join("");
+};
+const safeEqual = (a: string, b: string) => {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+};
+const NEXAPAY_ORIGIN = "https://thankful-nexa-pay-flow.base44.app";
+const NEXAPAY_DISPATCHER = "https://base44-dispatcher-production.base44.workers.dev";
 
 // ───────────────────────────── orders & intents ─────────────────────────────
 // deno-lint-ignore no-explicit-any
@@ -167,8 +190,41 @@ async function finalize(db: any, intent: any, paid: number, paidCurrency: string
     return json({ ok: false, error: "Payment amount mismatch — flagged for review" }, 409);
   }
   await db.from("payment_intents").update({ status: "SUCCEEDED", confirmed_at: new Date().toISOString(), metadata: { ...(intent.metadata || {}), ...extra } }).eq("id", intent.id);
-  await db.from("orders").update({ status: "PAID" }).eq("order_number", intent.order_number).eq("status", "PENDING_PAYMENT");
+  const { data: changed } = await db.from("orders").update({ status: "PAID" }).eq("order_number", intent.order_number).eq("status", "PENDING_PAYMENT").select();
+  // Stock is only consumed once the payment is confirmed (guests never touch inventory before paying).
+  if (changed?.length) await commitStock(db, changed[0]);
   return json({ ok: true, order_number: intent.order_number });
+}
+
+// deno-lint-ignore no-explicit-any
+async function commitStock(db: any, order: any) {
+  try {
+    const items = Array.isArray(order.items) ? order.items : [];
+    for (const it of items) {
+      const qty = Number(it.qty) || 0;
+      if (qty <= 0 || !it.product_id) continue;
+      const { data: p } = await db.from("products").select("id,name,veyro_stock,veyro_allocated_stock,available_to_sell").eq("id", it.product_id).maybeSingle();
+      if (!p) continue;
+      const patch: Record<string, number> = {};
+      if (Number(p.veyro_allocated_stock) > 0) {
+        const cur = p.available_to_sell != null ? Number(p.available_to_sell) : Number(p.veyro_allocated_stock);
+        patch.available_to_sell = Math.max(0, cur - qty);
+      }
+      if (it.fulfillment_source === "VEYRO") {
+        const oldStock = Number(p.veyro_stock) || 0;
+        patch.veyro_stock = Math.max(0, oldStock - qty);
+        await db.from("stock_movements").insert({ product_id: p.id, product_name: p.name || it.name || "", qty: -qty, old_stock: oldStock, new_stock: patch.veyro_stock, reason: "ORDER_FULFILLMENT", order_number: order.order_number });
+      }
+      if (Object.keys(patch).length) await db.from("products").update(patch).eq("id", p.id);
+    }
+    const promoIds = Array.isArray(order.price_snapshot?.promotion_ids) ? order.price_snapshot.promotion_ids : [];
+    for (const id of promoIds) {
+      const { data: pr } = await db.from("promotions").select("usage_count").eq("id", id).maybeSingle();
+      if (pr) await db.from("promotions").update({ usage_count: (Number(pr.usage_count) || 0) + 1 }).eq("id", id);
+    }
+  } catch (e) {
+    console.error("commitStock failed (payment already confirmed)", e);
+  }
 }
 
 // ───────────────────────────── create (public) ──────────────────────────────
@@ -222,6 +278,21 @@ async function create(db: any, providerId: string, orderNumber: string) {
     return json({ ok: true, provider: "stripe", external_id: r.body.id, client_secret: r.body.client_secret, publishable_key: c.publishable_key, currency: orderCurrency, amount: dueNow });
   }
 
+  if (providerId === "nexapay") {
+    const res = await fetch(`${NEXAPAY_ORIGIN}/functions/createCheckoutSession`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${c.secret_key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: dueNow, currency: orderCurrency, order_id: orderNumber, webhook_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/payments` }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.checkout_url) return json({ ok: false, error: data.error || `NexaPay could not start the payment (${res.status})` }, 502);
+    // The hosted page is served from the PSP's own origin (the dispatcher host rejects sessions).
+    const checkoutUrl = String(data.checkout_url).startsWith(NEXAPAY_DISPATCHER) ? NEXAPAY_ORIGIN + String(data.checkout_url).slice(NEXAPAY_DISPATCHER.length) : data.checkout_url;
+    const externalId = String(data.session_id || `nexa-${orderNumber}-${Date.now().toString(36)}`).slice(0, 80);
+    await recordIntent(db, { order_number: orderNumber, provider: "nexapay", amount: dueNow, currency: orderCurrency, external_id: externalId, total, dueNow, order_currency: orderCurrency });
+    return json({ ok: true, provider: "nexapay", external_id: externalId, checkout_url: checkoutUrl, origin: NEXAPAY_ORIGIN, currency: orderCurrency, amount: dueNow });
+  }
+
   if (providerId === "paystack") {
     if (!PAYSTACK_CURRENCIES.has(orderCurrency)) return json({ ok: false, error: `Paystack does not support ${orderCurrency}` }, 400);
     const reference = `VEY-${orderNumber}-${Date.now().toString(36)}`.slice(0, 60);
@@ -242,6 +313,8 @@ async function confirm(db: any, providerId: string, externalId: string) {
   if (!intent) return json({ ok: false, error: "Unknown payment" }, 404);
   if (intent.status === "SUCCEEDED") return json({ ok: true, order_number: intent.order_number, already: true });
   if (!["CREATED", "PENDING", "PROCESSING"].includes(intent.status)) return json({ ok: false, error: "Payment cannot be confirmed" }, 409);
+  // NexaPay only confirms through its signed webhook — the browser can just wait.
+  if (providerId === "nexapay") return json({ ok: true, pending: true, order_number: intent.order_number });
   const prov = await loadProvider(db, providerId);
   if (!isConfigured(providerId, prov.creds)) return json({ ok: false, error: "Provider not configured" }, 503);
   const c = prov.creds;
@@ -318,6 +391,44 @@ async function stripeWebhook(db: any, raw: string, sig: string) {
   return json({ received: true });
 }
 
+// deno-lint-ignore no-explicit-any
+async function nexapayWebhook(db: any, raw: string, sig: string) {
+  const prov = await loadProvider(db, "nexapay");
+  const secret = prov.creds.webhook_secret;
+  if (!secret) return json({ error: "Webhook secret not configured" }, 400);
+  const parts: Record<string, string> = {};
+  for (const kv of sig.split(",")) { const i = kv.indexOf("="); if (i > 0) parts[kv.slice(0, i).trim()] = kv.slice(i + 1).trim(); }
+  if (!parts.t || !parts.v1 || !safeEqual(parts.v1, await hmacHex(secret, `${parts.t}.${raw}`))) return json({ error: "Invalid signature" }, 401);
+
+  const evt = JSON.parse(raw);
+  const d = evt.data || {};
+  const type = String(evt.type || evt.event || "");
+  const orderNumber = String(d.order_number || evt.order_number || d.order_id || evt.order_id || "");
+  const amount = d.amount != null ? Number(d.amount) : evt.amount != null ? Number(evt.amount) : null;
+  const currency = String(d.currency || evt.currency || "");
+  const log = (status: string, error?: string) => db.from("psp_webhook_events").insert({ provider: "nexapay", event_type: type, external_id: String(evt.id || evt.transaction_id || ""), signature_valid: true, processed: status === "PROCESSED", status, order_number: orderNumber || null, amount, currency: currency || null, error: error || null });
+
+  const { data: intents } = await db.from("payment_intents").select("*").eq("provider", "nexapay").eq("order_number", orderNumber).order("created_date", { ascending: false }).limit(1);
+  const intent = intents?.[0];
+  if (!intent) { await log("TRANSACTION_MISMATCH", "No intent for this order"); return json({ received: true, ignored: true }); }
+
+  if (type === "payment.succeeded") {
+    if (amount != null && Math.abs(amount - Number(intent.amount)) > 0.01) {
+      await db.from("payment_intents").update({ status: "FAILED", failure_reason: "amount_mismatch" }).eq("id", intent.id);
+      await log("TRANSACTION_MISMATCH", `Amount ${amount} vs intent ${intent.amount}`);
+      return json({ received: true });
+    }
+    if (intent.status !== "SUCCEEDED") await finalize(db, intent, amount ?? Number(intent.amount), currency || intent.currency, { nexapay_event: type });
+    await log("PROCESSED");
+  } else if (type === "payment.failed" || type === "payment.cancelled") {
+    if (intent.status !== "SUCCEEDED") await db.from("payment_intents").update({ status: type === "payment.failed" ? "FAILED" : "CANCELLED", failure_reason: String(d.reason || d.error || evt.reason || type) }).eq("id", intent.id);
+    await log("PROCESSED");
+  } else {
+    await log("IGNORED");
+  }
+  return json({ received: true });
+}
+
 // ───────────────────────────── admin (vault) ────────────────────────────────
 // deno-lint-ignore no-explicit-any
 async function adminList(db: any) {
@@ -363,6 +474,8 @@ serve(async (req) => {
   const db = ctx.db;
 
   if (sig) return stripeWebhook(db, await req.text(), sig);
+  const nexaSig = req.headers.get("nexapay-signature");
+  if (nexaSig) return nexapayWebhook(db, await req.text(), nexaSig);
 
   const body = await req.json().catch(() => ({}));
   const action = String(body.action || "");
@@ -375,6 +488,34 @@ serve(async (req) => {
       if (p.enabled && isConfigured(id, p.creds)) out.push({ id, label: def.label, region: def.region, desc: def.desc });
     }
     return json({ ok: true, providers: out });
+  }
+  if (action === "order_lookup") {
+    // Guests look an order up with its number + the e-mail used at checkout (nothing is listed without both).
+    const num = String(body.order_number || "").trim().toUpperCase();
+    const email = String(body.email || "").trim().toLowerCase();
+    if (!/^[A-Z0-9-]{4,40}$/.test(num) || !email) return json({ ok: false, error: "Order number and e-mail are required" }, 400);
+    const { data: o } = await db.from("orders").select("*").eq("order_number", num).maybeSingle();
+    if (!o || String(o.customer_email || "").toLowerCase() !== email) return json({ ok: false, error: "No order matches these details" }, 404);
+    const { price_snapshot: _hidden, ...safe } = o; // supplier costs / margins never leave the server
+    return json({ ok: true, order: safe });
+  }
+  if (action === "my_orders") {
+    // Signed-in customers: their orders (by account or checkout e-mail), without internal cost data.
+    if (!ctx.user) return json({ ok: false, error: "Unauthorized" }, 401);
+    const email = String(ctx.user.email || "").toLowerCase();
+    // Two exact-match queries (an ilike on its own would treat "_" in an e-mail as a wildcard).
+    const { data: byId } = await db.from("orders").select("*").eq("created_by_id", ctx.user.id).limit(100);
+    const { data: byMail } = await db.from("orders").select("*").ilike("customer_email", email.replace(/[%_\\]/g, (m) => "\\" + m)).limit(100);
+    const seen = new Set<string>();
+    // deno-lint-ignore no-explicit-any
+    const rows = [...(byId || []), ...(byMail || []).filter((o: any) => String(o.customer_email || "").toLowerCase() === email)]
+      // deno-lint-ignore no-explicit-any
+      .filter((o: any) => !seen.has(o.id) && seen.add(o.id))
+      // deno-lint-ignore no-explicit-any
+      .sort((x: any, y: any) => String(y.created_date).localeCompare(String(x.created_date)));
+    // deno-lint-ignore no-explicit-any
+    const orders = rows.map(({ price_snapshot: _hidden, ...safe }: any) => safe);
+    return json({ ok: true, orders });
   }
   if (action === "create") {
     const orderNumber = String(body.order_number || "");

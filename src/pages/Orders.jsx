@@ -6,6 +6,8 @@ import { useRegion } from "@/lib/RegionContext";
 import { formatPrice } from "@/lib/pricing";
 import PaymentEmbed, { EMBEDDED_PROVIDERS } from "@/components/payments/PaymentEmbed";
 import { useConnectedProviders } from "@/lib/useConnectedProviders";
+import { useAuth } from "@/lib/AuthContext";
+import { readGuestOrders, rememberGuestOrder } from "@/lib/guestOrders";
 
 const STATUS_FLOW = ["PAID", "VERIFYING_SUPPLIER", "PROCESSING", "SHIPPED", "IN_TRANSIT", "DELIVERED", "COMPLETED"];
 const STATUS_LABEL = {
@@ -23,27 +25,61 @@ export default function Orders() {
   const { currency } = useRegion();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { user, isLoadingAuth } = useAuth();
   const [email, setEmail] = useState(localStorage.getItem("veyro_email") || "");
-  const [searched, setSearched] = useState(false);
+  const [orderNumber, setOrderNumber] = useState(params.get("placed") || "");
+  const [lookupError, setLookupError] = useState("");
   const [paying, setPaying] = useState(null); // resume an embedded payment inline
   const [choice, setChoice] = useState({}); // payment method picked per unpaid order
   const connected = useConnectedProviders();
   const placed = params.get("placed");
 
-  const loadOrders = async (em) => {
-    if (!em) return;
+  const fetchOne = async (num, em) => {
+    const res = await api.functions.invoke("payments", { action: "order_lookup", order_number: num, email: em });
+    return res.data?.ok ? res.data.order : null;
+  };
+
+  // Signed-in customers see their account orders; guests see the orders remembered on this
+  // device, or look one up with order number + e-mail. No account is ever required.
+  const loadOrders = async () => {
     setLoading(true);
-    localStorage.setItem("veyro_email", em);
-    const res = await api.entities.Order.filter({ customer_email: em }, "-created_date", 50);
-    setOrders(res);
-    setSearched(true);
-    setLoading(false);
+    setLookupError("");
+    try {
+      if (user) {
+        const res = await api.functions.invoke("payments", { action: "my_orders" });
+        const mine = res.data?.orders || [];
+        const known = new Set(mine.map((o) => o.order_number));
+        const extra = (await Promise.all(readGuestOrders().filter((g) => !known.has(g.n)).map((g) => fetchOne(g.n, g.e).catch(() => null)))).filter(Boolean);
+        setOrders([...mine, ...extra].sort((x, y) => String(y.created_date).localeCompare(String(x.created_date))));
+      } else {
+        const list = (await Promise.all(readGuestOrders().map((g) => fetchOne(g.n, g.e).catch(() => null)))).filter(Boolean);
+        setOrders(list);
+      }
+      setSearched(true);
+    } catch (e) {
+      setLookupError(e.message || "Could not load your orders");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const lookup = async () => {
+    setLookupError("");
+    try {
+      const o = await fetchOne(orderNumber.trim().toUpperCase(), email.trim().toLowerCase());
+      if (!o) throw new Error("No order matches these details");
+      rememberGuestOrder(o.order_number, email);
+      await loadOrders();
+    } catch (e) {
+      setLookupError(e.message || "No order matches these details");
+    }
   };
 
   useEffect(() => {
-    if (placed && email) loadOrders(email);
-    else setLoading(false);
-  }, []);
+    if (isLoadingAuth) return;
+    loadOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoadingAuth, user?.id]);
 
   return (
     <div className="px-4 md:px-8 py-6 md:py-10 max-w-[1000px] mx-auto">
@@ -72,26 +108,30 @@ export default function Orders() {
 
       <h1 className="font-display font-bold text-2xl md:text-3xl mb-6">Your Orders</h1>
 
-      {!searched ? (
-        <div className="max-w-md">
-          <p className="text-sm text-text-muted mb-4">Enter the email you used at checkout to view your orders and payment plans.</p>
-          <div className="flex gap-2">
-            <input
-              placeholder="your@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && loadOrders(email)}
-              className="flex-1 bg-surface-card border border-border-hairline rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent-cyan/50"
-            />
-            <button onClick={() => loadOrders(email)} className="px-5 rounded-lg bg-noon text-noon-fg font-medium text-sm">View</button>
-          </div>
-        </div>
-      ) : loading ? (
+      {loading ? (
         <div className="space-y-3">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-40 bg-surface-card rounded-lg animate-pulse" />)}</div>
-      ) : orders.length === 0 ? (
+      ) : (
+        <>
+        {!user && (
+          <div className="max-w-xl mb-6 p-4 rounded-lg border border-border-hairline bg-surface-card">
+            <p className="text-sm font-medium mb-1">Find an order</p>
+            <p className="text-xs text-text-muted mb-3">No account needed — enter your order number and the e-mail used at checkout.</p>
+            <div className="flex flex-wrap gap-2">
+              <input placeholder="Order number (VYR-…)" value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)}
+                className="flex-1 min-w-[160px] bg-surface-primary border border-border-hairline rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent-cyan/50" />
+              <input placeholder="your@email.com" value={email} onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && lookup()}
+                className="flex-1 min-w-[160px] bg-surface-primary border border-border-hairline rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent-cyan/50" />
+              <button onClick={lookup} className="px-5 rounded-lg bg-noon text-noon-fg font-medium text-sm">Find</button>
+            </div>
+            {lookupError && <p className="text-xs text-destructive mt-2">{lookupError}</p>}
+          </div>
+        )}
+        {lookupError && user && <p className="text-xs text-destructive mb-3">{lookupError}</p>}
+        {orders.length === 0 ? (
         <div className="text-center py-16">
           <Package className="w-10 h-10 text-text-muted mx-auto mb-3" />
-          <p className="text-sm text-text-muted">No orders found for {email}.</p>
+          <p className="text-sm text-text-muted">{user ? "You have no orders yet." : "No orders saved on this device yet — find one above with its number and e-mail."}</p>
           <Link to="/category" className="text-accent-cyan text-sm mt-2 inline-block">Start shopping →</Link>
         </div>
       ) : (
@@ -214,6 +254,8 @@ export default function Orders() {
             );
           })}
         </div>
+        )}
+        </>
       )}
     </div>
   );

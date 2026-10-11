@@ -72,7 +72,7 @@ function entity(name) {
     async create(data) {
       const record = { id: newId(), ...data };
       const { data: session } = await supabase.auth.getSession();
-      if (session?.session) {
+      if (session?.session && name !== 'Order') {
         return unwrap(await from().insert(record).select().single());
       }
       unwrap(await from().insert(record));
