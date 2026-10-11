@@ -23,12 +23,12 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      const { data: signedIn, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) throw signInError;
       // Admins land on their console unless a specific page was requested.
       let target = returnTo;
       if (returnTo === "/") {
-        const { data: prof } = await supabase.from("profiles").select("role, staff_role").maybeSingle();
+        const { data: prof } = await supabase.from("profiles").select("role, staff_role").eq("id", signedIn.user.id).maybeSingle();
         if (prof?.role === "admin") target = "/admin";
       }
       window.location.href = target;

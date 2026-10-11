@@ -9,7 +9,7 @@ import { useToast } from "@/components/ui/use-toast";
 const EMPTY_ADDRESS = { label: "", name: "", street: "", city: "", country: "", phone: "" };
 
 export default function Profile() {
-  const { user, isLoadingAuth, updateProfile } = useAuth();
+  const { user, isLoadingAuth, updateProfile, logout } = useAuth();
   const { t, lang, setLang } = useLang();
   const { countryCode, setCountryCode, country, countries, currency } = useRegion();
   const { toast } = useToast();
@@ -75,9 +75,19 @@ export default function Profile() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 md:px-8 py-8 space-y-6">
-      <div>
-        <h1 className="font-display font-bold text-2xl md:text-3xl">{t("profile.title")}</h1>
-        <p className="text-xs text-text-muted mt-1">{user?.email}</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display font-bold text-2xl md:text-3xl">{t("profile.title")}</h1>
+          <p className="text-xs text-text-muted mt-1">{user?.email}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {user?.role === "admin" && (
+            <Link to="/admin" className="px-4 py-2 rounded-lg bg-noon-fg text-white text-xs font-semibold hover:opacity-90">Admin console</Link>
+          )}
+          <button onClick={() => logout("/")} className="px-4 py-2 rounded-lg border border-border-hairline text-xs font-semibold hover:border-accent-cyan/40">
+            Log out
+          </button>
+        </div>
       </div>
 
       {/* Account shortcuts */}

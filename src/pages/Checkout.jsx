@@ -135,6 +135,7 @@ export default function Checkout() {
 
   const placeOrder = async () => {
     if (!form.name || !form.email || !form.address) return;
+    if (!selected) return; // no payment method connected: never create an unpayable order
     // Stock is committed server-side for signed-in customers only.
     if (!user) {
       navigate("/login?returnTo=" + encodeURIComponent("/checkout"));
@@ -315,7 +316,9 @@ export default function Checkout() {
                 </button>
               ))}
               {activeProviders.length === 0 && (
-                <p className="text-xs text-text-muted">No payment method is available right now.</p>
+                <p className="text-sm p-3 rounded-lg bg-amber-50 text-amber-800">
+                  Payments are temporarily unavailable, so orders cannot be placed right now. Please try again shortly.
+                </p>
               )}
             </div>
           </section>
@@ -370,7 +373,7 @@ export default function Checkout() {
             </div>
             <button
               onClick={placeOrder}
-              disabled={placing || revalidating || items.length === 0 || !form.name || !form.email || !form.address}
+              disabled={placing || revalidating || !selected || items.length === 0 || !form.name || !form.email || !form.address}
               className="w-full mt-5 py-3.5 rounded-lg bg-noon text-noon-fg font-semibold text-sm hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {placing ? "Processing…" : <><Lock className="w-4 h-4" /> Place order · {data ? money(plan && plan.installmentCount > 0 ? plan.downPayment : totals.total) : formatPrice(veyroTotal, currency)}</>}

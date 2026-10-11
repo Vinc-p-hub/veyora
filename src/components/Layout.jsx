@@ -32,7 +32,7 @@ function HeaderAction({ to, icon: Icon, label, onClick, badge }) {
 
 function Footer() {
   const { t, tCat } = useLang();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   return (
     <footer className="bg-noon text-noon-fg mt-10">
       <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-10 grid grid-cols-2 md:grid-cols-5 gap-8">
@@ -66,11 +66,13 @@ function Footer() {
             <Link to="/financing-info" className="block hover:underline">{t("footer.financing")}</Link>
             <Link to="/support" className="block hover:underline">{t("footer.help")}</Link>
             <Link to="/contact" className="block hover:underline">Contact us</Link>
-            {!user && (
+            {!user ? (
               <>
                 <Link to="/login" className="block hover:underline font-semibold">{t("profile.loginCta")}</Link>
                 <Link to="/register" className="block hover:underline">{t("profile.registerCta")}</Link>
               </>
+            ) : (
+              <button onClick={() => logout("/")} className="block hover:underline font-semibold text-start">Log out</button>
             )}
           </div>
         </div>
@@ -134,7 +136,13 @@ export default function Layout() {
               <RegionLangMenu />
               <div className="hidden md:flex items-center gap-5">
                 {user ? (
-                  <HeaderAction to="/profile" icon={User} label={t("nav.account")} />
+                  <>
+                    <HeaderAction to="/profile" icon={User} label={t("nav.account")} />
+                    {user.role === "admin" && (
+                      <Link to="/admin" className="px-3 py-1.5 rounded-lg bg-noon-fg text-white text-xs font-semibold hover:opacity-90">Admin</Link>
+                    )}
+                    <button onClick={() => logout("/")} className="text-xs font-medium hover:underline no-tap-highlight">Log out</button>
+                  </>
                 ) : (
                   <div className="flex items-center gap-2">
                     <Link to="/login" className="px-4 py-2 rounded-lg bg-noon-fg text-white text-xs font-semibold hover:opacity-90 transition no-tap-highlight">

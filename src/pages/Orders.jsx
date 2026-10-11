@@ -5,6 +5,7 @@ import { api } from "@/api/client";
 import { useRegion } from "@/lib/RegionContext";
 import { formatPrice } from "@/lib/pricing";
 import PaymentEmbed, { EMBEDDED_PROVIDERS } from "@/components/payments/PaymentEmbed";
+import { useConnectedProviders } from "@/lib/useConnectedProviders";
 
 const STATUS_FLOW = ["PAID", "VERIFYING_SUPPLIER", "PROCESSING", "SHIPPED", "IN_TRANSIT", "DELIVERED", "COMPLETED"];
 const STATUS_LABEL = {
@@ -24,7 +25,9 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState(localStorage.getItem("veyro_email") || "");
   const [searched, setSearched] = useState(false);
-  const [paying, setPaying] = useState(null); // resume a hosted-checkout payment inline
+  const [paying, setPaying] = useState(null); // resume an embedded payment inline
+  const [choice, setChoice] = useState({}); // payment method picked per unpaid order
+  const connected = useConnectedProviders();
   const placed = params.get("placed");
 
   const loadOrders = async (em) => {
@@ -44,15 +47,28 @@ export default function Orders() {
 
   return (
     <div className="px-4 md:px-8 py-6 md:py-10 max-w-[1000px] mx-auto">
-      {placed && (
-        <div className="mb-6 p-4 rounded-lg border border-emerald-400/30 bg-emerald-400/5 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-emerald-400/20 flex items-center justify-center"><Check className="w-5 h-5 text-emerald-400" /></div>
-          <div>
-            <div className="font-medium text-sm">Order {placed} confirmed</div>
-            <div className="text-xs text-text-muted">We've emailed your receipt and tracking details.</div>
+      {placed && (() => {
+        const o = orders.find((x) => x.order_number === placed);
+        const paid = o && o.status !== "PENDING_PAYMENT";
+        if (!o) return null;
+        return paid ? (
+          <div className="mb-6 p-4 rounded-lg border border-emerald-400/30 bg-emerald-400/5 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-emerald-400/20 flex items-center justify-center"><Check className="w-5 h-5 text-emerald-400" /></div>
+            <div>
+              <div className="font-medium text-sm">Order {placed} confirmed</div>
+              <div className="text-xs text-text-muted">Payment received. We've emailed your receipt and tracking details.</div>
+            </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="mb-6 p-4 rounded-lg border border-amber-400/40 bg-amber-50 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-amber-400/20 flex items-center justify-center"><Clock className="w-5 h-5 text-amber-600" /></div>
+            <div>
+              <div className="font-medium text-sm">Order {placed} is awaiting payment</div>
+              <div className="text-xs text-text-muted">It is only confirmed once your payment goes through — complete it below.</div>
+            </div>
+          </div>
+        );
+      })()}
 
       <h1 className="font-display font-bold text-2xl md:text-3xl mb-6">Your Orders</h1>
 
@@ -97,29 +113,45 @@ export default function Orders() {
                   </div>
                 </div>
 
-                {/* Pending payment — resume the hosted checkout inline */}
-                {order.status === "PENDING_PAYMENT" && EMBEDDED_PROVIDERS.includes(order.payment_provider) && (
-                  paying && paying.id === order.id ? (
-                    <div className="border-b border-border-hairline p-4 bg-surface-secondary">
-                      <PaymentEmbed
-                        provider={order.payment_provider}
-                        key={order.order_number}
-                        orderNumber={order.order_number}
-                        onPaid={() => { setPaying(null); loadOrders(email); }}
-                      />
+                {/* Unpaid order: pick a method (if needed) and pay inline — no redirect */}
+                {order.status === "PENDING_PAYMENT" && (() => {
+                  const options = connected.filter((p) => EMBEDDED_PROVIDERS.includes(p.id));
+                  const preferred = options.find((p) => p.id === order.payment_provider)?.id;
+                  const chosen = choice[order.id] || preferred || (options.length === 1 ? options[0].id : null);
+                  if (paying && paying.id === order.id && chosen) {
+                    return (
+                      <div className="border-b border-border-hairline p-4 bg-surface-secondary">
+                        <PaymentEmbed
+                          provider={chosen}
+                          key={order.order_number + chosen}
+                          orderNumber={order.order_number}
+                          onPaid={() => { setPaying(null); loadOrders(email); }}
+                        />
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="border-b border-border-hairline px-4 py-3 bg-amber-50 space-y-2">
+                      <div className="text-xs text-amber-700">Awaiting payment — this order is not confirmed yet.</div>
+                      {options.length === 0 ? (
+                        <div className="text-xs text-text-muted">Payments are temporarily unavailable. Please come back shortly.</div>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2">
+                          {options.length > 1 && options.map((p) => (
+                            <button key={p.id} onClick={() => setChoice((c) => ({ ...c, [order.id]: p.id }))}
+                              className={`px-3 py-1.5 rounded-lg text-xs border ${chosen === p.id ? "bg-noon text-noon-fg border-transparent" : "border-border-hairline bg-white"}`}>
+                              {p.label}
+                            </button>
+                          ))}
+                          <button onClick={() => setPaying(order)} disabled={!chosen}
+                            className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-xs font-semibold disabled:opacity-50">
+                            Complete payment
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="border-b border-border-hairline px-4 py-3 bg-amber-50 flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-xs text-amber-700">Payment pending — your order is confirmed once the payment is verified.</div>
-                      <button
-                        onClick={() => setPaying(order)}
-                        className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-xs font-semibold"
-                      >
-                        Complete payment
-                      </button>
-                    </div>
-                  )
-                )}
+                  );
+                })()}
 
                 {/* Items */}
                 <div className="p-4 space-y-2">
