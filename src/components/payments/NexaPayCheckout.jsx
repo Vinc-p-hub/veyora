@@ -85,7 +85,7 @@ export default function NexaPayCheckout({ orderNumber, onPaid }) {
       <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
         <AlertTriangle className="w-6 h-6 mx-auto text-red-500 mb-2" />
         <p className="text-sm text-red-700">{error}</p>
-        <button onClick={start} className="mt-4 px-5 py-2.5 rounded-lg bg-noon text-noon-fg text-sm font-semibold inline-flex items-center gap-2">
+        <button onClick={start} className="mt-4 px-5 py-2.5 rounded-full bg-noon text-noon-fg text-sm font-semibold inline-flex items-center gap-2">
           <RefreshCw className="w-4 h-4" /> Retry payment
         </button>
       </div>

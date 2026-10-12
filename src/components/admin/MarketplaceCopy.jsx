@@ -68,7 +68,7 @@ export default function MarketplaceCopy() {
         <button
           onClick={save}
           disabled={saving || loading}
-          className="self-start md:self-auto px-4 py-2 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center gap-1.5"
+          className="self-start md:self-auto px-4 py-2 rounded-full bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center gap-1.5"
         >
           <Save className="w-4 h-4" /> {saving ? "Saving…" : "Save"}
         </button>

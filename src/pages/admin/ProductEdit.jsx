@@ -177,7 +177,7 @@ export default function ProductEdit() {
           <label className="block text-xs font-medium">Meta description
             <textarea rows={2} className={cn(inputCls, "mt-1")} value={p.meta_description || ""} onChange={(e) => patch({ meta_description: e.target.value })} />
           </label>
-          <button onClick={saveFields} disabled={saving} className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40">Save details</button>
+          <button onClick={saveFields} disabled={saving} className="px-4 py-2 rounded-full bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40">Save details</button>
         </section>
 
         {/* Stock */}
@@ -205,7 +205,7 @@ export default function ProductEdit() {
           <label className="block text-xs font-medium">Reason (logged in the stock history)
             <input className={cn(inputCls, "mt-1")} value={stockReason} onChange={(e) => setStockReason(e.target.value)} />
           </label>
-          <button onClick={saveStock} disabled={saving} className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40">Save stock</button>
+          <button onClick={saveStock} disabled={saving} className="px-4 py-2 rounded-full bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40">Save stock</button>
           <h3 className="font-display font-semibold text-sm pt-1">Stock movements ({movements.length})</h3>
           <div className="max-h-48 overflow-y-auto text-xs">
             {movements.length === 0 ? <p className="text-text-muted">No movements recorded yet.</p> : movements.map((m) => (
@@ -248,7 +248,7 @@ export default function ProductEdit() {
         </div>
         <div className="flex gap-2 max-w-lg">
           <input value={newImageUrl} onChange={(e) => setNewImageUrl(e.target.value)} placeholder="Real image URL (https://…)" className={inputCls} />
-          <button onClick={addImage} className="px-4 py-2 rounded-lg border border-border-hairline text-sm hover:border-accent-cyan/40 flex items-center gap-1.5 shrink-0">
+          <button onClick={addImage} className="px-4 py-2 rounded-full border border-border-hairline text-sm hover:border-accent-cyan/40 flex items-center gap-1.5 shrink-0">
             <ImagePlus className="w-4 h-4" /> Add
           </button>
         </div>

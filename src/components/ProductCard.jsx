@@ -23,8 +23,17 @@ export default function ProductCard({ product, compact }) {
   const plan = buildPlan(price);
   // Discount: a live VEYRO promotion first, otherwise the previous REAL VEYRO
   // customer price — never the secret supplier source price (back-office only).
-  const original = promo ? promo.original : product.previous_price;
-  const discount = original && original > price ? Math.round((1 - price / original) * 100) : 0;
+  // A struck-through price is only ever shown when it is real: a live promotion, or our own
+  // previous price after a genuine drop in the last 30 days (3–50%; anything larger is
+  // treated as a data glitch and never advertised).
+  const recentDrop =
+    !promo && product.previous_price && product.price_changed_at &&
+    Date.now() - new Date(product.price_changed_at).getTime() <= 30 * 24 * 3600 * 1000
+      ? product.previous_price
+      : null;
+  const original = promo ? promo.original : recentDrop;
+  const pct = original && original > price ? Math.round((1 - price / original) * 100) : 0;
+  const discount = promo ? pct : pct >= 3 && pct <= 50 ? pct : 0;
 
   return (
     <Link

@@ -70,7 +70,7 @@ export default function FinancingInfo() {
         </p>
       </div>
 
-      <Link to="/financing-calculator" className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-noon-fg text-white text-sm font-semibold hover:opacity-90">
+      <Link to="/financing-calculator" className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-noon-fg text-white text-sm font-semibold hover:opacity-90">
         <Calculator className="w-4 h-4" /> {t("financing.tryCalculator")}
       </Link>
     </div>

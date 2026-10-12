@@ -178,7 +178,7 @@ export default function Home() {
                   <div className="font-display font-bold text-sm md:text-base shrink-0">{formatPrice(hero.customer_price, currency)}</div>
                 </Link>
               )}
-              <Link to="/category" className="mt-4 inline-flex items-center justify-center gap-2 self-stretch md:self-start px-6 py-3 md:py-2.5 rounded-lg bg-noon-fg text-white text-sm font-semibold hover:opacity-90 transition">
+              <Link to="/category" className="mt-4 inline-flex items-center justify-center gap-2 self-stretch md:self-start px-6 py-3 md:py-2.5 rounded-full bg-noon-fg text-white text-sm font-semibold hover:opacity-90 transition">
                 {t("home.shopNow")} <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
@@ -251,10 +251,10 @@ export default function Home() {
               </div>
             )}
             <div className="absolute bottom-0 inset-x-0 p-4 flex gap-2">
-              <Link to={flagshipSlide?.link_url || "/category?cat=Smartphones"} className="flex-1 text-center px-4 py-2.5 rounded-lg bg-white text-noon-fg text-xs md:text-sm font-semibold hover:bg-white/90 transition">
+              <Link to={flagshipSlide?.link_url || "/category?cat=Smartphones"} className="flex-1 text-center px-4 py-2.5 rounded-full bg-white text-noon-fg text-xs md:text-sm font-semibold hover:bg-white/90 transition">
                 {flagshipSlide?.cta_label || t("home.shopNow")}
               </Link>
-              <Link to="/financing-info" className="flex-1 text-center px-4 py-2.5 rounded-lg bg-white text-noon-fg text-xs md:text-sm font-semibold hover:bg-white/90 transition">
+              <Link to="/financing-info" className="flex-1 text-center px-4 py-2.5 rounded-full bg-white text-noon-fg text-xs md:text-sm font-semibold hover:bg-white/90 transition">
                 {t("nav.financing")}
               </Link>
             </div>
@@ -329,7 +329,7 @@ export default function Home() {
               <Link
                 key={b}
                 to={`/brand/${encodeURIComponent(b)}`}
-                className="px-4 py-2 rounded-lg bg-surface-primary border border-border-hairline text-xs font-medium hover:border-accent-cyan transition"
+                className="px-4 py-2 rounded-full bg-surface-primary border border-border-hairline text-xs font-medium hover:border-accent-cyan transition"
               >
                 {b}
               </Link>

@@ -4,8 +4,9 @@ import { Package, CreditCard, Clock, Check, Truck } from "lucide-react";
 import { api } from "@/api/client";
 import { useRegion } from "@/lib/RegionContext";
 import { formatPrice } from "@/lib/pricing";
-import PaymentEmbed, { EMBEDDED_PROVIDERS } from "@/components/payments/PaymentEmbed";
+import PaymentEmbed from "@/components/payments/PaymentEmbed";
 import { useConnectedProviders } from "@/lib/useConnectedProviders";
+import { buildPaymentMethods } from "@/lib/paymentMethods";
 import { useAuth } from "@/lib/AuthContext";
 import { readGuestOrders, rememberGuestOrder } from "@/lib/guestOrders";
 
@@ -122,7 +123,7 @@ export default function Orders() {
               <input placeholder="your@email.com" value={email} onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && lookup()}
                 className="flex-1 min-w-[160px] bg-surface-primary border border-border-hairline rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent-cyan/50" />
-              <button onClick={lookup} className="px-5 rounded-lg bg-noon text-noon-fg font-medium text-sm">Find</button>
+              <button onClick={lookup} className="px-5 rounded-full bg-noon text-noon-fg font-medium text-sm">Find</button>
             </div>
             {lookupError && <p className="text-xs text-destructive mt-2">{lookupError}</p>}
           </div>
@@ -155,15 +156,17 @@ export default function Orders() {
 
                 {/* Unpaid order: pick a method (if needed) and pay inline — no redirect */}
                 {order.status === "PENDING_PAYMENT" && (() => {
-                  const options = connected.filter((p) => EMBEDDED_PROVIDERS.includes(p.id));
-                  const preferred = options.find((p) => p.id === order.payment_provider)?.id;
-                  const chosen = choice[order.id] || preferred || (options.length === 1 ? options[0].id : null);
+                  const options = buildPaymentMethods(connected);
+                  const preferred = options.find((m) => m.provider === order.payment_provider)?.id;
+                  const chosenId = choice[order.id] || preferred || (options.length === 1 ? options[0].id : null);
+                  const chosen = options.find((m) => m.id === chosenId) || null;
                   if (paying && paying.id === order.id && chosen) {
                     return (
                       <div className="border-b border-border-hairline p-4 bg-surface-secondary">
                         <PaymentEmbed
-                          provider={chosen}
-                          key={order.order_number + chosen}
+                          provider={chosen.provider}
+                          funding={chosen.funding}
+                          key={order.order_number + chosen.id}
                           orderNumber={order.order_number}
                           onPaid={() => { setPaying(null); loadOrders(email); }}
                         />
@@ -177,10 +180,10 @@ export default function Orders() {
                         <div className="text-xs text-text-muted">Payments are temporarily unavailable. Please come back shortly.</div>
                       ) : (
                         <div className="flex flex-wrap items-center gap-2">
-                          {options.length > 1 && options.map((p) => (
-                            <button key={p.id} onClick={() => setChoice((c) => ({ ...c, [order.id]: p.id }))}
-                              className={`px-3 py-1.5 rounded-lg text-xs border ${chosen === p.id ? "bg-noon text-noon-fg border-transparent" : "border-border-hairline bg-white"}`}>
-                              {p.label}
+                          {options.length > 1 && options.map((m) => (
+                            <button key={m.id} onClick={() => setChoice((c) => ({ ...c, [order.id]: m.id }))}
+                              className={`px-4 py-1.5 rounded-full text-xs border ${chosenId === m.id ? "bg-noon text-noon-fg border-transparent" : "border-border-hairline bg-white"}`}>
+                              {m.label}
                             </button>
                           ))}
                           <button onClick={() => setPaying(order)} disabled={!chosen}

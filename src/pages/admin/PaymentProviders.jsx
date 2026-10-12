@@ -125,16 +125,16 @@ function ProviderCard({ p, onChanged }) {
 
       <div className="flex flex-wrap items-center gap-2">
         <button onClick={save} disabled={!!busy || missingRequired}
-          className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-xs font-semibold disabled:opacity-50 inline-flex items-center gap-2">
+          className="px-4 py-2 rounded-full bg-noon text-noon-fg text-xs font-semibold disabled:opacity-50 inline-flex items-center gap-2">
           {busy === "admin_save" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
           Save & test connection
         </button>
         {p.configured && (
           <>
-            <button onClick={test} disabled={!!busy} className="px-3 py-2 rounded-lg border border-border-hairline text-xs">
+            <button onClick={test} disabled={!!busy} className="px-3 py-2 rounded-full border border-border-hairline text-xs">
               {busy === "admin_test" ? "Testing…" : "Test again"}
             </button>
-            <button onClick={disconnect} disabled={!!busy} className="px-3 py-2 rounded-lg text-xs text-destructive">Disconnect</button>
+            <button onClick={disconnect} disabled={!!busy} className="px-3 py-2 rounded-full text-xs text-destructive">Disconnect</button>
           </>
         )}
         <a href={p.docs} target="_blank" rel="noreferrer" className="ml-auto text-xs underline inline-flex items-center gap-1">

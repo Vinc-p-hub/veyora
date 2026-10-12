@@ -77,7 +77,7 @@ export default function BulkReviewImport() {
         <button
           type="button"
           onClick={downloadTemplate}
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border-hairline text-xs font-semibold hover:border-accent-cyan/40 transition"
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full border border-border-hairline text-xs font-semibold hover:border-accent-cyan/40 transition"
         >
           <Download className="w-3.5 h-3.5" /> Download the CSV template
         </button>

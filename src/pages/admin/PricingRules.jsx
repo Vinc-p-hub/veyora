@@ -166,7 +166,7 @@ export default function PricingRules() {
         <button
           onClick={save}
           disabled={saving || loading}
-          className="px-5 py-2.5 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center gap-2"
+          className="px-5 py-2.5 rounded-full bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center gap-2"
         >
           <Save className="w-4 h-4" /> {saving ? "Saving…" : "Save rules"}
         </button>

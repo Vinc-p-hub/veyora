@@ -329,7 +329,7 @@ export default function ProductDetail() {
             <div className="flex gap-2.5">
               <button
                 onClick={buyNow}
-                className="flex-1 py-3.5 rounded-lg bg-noon text-noon-fg font-semibold text-sm hover:opacity-90 transition"
+                className="flex-1 py-3.5 rounded-full bg-noon text-noon-fg font-semibold text-sm hover:opacity-90 transition"
               >
                 {plan.count === 0 ? `Buy now · ${todayFmt}` : `Prequalify · ${todayFmt} today`}
               </button>

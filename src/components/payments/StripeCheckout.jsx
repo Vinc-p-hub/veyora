@@ -66,7 +66,7 @@ export default function StripeCheckout({ orderNumber, onPaid }) {
       <div ref={mountRef} className={phase === "ready" || phase === "paying" ? "" : "hidden"} />
       {(phase === "ready" || phase === "paying") && (
         <button onClick={pay} disabled={phase === "paying"}
-          className="w-full py-3 rounded-lg bg-noon text-noon-fg text-sm font-semibold disabled:opacity-60 inline-flex items-center justify-center gap-2">
+          className="w-full py-3 rounded-full bg-noon text-noon-fg text-sm font-semibold disabled:opacity-60 inline-flex items-center justify-center gap-2">
           {phase === "paying" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
           Pay {amount ? `${Number(amount.value).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${amount.currency}` : ""}
         </button>

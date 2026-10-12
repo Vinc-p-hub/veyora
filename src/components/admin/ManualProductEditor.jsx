@@ -301,11 +301,11 @@ export default function ManualProductEditor() {
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex gap-2">
             <button onClick={save} disabled={saving || uploading || uploadingVideo}
-              className="px-4 py-2 rounded-lg border border-border-hairline text-sm font-semibold hover:border-accent-cyan/40 disabled:opacity-40 flex items-center gap-1.5">
+              className="px-4 py-2 rounded-full border border-border-hairline text-sm font-semibold hover:border-accent-cyan/40 disabled:opacity-40 flex items-center gap-1.5">
               <Plus className="w-4 h-4" /> {editing ? "Update draft" : "Save draft"}
             </button>
             <button onClick={saveAndPublish} disabled={saving || uploading || uploadingVideo}
-              className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center gap-1.5">
+              className="px-4 py-2 rounded-full bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center gap-1.5">
               <Rocket className="w-4 h-4" /> Save & publish to store
             </button>
           </div>

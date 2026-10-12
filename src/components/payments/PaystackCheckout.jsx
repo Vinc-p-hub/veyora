@@ -68,7 +68,7 @@ export default function PaystackCheckout({ orderNumber, onPaid }) {
       )}
       {(phase === "ready" || phase === "paying") && info && (
         <button onClick={pay} disabled={phase === "paying"}
-          className="w-full py-3 rounded-lg bg-noon text-noon-fg text-sm font-semibold disabled:opacity-60 inline-flex items-center justify-center gap-2">
+          className="w-full py-3 rounded-full bg-noon text-noon-fg text-sm font-semibold disabled:opacity-60 inline-flex items-center justify-center gap-2">
           <Lock className="w-4 h-4" />
           Pay {Number(info.amount).toLocaleString(undefined, { maximumFractionDigits: 2 })} {info.currency}
         </button>

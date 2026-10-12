@@ -53,7 +53,7 @@ export default function Wishlist() {
         <div className="text-center py-16">
           <p className="text-sm text-text-muted">{t("wishlist.empty")}</p>
           <p className="text-xs text-text-muted mt-1">{t("wishlist.emptyHint")}</p>
-          <Link to="/category" className="inline-block mt-5 px-6 py-3 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90">
+          <Link to="/category" className="inline-block mt-5 px-6 py-3 rounded-full bg-noon text-noon-fg text-sm font-semibold hover:opacity-90">
             {t("wishlist.browse")}
           </Link>
         </div>

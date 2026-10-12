@@ -37,7 +37,7 @@ export default function CouponField({ applied, result, loading, onApply, onRemov
           placeholder="Promo code"
           className="flex-1 min-w-0 bg-surface-primary border border-border-hairline rounded-lg px-3 py-2 text-sm uppercase focus:outline-none focus:border-accent-cyan/50"
         />
-        <button type="submit" disabled={loading || !value.trim()} className="px-3.5 py-2 rounded-lg border border-border-hairline text-sm font-medium hover:border-accent-cyan/40 disabled:opacity-40">
+        <button type="submit" disabled={loading || !value.trim()} className="px-3.5 py-2 rounded-full border border-border-hairline text-sm font-medium hover:border-accent-cyan/40 disabled:opacity-40">
           {loading && applied ? "…" : "Apply"}
         </button>
       </form>

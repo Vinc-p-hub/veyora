@@ -124,7 +124,7 @@ export default function Users() {
             className="w-full bg-surface-primary border border-border-hairline rounded-lg px-3 py-2 text-sm">
             {STAFF_ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
           </select>
-          <button onClick={assign} disabled={busy} className="w-full py-2 rounded-lg bg-noon text-noon-fg text-sm font-semibold disabled:opacity-40">Assign</button>
+          <button onClick={assign} disabled={busy} className="w-full py-2 rounded-full bg-noon text-noon-fg text-sm font-semibold disabled:opacity-40">Assign</button>
         </div>
         <div className="bg-surface-card border border-border-hairline rounded-lg p-4 space-y-3">
           <h3 className="font-display font-semibold text-sm flex items-center gap-2"><UserPlus className="w-4 h-4 text-accent-cyan" /> Invite a user</h3>
@@ -136,7 +136,7 @@ export default function Users() {
             <option value="user">user</option>
             <option value="admin">admin</option>
           </select>
-          <button onClick={invite} disabled={busy} className="w-full py-2 rounded-lg border border-border-hairline text-sm font-semibold hover:border-accent-cyan/40 disabled:opacity-40">Send invitation</button>
+          <button onClick={invite} disabled={busy} className="w-full py-2 rounded-full border border-border-hairline text-sm font-semibold hover:border-accent-cyan/40 disabled:opacity-40">Send invitation</button>
         </div>
       </div>
 

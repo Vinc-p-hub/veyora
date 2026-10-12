@@ -164,7 +164,7 @@ export default function AddSourceDialog({ onDone, onCancel }) {
     <div className="bg-surface-card border border-border-hairline rounded-lg p-5 space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="font-display font-semibold">Add a crawl source</h3>
-        <button onClick={onCancel} className="p-1.5 rounded-md hover:bg-surface-secondary text-text-muted">
+        <button onClick={onCancel} className="p-1.5 rounded-full hover:bg-surface-secondary text-text-muted">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -245,7 +245,7 @@ export default function AddSourceDialog({ onDone, onCancel }) {
         <button
           onClick={bulkAdd}
           disabled={bulkBusy || saving}
-          className="px-4 py-2 rounded-lg border border-border-hairline text-sm font-semibold hover:border-accent-cyan/40 disabled:opacity-40 flex items-center gap-2"
+          className="px-4 py-2 rounded-full border border-border-hairline text-sm font-semibold hover:border-accent-cyan/40 disabled:opacity-40 flex items-center gap-2"
         >
           <Sparkles className="w-4 h-4" /> {bulkBusy ? "Detecting…" : "Detect & add sources"}
         </button>
@@ -253,13 +253,13 @@ export default function AddSourceDialog({ onDone, onCancel }) {
 
       {err && <p className="text-xs text-red-600">{err}</p>}
       <div className="flex justify-end gap-2">
-        <button onClick={onCancel} className="px-4 py-2 rounded-lg border border-border-hairline text-sm text-text-muted hover:text-text-primary">
+        <button onClick={onCancel} className="px-4 py-2 rounded-full border border-border-hairline text-sm text-text-muted hover:text-text-primary">
           Cancel
         </button>
         <button
           onClick={save}
           disabled={saving}
-          className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40"
+          className="px-4 py-2 rounded-full bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40"
         >
           {saving ? "Saving…" : "Save source"}
         </button>

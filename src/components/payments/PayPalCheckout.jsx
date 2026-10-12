@@ -11,7 +11,7 @@ function loadPayPalSdk(clientId, currency) {
     document.querySelectorAll("script[data-veyro-paypal]").forEach((s) => s.remove());
     delete window.paypal;
     const script = document.createElement("script");
-    script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=${encodeURIComponent(currency)}&intent=capture&components=buttons`;
+    script.src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&currency=${encodeURIComponent(currency)}&intent=capture&components=buttons&enable-funding=card&disable-funding=paylater,venmo`;
     script.dataset.veyroPaypal = "1";
     script.onload = () => (window.paypal ? resolve(window.paypal) : reject(new Error("PayPal SDK unavailable")));
     script.onerror = () => {
@@ -25,7 +25,9 @@ function loadPayPalSdk(clientId, currency) {
 
 // Embedded PayPal Checkout. The server creates the PayPal order from the stored VEYRO order
 // and captures it after approval; the order flips to PAID only on the server's verified capture.
-export default function PayPalCheckout({ orderNumber, onPaid }) {
+// funding: "card" -> PayPal's official "Debit or Credit Card" button (card-brand logos, no PayPal login)
+//          "wallet" -> the PayPal button (PayPal account)
+export default function PayPalCheckout({ orderNumber, onPaid, funding = "card" }) {
   const containerRef = useRef(null);
   const buttonsRef = useRef(null);
   const [phase, setPhase] = useState("loading"); // loading | ready | confirming | pending | error
@@ -49,8 +51,12 @@ export default function PayPalCheckout({ orderNumber, onPaid }) {
         const paypal = await loadPayPalSdk(d.client_id, d.currency);
         if (cancelled || !containerRef.current) return;
 
+        const isCard = funding === "card";
         buttonsRef.current = paypal.Buttons({
-          style: { layout: "vertical", shape: "rect", label: "paypal" },
+          fundingSource: isCard ? paypal.FUNDING.CARD : paypal.FUNDING.PAYPAL,
+          style: isCard
+            ? { layout: "vertical", shape: "pill", color: "black", height: 50 }
+            : { layout: "vertical", shape: "pill", color: "gold", label: "paypal", height: 50 },
           createOrder: () => d.external_id,
           onApprove: async (data) => {
             setPhase("confirming");
@@ -70,6 +76,9 @@ export default function PayPalCheckout({ orderNumber, onPaid }) {
             setPhase("error");
           },
         });
+        if (buttonsRef.current.isEligible && !buttonsRef.current.isEligible()) {
+          throw new Error(isCard ? "Card payment through PayPal is not available for this order. Please choose another method." : "PayPal is not available for this order.");
+        }
         await buttonsRef.current.render(containerRef.current);
         if (!cancelled) setPhase("ready");
       } catch (e) {
@@ -85,7 +94,7 @@ export default function PayPalCheckout({ orderNumber, onPaid }) {
       try { buttonsRef.current?.close?.(); } catch { /* already closed */ }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderNumber, attempt]);
+  }, [orderNumber, funding, attempt]);
 
   return (
     <div className="space-y-4">

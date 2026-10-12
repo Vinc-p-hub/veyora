@@ -125,7 +125,7 @@ export default function InviteBuyersPanel() {
         <button
           onClick={invite}
           disabled={busy}
-          className="mt-4 px-4 py-2 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center gap-2"
+          className="mt-4 px-4 py-2 rounded-full bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center gap-2"
         >
           <MailPlus className="w-4 h-4" /> {busy ? "Sending…" : "Send invitation"}
         </button>

@@ -24,7 +24,7 @@ export default function Contact() {
 
       <Link
         to="/support"
-        className="mt-6 inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 transition"
+        className="mt-6 inline-flex items-center gap-2 px-5 py-3 rounded-full bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 transition"
       >
         <MessageSquare className="w-4 h-4" /> Open a support ticket
       </Link>

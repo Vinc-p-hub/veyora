@@ -167,7 +167,7 @@ export default function Settings() {
             className="bg-surface-primary border border-border-hairline rounded-lg px-3 py-2 text-sm w-28"
           />
           <button onClick={saveAlloc} disabled={allocSaving}
-            className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40">
+            className="px-4 py-2 rounded-full bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40">
             {allocSaving ? "Saving…" : "Save allocation"}
           </button>
         </div>
@@ -210,7 +210,7 @@ export default function Settings() {
           </div>
         </div>
         <button onClick={save} disabled={saving}
-          className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center gap-1.5">
+          className="px-4 py-2 rounded-full bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center gap-1.5">
           <Plus className="w-4 h-4" /> Save country
         </button>
       </div>

@@ -11,38 +11,22 @@ import {
 import {
   mergeConfig, resolveRules, computePriceChain, computePlanFromConfig,
 } from "../_shared/commerce/rules.js";
-import { selectFulfillmentSource, recordStockMovement } from "../_shared/commerce/stock.js";
+import { selectFulfillmentSource } from "../_shared/commerce/stock.js";
 import { bestAutoPromo, evaluateOrderPromos } from "../_shared/commerce/promotions.js";
 
 const SUPPLIER_FRESH_MS = 24 * 60 * 60 * 1000; // supplier data older than 24h = stale
 
-serve(async (req) => {
-  try {
-    const { user, admin } = await createContext(req);
-    const body = await req.json().catch(() => ({}));
-    // Price quotes are public; committing stock (commit:true) requires a signed-in customer.
-    if (body.commit === true && !user) return Response.json({ error: "Unauthorized" }, { status: 401 });
-    const cartItems = Array.isArray(body.items) ? body.items.slice(0, 20) : [];
-    const countryCode = String(body.country_code || "US").toUpperCase().slice(0, 2);
-    const planId = String(body.plan_id || "plan_5");
-    // commit: final step before the order is written — decrements the internal
-    // VEYRO allocation and the real VEYRO physical stock for VEYRO-fulfilled lines.
-    const commit = body.commit === true;
-    const orderNumber = typeof body.order_number === "string" ? body.order_number.slice(0, 24) : "";
-    const couponCode = typeof body.coupon_code === "string" ? body.coupon_code.slice(0, 32) : "";
-    const now = new Date();
-
-    if (!cartItems.length) return Response.json({ error: "Cart empty" }, { status: 400 });
+// Pure server-side quote: given a cart (product ids + quantities), a country, a plan and an
+// optional coupon, returns authoritative prices. Nothing the browser sends is trusted but the cart.
+async function quote(admin, { cartItems, countryCode, planId, couponCode }) {
+  const now = new Date();
+  if (!cartItems.length) return { error: "Cart empty", status: 400 };
 
     // Market control: a country the Super Admin has blocked (Market control)
     // can never be sold to — no price, no plan, no order.
     const marketCfg = await admin.entities.CountryConfig.filter({ code: countryCode }, null, 1).catch(() => []);
     if (marketCfg[0] && marketCfg[0].enabled === false) {
-      return Response.json({
-        ok: false,
-        blocked_country: true,
-        error: "VEYRO does not deliver to this country yet.",
-      });
+      return { ok: false, blocked_country: true, error: "VEYRO does not deliver to this country yet." };
     }
 
     const country = getCountry(countryCode);
@@ -209,58 +193,6 @@ serve(async (req) => {
       waitUntil(admin.entities.CrawlerJob.bulkCreate(supplierRecheckJobs).catch(() => {}));
     }
 
-    // Commit: decrement the internal VEYRO sellable allocation and the REAL
-    // VEYRO physical stock (VEYRO-fulfilled lines) before the order is
-    // written. Orders are never refused — warehouse stock (+10 surplus per
-    // product) covers unavailable suppliers. The supplier stock never moves.
-    const productUpdateSets = [];
-    const stockMovements = [];
-    if (commit) {
-      for (const it of items) {
-        const product = productMap.get(it.product_id);
-        if (!product) continue;
-        const allocated = Number(product.veyro_allocated_stock) || 0;
-        if (allocated > 0) {
-          const current = typeof product.available_to_sell === "number" ? product.available_to_sell : allocated;
-          // The internal allocation decrements but never blocks the order —
-          // the VEYRO warehouse surplus covers whatever the supplier lacks.
-          product.available_to_sell = Math.max(0, current - it.qty);
-          productUpdateSets.push({ id: product.id, available_to_sell: product.available_to_sell });
-        }
-        // VEYRO-owned physical inventory: real decrement + immutable movement log.
-        if (it.fulfillment_source === "VEYRO") {
-          const oldStock = Number(product.veyro_stock) || 0;
-          const newStock = Math.max(0, oldStock - it.qty);
-          product.veyro_stock = newStock;
-          productUpdateSets.push({ id: product.id, veyro_stock: newStock });
-          stockMovements.push({
-            product_id: product.id,
-            product_name: it.name,
-            qty: -it.qty,
-            old_stock: oldStock,
-            new_stock: newStock,
-            reason: "ORDER_FULFILLMENT",
-            order_number: orderNumber,
-          });
-        }
-      }
-      // One update per product (a product may appear on several lines).
-      const byId = new Map();
-      for (const u of productUpdateSets) byId.set(u.id, { ...(byId.get(u.id) || {}), ...u });
-      if (byId.size) {
-        await admin.entities.Product.bulkUpdate([...byId.values()]);
-      }
-      for (const m of stockMovements) {
-        waitUntil(recordStockMovement(admin, m));
-      }
-      // Promotion usage counters (usage limits are enforced from these).
-      const promoById = new Map(promos.map((p) => [p.id, p]));
-      for (const id of usedPromoIds) {
-        const p = promoById.get(id);
-        if (p) waitUntil(admin.entities.Promotion.update(id, { usage_count: (Number(p.usage_count) || 0) + 1 }).catch(() => {}));
-      }
-    }
-
     const snapshot = {
       created_at: new Date().toISOString(),
       country: countryCode,
@@ -281,7 +213,7 @@ serve(async (req) => {
       note: "Immutable OrderPriceSnapshot — future source price or pricing-rule changes never modify this order.",
     };
 
-    return Response.json({
+    return {
       ok: true,
       currency: currency.code,
       symbol: currency.symbol,
@@ -292,7 +224,89 @@ serve(async (req) => {
       coupon: promoEval.coupon,
       free_shipping: !!promoEval.free_shipping,
       snapshot,
+    };
+}
+
+// Re-price a stored order from the catalogue and OVERWRITE every monetary field with the server's
+// numbers. A client can no longer pay less than the real price by editing the request it sends.
+async function verifyOrder(admin, orderNumber) {
+  const orders = await admin.entities.Order.filter({ order_number: orderNumber }, null, 1);
+  const order = orders[0];
+  if (!order) return { ok: false, error: "Order not found", status: 404 };
+  if (order.status !== "PENDING_PAYMENT") return { ok: true, skipped: true };
+
+  const cartItems = (Array.isArray(order.items) ? order.items : [])
+    .map((i) => ({ product_id: i.product_id || i.id, qty: Math.max(1, Math.min(Number(i.qty) || 1, 10)) }))
+    .filter((i) => i.product_id)
+    .slice(0, 20);
+
+  const cfgDocs = await admin.entities.PricingConfig.filter({ active: true }, "-created_date", 5);
+  const config = mergeConfig(cfgDocs[0] || {});
+  const count = Number(order.installment_count) || 0;
+  const plan = config.installment_plans.find((p) => p.installments === count);
+  const planId = count > 0 && plan ? plan.id : "pay_now";
+
+  const q = await quote(admin, {
+    cartItems,
+    countryCode: String(order.country || "US").toUpperCase().slice(0, 2),
+    planId,
+    couponCode: order.coupon_code || "",
+  });
+  if (!q.ok) return { ok: false, error: q.error || "Order cannot be priced", status: q.status || 400 };
+  const lines = q.items.filter((i) => i.available);
+  if (!lines.length) return { ok: false, error: "No purchasable items", status: 400 };
+
+  const claimed = Number(order.total) || 0;
+  const drift = claimed > 0 ? Math.abs(q.totals.total - claimed) / claimed : 1;
+  if (drift > 0.005) {
+    await admin.entities.AuditLog.create({
+      actor_email: order.customer_email || "",
+      action: "ORDER_PRICE_CORRECTED",
+      target_type: "order",
+      target_id: orderNumber,
+      details: `Client total ${claimed} replaced by server total ${q.totals.total} ${q.currency}`,
+    }).catch(() => {});
+  }
+
+  await admin.entities.Order.update(order.id, {
+    items: lines.map((i) => ({
+      id: i.product_id, name: i.name, brand: i.brand, price: i.unit_price, qty: i.qty,
+      seller_id: i.seller_id, seller_name: i.seller_name, delivery_days: i.delivery_days,
+      fulfillment_source: i.fulfillment_source || "SUPPLIER",
+    })),
+    subtotal: q.totals.subtotal,
+    discount: q.totals.discount || 0,
+    coupon_code: q.coupon && q.coupon.valid ? q.coupon.code : "",
+    shipping: q.totals.shipping,
+    tax: q.totals.tax,
+    total: q.totals.total,
+    currency: q.currency,
+    down_payment: q.plan.downPayment || q.totals.total,
+    installment_count: q.plan.installmentCount || 0,
+    installment_amount: q.plan.installmentAmount || 0,
+    price_snapshot: q.snapshot,
+    price_verified: true,
+  });
+  return { ok: true, total: q.totals.total, currency: q.currency, corrected: drift > 0.005 };
+}
+
+serve(async (req) => {
+  try {
+    const { admin } = await createContext(req);
+    const body = await req.json().catch(() => ({}));
+
+    if (typeof body.verify_order === "string") {
+      const r = await verifyOrder(admin, body.verify_order.slice(0, 40));
+      return Response.json(r, { status: r.ok ? 200 : r.status || 400 });
+    }
+
+    const out = await quote(admin, {
+      cartItems: Array.isArray(body.items) ? body.items.slice(0, 20) : [],
+      countryCode: String(body.country_code || "US").toUpperCase().slice(0, 2),
+      planId: String(body.plan_id || "plan_5"),
+      couponCode: typeof body.coupon_code === "string" ? body.coupon_code.slice(0, 32) : "",
     });
+    return Response.json(out, { status: out.error && !out.blocked_country ? out.status || 400 : 200 });
   } catch (error) {
     return Response.json({ error: error.message || "Revalidation failed" }, { status: 500 });
   }

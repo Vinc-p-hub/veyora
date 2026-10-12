@@ -76,7 +76,7 @@ export default function CurrencySettings() {
             className="mt-1 w-32 bg-surface-primary border border-border-hairline rounded-lg px-3 py-2 text-sm" />
         </label>
         <button onClick={addOrUpdate} disabled={saving}
-          className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center gap-1.5">
+          className="px-4 py-2 rounded-full bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center gap-1.5">
           <Plus className="w-4 h-4" /> Save
         </button>
       </div>

@@ -139,16 +139,16 @@ export default function Layout() {
                   <>
                     <HeaderAction to="/profile" icon={User} label={t("nav.account")} />
                     {user.role === "admin" && (
-                      <Link to="/admin" className="px-3 py-1.5 rounded-lg bg-noon-fg text-white text-xs font-semibold hover:opacity-90">Admin</Link>
+                      <Link to="/admin" className="px-3 py-1.5 rounded-full bg-noon-fg text-white text-xs font-semibold hover:opacity-90">Admin</Link>
                     )}
                     <button onClick={() => logout("/")} className="text-xs font-medium hover:underline no-tap-highlight">Log out</button>
                   </>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <Link to="/login" className="px-4 py-2 rounded-lg bg-noon-fg text-white text-xs font-semibold hover:opacity-90 transition no-tap-highlight">
+                    <Link to="/login" className="px-4 py-2 rounded-full bg-noon-fg text-white text-xs font-semibold hover:opacity-90 transition no-tap-highlight">
                       {t("profile.loginCta")}
                     </Link>
-                    <Link to="/register" className="px-4 py-2 rounded-lg border border-noon-fg/25 text-xs font-semibold hover:border-noon-fg/60 transition no-tap-highlight">
+                    <Link to="/register" className="px-4 py-2 rounded-full border border-noon-fg/25 text-xs font-semibold hover:border-noon-fg/60 transition no-tap-highlight">
                       {t("profile.registerCta")}
                     </Link>
                   </div>

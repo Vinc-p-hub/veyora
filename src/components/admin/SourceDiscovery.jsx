@@ -93,7 +93,7 @@ export default function SourceDiscovery({ onAdded }) {
         <button
           onClick={detect}
           disabled={busy}
-          className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center gap-2"
+          className="px-4 py-2 rounded-full bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center gap-2"
         >
           <Radar className={cn("w-4 h-4", busy && "animate-pulse")} /> {busy ? "Scanning…" : "Scan candidates"}
         </button>

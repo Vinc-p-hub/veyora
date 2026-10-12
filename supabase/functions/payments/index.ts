@@ -160,9 +160,26 @@ const NEXAPAY_DISPATCHER = "https://base44-dispatcher-production.base44.workers.
 // ───────────────────────────── orders & intents ─────────────────────────────
 // deno-lint-ignore no-explicit-any
 async function loadPayableOrder(db: any, orderNumber: string) {
-  const { data: order } = await db.from("orders").select("*").eq("order_number", orderNumber).maybeSingle();
+  const fetchOrder = async () => (await db.from("orders").select("*").eq("order_number", orderNumber).maybeSingle()).data;
+  let order = await fetchOrder();
   if (!order) return { error: json({ ok: false, error: "Order not found" }, 404) };
   if (order.status !== "PENDING_PAYMENT") return { error: json({ ok: false, error: "Order is not awaiting payment" }, 409) };
+
+  // The amount charged is NEVER the one the browser sent: the order is re-priced from the
+  // catalogue (prices, promotions, coupon, shipping, tax, plan) before any provider is called.
+  if (!order.price_verified) {
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/checkoutRevalidate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}`, apikey: key },
+      body: JSON.stringify({ verify_order: orderNumber }),
+    });
+    const v = await r.json().catch(() => ({}));
+    if (!r.ok || !v.ok) return { error: json({ ok: false, error: v.error || "This order could not be priced. Please try again." }, 409) };
+    order = await fetchOrder();
+    if (!order?.price_verified) return { error: json({ ok: false, error: "This order could not be verified" }, 409) };
+  }
+
   const total = Number(order.total);
   if (!(total > 0)) return { error: json({ ok: false, error: "Invalid order total" }, 400) };
   const down = Number(order.down_payment) || 0;
@@ -202,8 +219,9 @@ async function commitStock(db: any, order: any) {
     const items = Array.isArray(order.items) ? order.items : [];
     for (const it of items) {
       const qty = Number(it.qty) || 0;
-      if (qty <= 0 || !it.product_id) continue;
-      const { data: p } = await db.from("products").select("id,name,veyro_stock,veyro_allocated_stock,available_to_sell").eq("id", it.product_id).maybeSingle();
+      const productId = it.product_id || it.id;
+      if (qty <= 0 || !productId) continue;
+      const { data: p } = await db.from("products").select("id,name,veyro_stock,veyro_allocated_stock,available_to_sell").eq("id", productId).maybeSingle();
       if (!p) continue;
       const patch: Record<string, number> = {};
       if (Number(p.veyro_allocated_stock) > 0) {

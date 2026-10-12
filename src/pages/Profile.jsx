@@ -37,11 +37,11 @@ export default function Profile() {
         <p className="text-sm text-text-muted mt-2">{t("profile.loginPrompt")}</p>
         <div className="flex gap-3 justify-center mt-6">
           <Link to="/login"
-            className="px-5 py-2.5 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90">
+            className="px-5 py-2.5 rounded-full bg-noon text-noon-fg text-sm font-semibold hover:opacity-90">
             {t("profile.loginCta")}
           </Link>
           <Link to="/register"
-            className="px-5 py-2.5 rounded-lg border border-border-hairline text-sm font-medium hover:border-accent-cyan/40">
+            className="px-5 py-2.5 rounded-full border border-border-hairline text-sm font-medium hover:border-accent-cyan/40">
             {t("profile.registerCta")}
           </Link>
         </div>
@@ -82,7 +82,7 @@ export default function Profile() {
         </div>
         <div className="flex items-center gap-2">
           {user?.role === "admin" && (
-            <Link to="/admin" className="px-4 py-2 rounded-lg bg-noon-fg text-white text-xs font-semibold hover:opacity-90">Admin console</Link>
+            <Link to="/admin" className="px-4 py-2 rounded-full bg-noon-fg text-white text-xs font-semibold hover:opacity-90">Admin console</Link>
           )}
           <button onClick={() => logout("/")} className="px-4 py-2 rounded-lg border border-border-hairline text-xs font-semibold hover:border-accent-cyan/40">
             Log out
@@ -142,7 +142,7 @@ export default function Profile() {
           </label>
         </div>
         <button onClick={save} disabled={saving}
-          className="px-5 py-2.5 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
+          className="px-5 py-2.5 rounded-full bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} {t("profile.save")}
         </button>
       </div>
@@ -177,7 +177,7 @@ export default function Profile() {
             {countries.map((c) => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
           </select>
           <button onClick={addAddress}
-            className="px-4 py-2 rounded-lg border border-border-hairline text-sm font-medium hover:border-accent-cyan/40 transition md:col-span-2">
+            className="px-4 py-2 rounded-full border border-border-hairline text-sm font-medium hover:border-accent-cyan/40 transition md:col-span-2">
             + {t("profile.addAddress")}
           </button>
         </div>

@@ -27,11 +27,11 @@ export default function Overview() {
         <div className="flex gap-2">
           <button
             onClick={reload}
-            className="px-4 py-2 rounded-lg border border-border-hairline text-sm font-semibold hover:border-accent-cyan/40 flex items-center gap-2"
+            className="px-4 py-2 rounded-full border border-border-hairline text-sm font-semibold hover:border-accent-cyan/40 flex items-center gap-2"
           >
             <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} /> Refresh
           </button>
-          <Link to="/admin/sources" className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-sm font-semibold">Open crawler console</Link>
+          <Link to="/admin/sources" className="px-4 py-2 rounded-full bg-noon text-noon-fg text-sm font-semibold">Open crawler console</Link>
         </div>
       </div>
 

@@ -98,7 +98,7 @@ export default function Support() {
             className="mt-1 w-full bg-surface-primary border border-border-hairline rounded-lg px-3 py-2.5 text-sm resize-y" />
         </label>
         <button type="submit" disabled={sending}
-          className="px-5 py-2.5 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
+          className="px-5 py-2.5 rounded-full bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
           {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} {t("support.submit")}
         </button>
       </form>

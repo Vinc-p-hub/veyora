@@ -113,7 +113,7 @@ export default function ReviewForm({ product, existing, photosEnabled, onDone })
         <button
           type="submit"
           disabled={busy}
-          className="px-5 py-2.5 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40"
+          className="px-5 py-2.5 rounded-full bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 disabled:opacity-40"
         >
           {existing ? t("reviews.update") : t("reviews.submit")}
         </button>

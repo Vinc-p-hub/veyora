@@ -52,8 +52,8 @@ export default function PromotionForm({ initial, onClose, onSave }) {
           <label className="flex items-center gap-2 text-sm"><Switch checked={f.active} onCheckedChange={(v) => set({ active: v })} /> Active</label>
           {error && <p className="text-xs text-red-500">{error}</p>}
           <div className="flex justify-end gap-2 pt-1">
-            <button onClick={onClose} className="px-4 py-2 rounded-lg border border-border-hairline text-sm">Cancel</button>
-            <button onClick={submit} disabled={saving} className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-sm font-semibold flex items-center gap-2 disabled:opacity-50">
+            <button onClick={onClose} className="px-4 py-2 rounded-full border border-border-hairline text-sm">Cancel</button>
+            <button onClick={submit} disabled={saving} className="px-4 py-2 rounded-full bg-noon text-noon-fg text-sm font-semibold flex items-center gap-2 disabled:opacity-50">
               {saving && <Loader2 className="w-4 h-4 animate-spin" />} Save promotion
             </button>
           </div>

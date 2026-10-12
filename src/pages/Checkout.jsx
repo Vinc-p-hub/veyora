@@ -5,7 +5,8 @@ import { useCart } from "@/lib/CartContext";
 import { useRegion } from "@/lib/RegionContext";
 import { usePricing } from "@/lib/PricingContext";
 import { useLang } from "@/lib/i18n";
-import { PAYMENT_PROVIDERS } from "@/lib/countries";
+import { buildPaymentMethods } from "@/lib/paymentMethods";
+import BrandLogo from "@/components/payments/BrandLogo";
 import { useConnectedProviders } from "@/lib/useConnectedProviders";
 import { formatPrice } from "@/lib/pricing";
 import { api } from "@/api/client";
@@ -13,6 +14,7 @@ import { useSiteText } from "@/lib/useSiteText";
 import { cn } from "@/lib/utils";
 import PaymentEmbed, { EMBEDDED_PROVIDERS } from "@/components/payments/PaymentEmbed";
 import { rememberGuestOrder } from "@/lib/guestOrders";
+import { useAuth } from "@/lib/AuthContext";
 import CouponField from "@/components/checkout/CouponField";
 import { usePromotions } from "@/lib/PromotionsContext";
 
@@ -29,15 +31,25 @@ export default function Checkout() {
   // Storefront payment methods mirror the providers switched on in the back
   // office — nothing else is offered at checkout.
   const connected = useConnectedProviders();
-  const activeProviders = connected.map((p) => ({
-    id: p.id,
-    name: PAYMENT_PROVIDERS[p.id]?.name || p.label,
-    desc: PAYMENT_PROVIDERS[p.id]?.desc || p.region,
-    badge: PAYMENT_PROVIDERS[p.id]?.badge || "",
-  }));
-  const [provider, setProvider] = useState(null);
-  const selected = activeProviders.some((p) => p.id === provider) ? provider : activeProviders[0]?.id;
+  const activeProviders = buildPaymentMethods(connected);
+  const selected = activeProviders.some((m) => m.id === provider) ? provider : activeProviders[0]?.id;
+  const selectedMethod = activeProviders.find((m) => m.id === selected);
   const [form, setForm] = useState({ name: "", email: "", address: "", city: "", postal: "" });
+  const { user } = useAuth();
+
+  // Account is optional: a signed-in customer simply gets the form pre-filled.
+  useEffect(() => {
+    if (!user) return;
+    const saved = Array.isArray(user.addresses) ? user.addresses[0] : null;
+    setForm((f) => ({
+      ...f,
+      name: f.name || user.full_name || "",
+      email: f.email || user.email || "",
+      address: f.address || saved?.line1 || saved?.address || "",
+      city: f.city || saved?.city || "",
+      postal: f.postal || saved?.postal || saved?.postal_code || "",
+    }));
+  }, [user]);
   const [placing, setPlacing] = useState(false);
   const [payingOrder, setPayingOrder] = useState(null); // live embedded payment step
   const [data, setData] = useState(null); // server-authoritative revalidation
@@ -102,6 +114,7 @@ export default function Checkout() {
         <PaymentEmbed
           key={payingOrder.orderNumber}
           provider={payingOrder.provider}
+          funding={payingOrder.funding}
           orderNumber={payingOrder.orderNumber}
           onPaid={() => navigate(`/orders?placed=${payingOrder.orderNumber}`)}
         />
@@ -116,7 +129,7 @@ export default function Checkout() {
         <p className="text-sm text-text-muted mt-2">
           Pick another delivery country at the top of the page to continue your order.
         </p>
-        <Link to="/category" className="inline-flex mt-4 px-5 py-3 rounded-lg bg-noon text-noon-fg text-sm font-medium">
+        <Link to="/category" className="inline-flex mt-4 px-5 py-3 rounded-full bg-noon text-noon-fg text-sm font-medium">
           Browse catalog
         </Link>
       </div>
@@ -127,7 +140,7 @@ export default function Checkout() {
     return (
       <div className="px-4 md:px-8 py-16 max-w-2xl mx-auto text-center">
         <h1 className="font-display font-bold text-2xl">Nothing to check out</h1>
-        <Link to="/category" className="inline-flex mt-4 px-5 py-3 rounded-lg bg-noon text-noon-fg text-sm font-medium">Browse catalog</Link>
+        <Link to="/category" className="inline-flex mt-4 px-5 py-3 rounded-full bg-noon text-noon-fg text-sm font-medium">Browse catalog</Link>
       </div>
     );
   }
@@ -209,7 +222,7 @@ export default function Checkout() {
         total: finalTotals.total,
         currency: d.currency,
         country: country.code,
-        payment_provider: selected,
+        payment_provider: selectedMethod?.provider,
         down_payment: d.plan?.downPayment || finalTotals.total,
         installment_count: d.plan?.installmentCount || 0,
         installment_amount: d.plan?.installmentAmount || 0,
@@ -222,10 +235,10 @@ export default function Checkout() {
       });
       rememberGuestOrder(orderNumber, form.email);
       clearCart();
-      if (EMBEDDED_PROVIDERS.includes(selected)) {
+      if (selectedMethod && EMBEDDED_PROVIDERS.includes(selectedMethod.provider)) {
         // Embedded payment (no redirect): PAID only after the server verifies the payment with the provider.
         setPlacing(false);
-        setPayingOrder({ orderNumber, currency: d.currency, total: finalTotals.total, provider: selected });
+        setPayingOrder({ orderNumber, currency: d.currency, total: finalTotals.total, provider: selectedMethod.provider, funding: selectedMethod.funding });
       } else {
         navigate(`/orders?placed=${orderNumber}`);
       }
@@ -244,7 +257,15 @@ export default function Checkout() {
       <div className="grid md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
           <section className="bg-surface-card border border-border-hairline rounded-lg p-5">
-            <h2 className="font-display font-semibold text-lg mb-4">Delivery to {country.flag} {country.name}</h2>
+            <h2 className="font-display font-semibold text-lg mb-1">Delivery to {country.flag} {country.name}</h2>
+            <p className="text-xs text-text-muted mb-4">
+              {user ? (
+                <>Signed in as {user.email}.</>
+              ) : (
+                <>No account needed — check out as a guest. Already a customer?{" "}
+                  <Link to={"/login?returnTo=" + encodeURIComponent("/checkout")} className="underline font-medium">Sign in</Link> (optional).</>
+              )}
+            </p>
             <div className="grid grid-cols-2 gap-3">
               <input placeholder="Full name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="col-span-2 bg-surface-primary border border-border-hairline rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent-cyan/50" />
               <input placeholder="Email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="col-span-2 bg-surface-primary border border-border-hairline rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:border-accent-cyan/50" />
@@ -287,27 +308,29 @@ export default function Checkout() {
 
           <section className="bg-surface-card border border-border-hairline rounded-lg p-5">
             <h2 className="font-display font-semibold text-lg mb-1">Payment method</h2>
-            <p className="text-xs text-text-muted mb-4">Payment methods currently connected to VEYRO</p>
+            <p className="text-xs text-text-muted mb-4">Secure payment — you stay on this page.</p>
             <div className="space-y-2.5">
-              {activeProviders.map((p) => (
+              {activeProviders.map((m) => (
                 <button
-                  key={p.id}
-                  onClick={() => setProvider(p.id)}
+                  key={m.id}
+                  onClick={() => setProvider(m.id)}
                   className={cn(
-                    "w-full flex items-center justify-between p-3.5 rounded-lg border transition",
-                    selected === p.id ? "border-accent-cyan bg-accent-cyan/5" : "border-border-hairline hover:border-accent-cyan/30"
+                    "w-full flex items-center justify-between gap-3 p-3.5 rounded-2xl border transition text-start",
+                    selected === m.id ? "border-accent-cyan bg-accent-cyan/5" : "border-border-hairline hover:border-accent-cyan/30"
                   )}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center", selected === p.id ? "border-accent-cyan" : "border-border-hairline")}>
-                      {selected === p.id && <div className="w-2.5 h-2.5 rounded-full bg-accent-cyan" />}
+                    <div className={cn("w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0", selected === m.id ? "border-accent-cyan" : "border-border-hairline")}>
+                      {selected === m.id && <div className="w-2.5 h-2.5 rounded-full bg-accent-cyan" />}
                     </div>
                     <div>
-                      <div className="text-sm font-medium">{p.name}</div>
-                      <div className="text-xs text-text-muted">{p.desc}</div>
+                      <div className="text-sm font-medium">{m.label}</div>
+                      <div className="text-xs text-text-muted">{m.desc}</div>
                     </div>
                   </div>
-                  {p.badge && <span className="text-[10px] text-mono text-text-muted px-2 py-1 rounded-md border border-border-hairline">{p.badge}</span>}
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    {m.logos.map((l) => <BrandLogo key={l} id={l} height={l === "paypal" ? 18 : 20} />)}
+                  </div>
                 </button>
               ))}
               {activeProviders.length === 0 && (
@@ -369,7 +392,7 @@ export default function Checkout() {
             <button
               onClick={placeOrder}
               disabled={placing || revalidating || !selected || items.length === 0 || !form.name || !form.email || !form.address}
-              className="w-full mt-5 py-3.5 rounded-lg bg-noon text-noon-fg font-semibold text-sm hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full mt-5 py-3.5 rounded-full bg-noon text-noon-fg font-semibold text-sm hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {placing ? "Processing…" : <><Lock className="w-4 h-4" /> Place order · {data ? money(plan && plan.installmentCount > 0 ? plan.downPayment : totals.total) : formatPrice(veyroTotal, currency)}</>}
             </button>

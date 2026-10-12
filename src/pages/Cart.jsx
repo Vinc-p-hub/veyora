@@ -25,7 +25,7 @@ export default function Cart() {
           </div>
           <h1 className="font-display font-bold text-2xl">Your cart is empty</h1>
           <p className="text-sm text-text-muted mt-2">Discover premium electronics and split the cost into installments.</p>
-          <Link to="/category" className="inline-flex items-center gap-2 mt-6 px-5 py-3 rounded-lg bg-noon text-noon-fg font-medium text-sm">
+          <Link to="/category" className="inline-flex items-center gap-2 mt-6 px-5 py-3 rounded-full bg-noon text-noon-fg font-medium text-sm">
             Browse catalog <ArrowRight className="w-4 h-4" />
           </Link>
         </div>

@@ -88,7 +88,7 @@ export default function Admin() {
               </p>
               <a
                 href="/login?returnTo=%2Fadmin"
-                className="mt-6 inline-block px-5 py-2.5 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90"
+                className="mt-6 inline-block px-5 py-2.5 rounded-full bg-noon text-noon-fg text-sm font-semibold hover:opacity-90"
               >
                 Sign in to VEYRO Ops
               </a>
