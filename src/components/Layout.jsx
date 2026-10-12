@@ -1,4 +1,5 @@
 import React from "react";
+import { Suspense } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import { ShoppingBag, User, Compass, LayoutGrid, Package, Search as SearchIcon, Heart } from "lucide-react";
 import { useCart } from "@/lib/CartContext";
@@ -174,7 +175,9 @@ export default function Layout() {
       </header>
 
       <main className="flex-1 min-w-0">
-        <Outlet />
+        <Suspense fallback={<div className="min-h-[60vh]" aria-busy="true" />}>
+          <Outlet />
+        </Suspense>
       </main>
 
       <Footer />

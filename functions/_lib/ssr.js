@@ -31,6 +31,31 @@ const clip = (s, n) => {
   return t.length <= n ? t : t.slice(0, n - 1).replace(/\s+\S*$/, "") + "…";
 };
 
+export const CATEGORIES = ["Laptops", "Smartphones", "Tablets", "Headphones & Earbuds", "TVs & Monitors", "Cameras", "Gaming", "Smartwatches", "Audio", "Accessories", "Smart Home", "Networking", "Computer Components"];
+
+// Site-wide entities, emitted on every server-rendered page (crawlers that never run JS still see them).
+export function siteGraph(origin) {
+  return [
+    { "@context": "https://schema.org", "@type": "Organization", "@id": `${origin}/#organization`, name: "VEYRO", url: origin, logo: `${origin}/favicon.svg` },
+    {
+      "@context": "https://schema.org", "@type": "WebSite", "@id": `${origin}/#website`, url: origin, name: "VEYRO",
+      publisher: { "@id": `${origin}/#organization` },
+      potentialAction: { "@type": "SearchAction", target: { "@type": "EntryPoint", urlTemplate: `${origin}/category?q={search_term_string}` }, "query-input": "required name=search_term_string" },
+    },
+  ];
+}
+
+// The published return policy: 30 days, return shipping paid by the customer unless the item is defective/misdescribed.
+const returnPolicy = (origin, countries) => ({
+  "@type": "MerchantReturnPolicy",
+  returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+  merchantReturnDays: 30,
+  returnMethod: "https://schema.org/ReturnByMail",
+  returnFees: "https://schema.org/ReturnShippingFees",
+  merchantReturnLink: `${origin}/return-policy`,
+  ...(Array.isArray(countries) && countries.length ? { applicableCountry: countries } : {}),
+});
+
 const TITLE_MAX = 68;
 export function seoTitle(keyword, extras, brand = "VEYRO") {
   const head = String(keyword || "").trim();
@@ -53,7 +78,7 @@ const flat = (v) => {
   return Object.entries(v).map(([k, x]) => `${k}: ${flat(x)}`).join(" · ");
 };
 
-export function productPage(p, origin) {
+export function productPage(p, origin, related = []) {
   const url = `${origin}/product/${p.slug}`;
   const fullName = `${p.brand ? `${p.brand} ` : ""}${p.name}`;
   const title = p.seo_title || seoTitle(fullName, ["Price, Specs & Installments", "Price & Specs", "Price"]);
@@ -89,6 +114,7 @@ export function productPage(p, origin) {
             itemCondition: "https://schema.org/NewCondition",
             availability: AVAILABILITY[p.stock_status] || AVAILABILITY.IN_STOCK,
             seller: { "@type": "Organization", name: "VEYRO", url: origin },
+            hasMerchantReturnPolicy: returnPolicy(origin, p.available_countries),
           },
         }
       : {}),
@@ -117,6 +143,8 @@ ${price > 0 ? `<p><strong>${esc(price.toFixed(2))} ${esc(p.currency || "USD")}</
 ${p.description ? `<p>${esc(clip(p.description, 1500))}</p>` : ""}
 ${specs.length ? `<h2>Specifications</h2><table>${specs.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(flat(v))}</td></tr>`).join("")}</table>` : ""}
 ${p.brand ? `<p><a href="/brand/${encodeURIComponent(p.brand)}">More ${esc(p.brand)} products</a></p>` : ""}
+${related.length ? `<h2>Related products</h2><ul>${related.map((r) => `<li><a href="/product/${esc(r.slug)}">${esc(r.brand ? `${r.brand} ${r.name}` : r.name)}</a>${Number(r.customer_price) > 0 ? ` — ${esc(Number(r.customer_price).toFixed(2))} ${esc(r.currency || "USD")}` : ""}</li>`).join("")}</ul>` : ""}
+<p><a href="/return-policy">30-day returns</a> · <a href="/shipping-policy">Shipping</a> · <a href="/warranty">2-year warranty</a></p>
 </main>`;
 
   return { title, description, url, image: images[0], type: "product", jsonLd: [product, breadcrumb], body, path: `/product/${p.slug}` };
@@ -151,6 +179,55 @@ export function brandPage(brand, products, origin) {
   return { title, description, url, image: products[0]?.image_url, type: "website", jsonLd: [list, breadcrumb], body, path };
 }
 
+export function homePage(origin, products) {
+  const title = "Buy Electronics Online — Smartphones, Laptops, Audio & More | VEYRO";
+  const description = "VEYRO is the international premium electronics marketplace: buy smartphones, laptops, audio, gaming and smart home from verified merchants — transparent prices, real stock and flexible installments with the total always visible.";
+  const brands = [...new Set(products.map((p) => p.brand).filter(Boolean))].slice(0, 12);
+  const list = {
+    "@context": "https://schema.org", "@type": "ItemList", name: "Featured electronics on VEYRO",
+    itemListElement: products.slice(0, 12).map((p, i) => ({ "@type": "ListItem", position: i + 1, url: `${origin}/product/${p.slug}`, name: p.name })),
+  };
+  const body = `<main data-ssr="home" style="max-width:960px;margin:0 auto;padding:24px;font-family:system-ui,sans-serif">
+<h1>Premium electronics, transparent prices</h1>
+<p>Buy smartphones, laptops, tablets, audio, gaming and smart home from verified merchants. Real stock, worldwide delivery, 30-day returns and flexible installments with the total always visible.</p>
+<h2>Shop by category</h2>
+<ul>${CATEGORIES.map((c) => `<li><a href="/category?cat=${encodeURIComponent(c)}">${esc(c)}</a></li>`).join("")}</ul>
+${brands.length ? `<h2>Popular brands</h2><ul>${brands.map((b) => `<li><a href="/brand/${encodeURIComponent(b)}">${esc(b)}</a></li>`).join("")}</ul>` : ""}
+<h2>Featured products</h2>
+<ul>${products.slice(0, 24).map((p) => `<li><a href="/product/${esc(p.slug)}">${esc(p.brand ? `${p.brand} ${p.name}` : p.name)}</a>${Number(p.customer_price) > 0 ? ` — ${esc(Number(p.customer_price).toFixed(2))} ${esc(p.currency || "USD")}` : ""}</li>`).join("")}</ul>
+</main>`;
+  return { title, description, url: `${origin}/`, type: "website", jsonLd: [list], body, path: "/" };
+}
+
+export function categoryPage(cat, products, origin, { indexable = true } = {}) {
+  const path = cat ? `/category?cat=${encodeURIComponent(cat)}` : "/category";
+  const url = `${origin}${path}`;
+  const name = cat || "Electronics";
+  const title = seoTitle(`Buy ${name} Online`, ["Best Prices, Real Stock & Installments", "Best Prices & Installments", "Best Prices"]);
+  const description = clip(
+    `Shop ${name.toLowerCase()} online at VEYRO${products.length ? ` — ${products.length}+ products` : ""} from verified merchants. Transparent prices, real stock, worldwide delivery, 30-day returns and flexible installments with the total always visible.`,
+    300
+  );
+  const list = {
+    "@context": "https://schema.org", "@type": "ItemList", name: `${name} on VEYRO`,
+    itemListElement: products.map((p, i) => ({ "@type": "ListItem", position: i + 1, url: `${origin}/product/${p.slug}`, name: p.name })),
+  };
+  const breadcrumb = {
+    "@context": "https://schema.org", "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: `${origin}/` },
+      ...(cat ? [{ "@type": "ListItem", position: 2, name: cat, item: url }] : []),
+    ],
+  };
+  const body = `<main data-ssr="category" style="max-width:960px;margin:0 auto;padding:24px;font-family:system-ui,sans-serif">
+<h1>${esc(name)}</h1>
+<ul>${products.map((p) => `<li><a href="/product/${esc(p.slug)}">${esc(p.brand ? `${p.brand} ${p.name}` : p.name)}</a>${Number(p.customer_price) > 0 ? ` — ${esc(Number(p.customer_price).toFixed(2))} ${esc(p.currency || "USD")}` : ""}</li>`).join("")}</ul>
+<h2>Other categories</h2>
+<ul>${CATEGORIES.filter((c) => c !== cat).map((c) => `<li><a href="/category?cat=${encodeURIComponent(c)}">${esc(c)}</a></li>`).join("")}</ul>
+</main>`;
+  return { title, description, url, image: products[0]?.image_url, type: "website", jsonLd: [list, breadcrumb], body, path, robots: indexable ? undefined : "noindex, follow" };
+}
+
 // Take the built index.html and rewrite its head + root for this page.
 export async function render(context, page, status = 200) {
   const { request, env } = context;
@@ -160,7 +237,7 @@ export async function render(context, page, status = 200) {
   const head = `
 <title>${esc(page.title)}</title>
 <meta name="description" content="${esc(page.description)}">
-<meta name="robots" content="${status === 200 ? "index, follow, max-image-preview:large, max-snippet:-1" : "noindex"}">
+<meta name="robots" content="${page.robots || (status === 200 ? "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" : "noindex")}">
 <link rel="canonical" href="${esc(page.url)}">
 ${hreflang}
 <meta property="og:site_name" content="VEYRO">
@@ -172,9 +249,11 @@ ${page.image ? `<meta property="og:image" content="${esc(page.image)}">\n<meta n
 <meta name="twitter:card" content="${page.image ? "summary_large_image" : "summary"}">
 <meta name="twitter:title" content="${esc(page.title)}">
 <meta name="twitter:description" content="${esc(page.description)}">
-${page.jsonLd.map((j) => `<script type="application/ld+json">${safeJson(j)}</script>`).join("\n")}`;
+${[...siteGraph(new URL(page.url).origin), ...page.jsonLd].map((j) => `<script type="application/ld+json">${safeJson(j)}</script>`).join("\n")}`;
 
   const rewritten = new HTMLRewriter()
+    // The client-side SEO bootstrap would append a second, conflicting canonical/hreflang set.
+    .on("script[data-seo-bootstrap]", { element: (e) => e.remove() })
     .on("title", { element: (e) => e.remove() })
     .on('meta[name="description"], meta[name="robots"], meta[name="keywords"], meta[property^="og:"], meta[name^="twitter:"], link[rel="canonical"], link[rel="alternate"]', { element: (e) => e.remove() })
     .on("head", { element: (e) => e.append(head, { html: true }) })
