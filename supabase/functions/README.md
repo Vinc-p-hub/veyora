@@ -12,3 +12,4 @@ needs the `SUPABASE_ACCESS_TOKEN` repository secret).
 | `reviews`, `staff` | Reviews pipeline; staff roles and invitations |
 
 Shared code lives in `_shared/` (catalog pipeline, pricing rules, search engine, runtime helpers).
+# 2026-10-13T11:40:58Z
