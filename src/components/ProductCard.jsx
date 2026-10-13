@@ -45,6 +45,7 @@ export default function ProductCard({ product, compact }) {
           src={product.image_url || FALLBACK_IMG}
           alt={product.name}
           loading="lazy"
+          decoding="async"
           className="w-full h-full object-cover group-hover:scale-[1.02] transition duration-500"
         />
         <span className="absolute bottom-2 start-2 text-[10px] italic font-bold text-white bg-accent-cyan px-1.5 py-0.5 rounded">{t("card.express")}</span>

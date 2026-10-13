@@ -11,7 +11,7 @@ export async function onRequestGet(context) {
   const products = [];
   try {
     for (let offset = 0; offset < 45000; offset += 1000) {
-      const page = await sb(context.env, `products?status=eq.PUBLISHED&slug=not.is.null&order=updated_date.desc&limit=1000&offset=${offset}&select=slug,name,brand,image_url,gallery,updated_date,last_crawled_at`);
+      const page = await sb(context.env, `products?status=eq.PUBLISHED&slug=not.is.null&image_url=not.is.null&order=updated_date.desc&limit=1000&offset=${offset}&select=slug,name,brand,image_url,gallery,updated_date,last_crawled_at`);
       products.push(...page);
       if (page.length < 1000) break;
     }

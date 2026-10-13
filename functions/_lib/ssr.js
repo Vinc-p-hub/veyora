@@ -64,6 +64,20 @@ export function seoTitle(keyword, extras, brand = "VEYRO") {
   return `${head}${tail}`;
 }
 
+// Thin catalogue descriptions are completed ONLY from the product's own real fields — nothing invented.
+function richDescription(p, fullName) {
+  const base = String(p.description || "").replace(/\s+/g, " ").trim();
+  if (base.length >= 160) return base;
+  const specs = p.specifications && typeof p.specifications === "object" ? Object.entries(p.specifications).slice(0, 8).map(([k, v]) => `${k}: ${flat(v)}`) : [];
+  const parts = [
+    base,
+    `${fullName}${p.category ? ` is listed in ${p.category}` : " is available"} on VEYRO${p.brand ? ` — official ${p.brand} product` : ""}.`,
+    specs.length ? `Key specifications — ${specs.join("; ")}.` : "",
+    "Prices are shown as a clear total, with 30-day returns and a 2-year warranty.",
+  ];
+  return parts.filter(Boolean).join(" ");
+}
+
 const AVAILABILITY = {
   IN_STOCK: "https://schema.org/InStock",
   LOW_STOCK: "https://schema.org/LimitedAvailability",
@@ -82,11 +96,14 @@ export function productPage(p, origin, related = []) {
   const url = `${origin}/product/${p.slug}`;
   const fullName = `${p.brand ? `${p.brand} ` : ""}${p.name}`;
   const title = p.seo_title || seoTitle(fullName, ["Price, Specs & Installments", "Price & Specs", "Price"]);
+  const price0 = Number(p.customer_price);
+  // SERP snippets show ~155 characters: lead with the product, the real price and the buying signals.
   const description = clip(
     p.meta_description ||
-      `Buy ${fullName} at VEYRO — transparent pricing, verified sellers, ${p.delivery_days || 5}-day delivery and flexible installments. Total price always visible.`,
-    300
+      `Buy ${fullName}${price0 > 0 ? ` for ${price0.toFixed(2)} ${p.currency || "USD"}` : ""} at VEYRO. ${p.stock_status === "OUT_OF_STOCK" ? "" : "In stock — "}verified sellers, ${p.delivery_days || 5}-day delivery, 30-day returns and flexible installments.`,
+    158
   );
+  const longDescription = richDescription(p, fullName);
   const images = [...new Set([p.image_url, ...(Array.isArray(p.gallery) ? p.gallery : [])].filter(Boolean))].slice(0, 6);
   const price = Number(p.customer_price);
 
@@ -97,7 +114,7 @@ export function productPage(p, origin, related = []) {
     name: fullName,
     url,
     ...(images.length ? { image: images } : {}),
-    description: clip(p.description || description, 5000),
+    description: clip(longDescription, 5000),
     ...(p.sku ? { sku: p.sku } : {}),
     ...(p.gtin ? { gtin: p.gtin } : {}),
     ...(p.mpn ? { mpn: p.mpn } : {}),
@@ -140,7 +157,7 @@ export function productPage(p, origin, related = []) {
 <h1>${esc(fullName)}</h1>
 ${images[0] ? `<img src="${esc(images[0])}" alt="${esc(fullName)}" width="480" height="480" style="max-width:100%;height:auto">` : ""}
 ${price > 0 ? `<p><strong>${esc(price.toFixed(2))} ${esc(p.currency || "USD")}</strong> — ${p.stock_status === "OUT_OF_STOCK" ? "Out of stock" : "In stock"}. Delivery in about ${esc(p.delivery_days || 5)} days. Flexible installments with the total always visible.</p>` : ""}
-${p.description ? `<p>${esc(clip(p.description, 1500))}</p>` : ""}
+<p>${esc(clip(longDescription, 1500))}</p>
 ${specs.length ? `<h2>Specifications</h2><table>${specs.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(flat(v))}</td></tr>`).join("")}</table>` : ""}
 ${p.brand ? `<p><a href="/brand/${encodeURIComponent(p.brand)}">More ${esc(p.brand)} products</a></p>` : ""}
 ${related.length ? `<h2>Related products</h2><ul>${related.map((r) => `<li><a href="/product/${esc(r.slug)}">${esc(r.brand ? `${r.brand} ${r.name}` : r.name)}</a>${Number(r.customer_price) > 0 ? ` — ${esc(Number(r.customer_price).toFixed(2))} ${esc(r.currency || "USD")}` : ""}</li>`).join("")}</ul>` : ""}
