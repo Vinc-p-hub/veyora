@@ -7,7 +7,7 @@ import { usePricing } from "@/lib/PricingContext";
 import { useLang } from "@/lib/i18n";
 import { buildPaymentMethods } from "@/lib/paymentMethods";
 import BrandLogo from "@/components/payments/BrandLogo";
-import { useConnectedProviders } from "@/lib/useConnectedProviders";
+import { useConnectedProvidersState } from "@/lib/useConnectedProviders";
 import { formatPrice } from "@/lib/pricing";
 import { api } from "@/api/client";
 import { useSiteText } from "@/lib/useSiteText";
@@ -28,9 +28,10 @@ export default function Checkout() {
   const getText = useSiteText();
 
   const [planId, setPlanId] = useState(params.get("plan") || "plan_5");
+  const [provider, setProvider] = useState(""); // chosen payment method id ("card" | "paypal")
   // Storefront payment methods mirror the providers switched on in the back
   // office — nothing else is offered at checkout.
-  const connected = useConnectedProviders();
+  const { providers: connected, status: payStatus, reload: reloadPay } = useConnectedProvidersState();
   const activeProviders = buildPaymentMethods(connected);
   const selected = activeProviders.some((m) => m.id === provider) ? provider : activeProviders[0]?.id;
   const selectedMethod = activeProviders.find((m) => m.id === selected);
@@ -334,9 +335,18 @@ export default function Checkout() {
                 </button>
               ))}
               {activeProviders.length === 0 && (
-                <p className="text-sm p-3 rounded-lg bg-amber-50 text-amber-800">
-                  Payments are temporarily unavailable, so orders cannot be placed right now. Please try again shortly.
-                </p>
+                payStatus === "loading" ? (
+                  <p className="text-sm text-text-muted animate-pulse">Loading payment methods…</p>
+                ) : payStatus === "error" ? (
+                  <p className="text-sm p-3 rounded-2xl bg-amber-50 text-amber-800">
+                    We couldn't load the payment methods.{" "}
+                    <button onClick={reloadPay} className="underline font-medium">Try again</button>
+                  </p>
+                ) : (
+                  <p className="text-sm p-3 rounded-2xl bg-amber-50 text-amber-800">
+                    Payments are temporarily unavailable, so orders cannot be placed right now. Please try again shortly.
+                  </p>
+                )
               )}
             </div>
           </section>

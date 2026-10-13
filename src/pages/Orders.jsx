@@ -5,7 +5,7 @@ import { api } from "@/api/client";
 import { useRegion } from "@/lib/RegionContext";
 import { formatPrice } from "@/lib/pricing";
 import PaymentEmbed from "@/components/payments/PaymentEmbed";
-import { useConnectedProviders } from "@/lib/useConnectedProviders";
+import { useConnectedProvidersState } from "@/lib/useConnectedProviders";
 import { buildPaymentMethods } from "@/lib/paymentMethods";
 import { useAuth } from "@/lib/AuthContext";
 import { readGuestOrders, rememberGuestOrder } from "@/lib/guestOrders";
@@ -32,7 +32,7 @@ export default function Orders() {
   const [lookupError, setLookupError] = useState("");
   const [paying, setPaying] = useState(null); // resume an embedded payment inline
   const [choice, setChoice] = useState({}); // payment method picked per unpaid order
-  const connected = useConnectedProviders();
+  const { providers: connected, status: payStatus, reload: reloadPay } = useConnectedProvidersState();
   const placed = params.get("placed");
 
   const fetchOne = async (num, em) => {
@@ -56,7 +56,6 @@ export default function Orders() {
         const list = (await Promise.all(readGuestOrders().map((g) => fetchOne(g.n, g.e).catch(() => null)))).filter(Boolean);
         setOrders(list);
       }
-      setSearched(true);
     } catch (e) {
       setLookupError(e.message || "Could not load your orders");
     } finally {
@@ -177,7 +176,11 @@ export default function Orders() {
                     <div className="border-b border-border-hairline px-4 py-3 bg-amber-50 space-y-2">
                       <div className="text-xs text-amber-700">Awaiting payment — this order is not confirmed yet.</div>
                       {options.length === 0 ? (
-                        <div className="text-xs text-text-muted">Payments are temporarily unavailable. Please come back shortly.</div>
+                        <div className="text-xs text-text-muted">
+                          {payStatus === "loading" ? "Loading payment methods…" : payStatus === "error" ? (
+                            <>We couldn't load the payment methods. <button onClick={reloadPay} className="underline font-medium">Try again</button></>
+                          ) : "Payments are temporarily unavailable. Please come back shortly."}
+                        </div>
                       ) : (
                         <div className="flex flex-wrap items-center gap-2">
                           {options.length > 1 && options.map((m) => (

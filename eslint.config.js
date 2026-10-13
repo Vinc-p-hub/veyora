@@ -57,4 +57,14 @@ export default [
       "react-hooks/rules-of-hooks": "error",
     },
   },
+  // Hard guard: a variable that does not exist is a crash in production, so it must fail the lint.
+  {
+    files: ["src/**/*.{js,jsx}"],
+    languageOptions: {
+      globals: globals.browser,
+      parserOptions: { ecmaVersion: 2022, sourceType: "module", ecmaFeatures: { jsx: true } },
+    },
+    plugins: { react: pluginReact },
+    rules: { "no-undef": "error", "react/jsx-no-undef": "error" },
+  },
 ];

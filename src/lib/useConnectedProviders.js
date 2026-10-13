@@ -1,49 +1,61 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "@/api/client";
 
-// The payment methods the storefront may offer — resolved server-side from the
-// providers switched on in the back office. Fetched once per session and shared
-// by the checkout, the payment-methods page and the footer.
+// The payment providers switched on in the back office, resolved server-side.
+// Short-lived cache (an empty list is re-checked quickly) so a connection made in the admin
+// shows up without a reload, and a failed lookup is reported instead of looking like "no PSP".
 let cache = null;
+let cacheAt = 0;
 let pending = null;
 
-export function useConnectedProviders() {
-  const [providers, setProviders] = useState(cache || []);
+const fresh = () => cache && Date.now() - cacheAt < (cache.length ? 60_000 : 10_000);
 
-  useEffect(() => {
-    if (cache) {
-      setProviders(cache);
-      return;
-    }
-    if (!pending) {
-      pending = api.functions
-        .invoke("payments", { action: "providers" })
-        .then((res) => {
-          cache = res.data?.providers || [];
-          return cache;
-        })
-        // A failed lookup is never cached, so the next page retries instead of
-        // showing a storefront without payment methods for the whole session.
-        .catch(() => {
-          pending = null;
-          return null;
-        });
-    }
-    let alive = true;
-    pending.then((list) => {
-      if (alive && list) setProviders(list);
-    });
-    return () => {
-      alive = false;
-    };
+function fetchProviders() {
+  if (!pending) {
+    pending = api.functions
+      .invoke("payments", { action: "providers" })
+      .then((res) => {
+        cache = res.data?.providers || [];
+        cacheAt = Date.now();
+        return cache;
+      })
+      .finally(() => {
+        pending = null;
+      });
+  }
+  return pending;
+}
+
+// status: "loading" | "ready" | "error"
+export function useConnectedProvidersState() {
+  const [state, setState] = useState(() => (fresh() ? { providers: cache, status: "ready" } : { providers: [], status: "loading" }));
+
+  const load = useCallback(() => {
+    setState((s) => ({ ...s, status: "loading" }));
+    fetchProviders()
+      .then((providers) => setState({ providers, status: "ready" }))
+      .catch(() => setState({ providers: [], status: "error" }));
   }, []);
 
-  return providers;
+  useEffect(() => {
+    if (fresh()) {
+      setState({ providers: cache, status: "ready" });
+      return;
+    }
+    load();
+  }, [load]);
+
+  return { ...state, reload: load };
+}
+
+export function useConnectedProviders() {
+  return useConnectedProvidersState().providers;
 }
 
 // Called after the back office connects or disconnects a provider so the
 // storefront, checkout and footer pick the change up immediately.
 export function invalidateConnectedProviders() {
   cache = null;
+  cacheAt = 0;
   pending = null;
 }

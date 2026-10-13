@@ -107,7 +107,7 @@ function Footer() {
 
 export default function Layout() {
   const { count } = useCart();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { t, tCat } = useLang();
   const location = useLocation();
   const catParam = new URLSearchParams(location.search).get("cat");
