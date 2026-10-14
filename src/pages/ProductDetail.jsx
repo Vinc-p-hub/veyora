@@ -251,7 +251,7 @@ export default function ProductDetail() {
                   <span>· {product.reviews_count} reviews</span>
                 </>
               )}
-              <span>Match {Math.round(product.match_confidence * 100)}%</span>
+              {product.source_id && product.match_confidence ? <span>Match {Math.round(product.match_confidence * 100)}%</span> : null}
             </div>
           </div>
 

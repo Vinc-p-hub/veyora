@@ -42,7 +42,7 @@ export default function BulkReviewImport() {
     setResult(null);
     setUnmatched([]);
     try {
-      const { file_url } = await api.integrations.Core.UploadPublicFile({ file });
+      const { file_url } = await api.integrations.Core.UploadPrivateFile({ file });
       const res = await api.functions.invoke("reviewImport", {
         file_url,
         source_name: sourceName.trim(),

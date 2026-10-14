@@ -86,6 +86,36 @@ export default async function handler(req: Request): Promise<Response> {
       }
     }
 
+    // ── Integrity checks: only genuine, individual reviews may be published ──
+    // A file where the same sentences are repeated across "different" reviewers, the same person
+    // reviews the same product several times, or the platform attributes reviews to itself is not a
+    // set of real customer reviews. Publishing those would be a fake-review practice (FTC / EU
+    // consumer law / Google review-spam policy), so the import is refused with an explanation.
+    const usable = rows.slice(0, maxRows).filter((r) => String(r?.text || r?.review || r?.body || "").trim());
+    const textsSeen = new Set(usable.map((r) => norm(r?.text || r?.review || r?.body).replace(/\s+/g, " ")));
+    const duplicateRatio = usable.length ? 1 - textsSeen.size / usable.length : 0;
+    const pairCount = new Map<string, number>();
+    for (const r of usable) {
+      const k = `${norm(r?.product || r?.product_slug || r?.slug || r?.sku)}|${norm(r?.author || r?.name)}`;
+      pairCount.set(k, (pairCount.get(k) || 0) + 1);
+    }
+    const repeatedAuthors = [...pairCount.values()].filter((n) => n > 1).length;
+    const selfAttributed = usable.filter((r) => /^(veyro|veyora)$/i.test(String(r?.source_name || defaultSource || "").trim())).length;
+    const problems: string[] = [];
+    if (usable.length >= 10 && duplicateRatio > 0.2) {
+      problems.push(`${Math.round(duplicateRatio * 100)}% of the review texts are copies of each other (${textsSeen.size} distinct texts for ${usable.length} reviews)`);
+    }
+    if (repeatedAuthors > 0 && repeatedAuthors / Math.max(1, pairCount.size) > 0.1) {
+      problems.push(`${repeatedAuthors} reviewer(s) appear several times on the same product`);
+    }
+    if (selfAttributed > 0) problems.push(`${selfAttributed} review(s) are attributed to VEYRO itself`);
+    if (problems.length) {
+      return Response.json({
+        error: `Import refused — this file does not look like genuine customer reviews: ${problems.join("; ")}. Reviews must be real, individual and traceable to their source. Please upload the original export (Google, Trustpilot, your order system…) or collect reviews from verified buyers.`,
+        integrity: { rows: usable.length, distinct_texts: textsSeen.size, repeated_authors: repeatedAuthors, self_attributed: selfAttributed },
+      }, { status: 422 });
+    }
+
     const sources = await admin.entities.CrawlerSource.list(null, 200);
     const nowIso = new Date().toISOString();
 

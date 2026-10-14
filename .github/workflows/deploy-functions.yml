@@ -20,8 +20,10 @@ jobs:
           version: latest
       - name: "Deploy functions (public endpoints, each verifies its callers)"
         run: |
+          failed=""
           for dir in supabase/functions/*/; do
             name=$(basename "$dir")
             [ "$name" = "_shared" ] && continue
-            supabase functions deploy "$name" --project-ref "$PROJECT_REF" --no-verify-jwt
+            supabase functions deploy "$name" --project-ref "$PROJECT_REF" --no-verify-jwt || failed="$failed $name"
           done
+          if [ -n "$failed" ]; then echo "Failed to deploy:$failed"; exit 1; fi

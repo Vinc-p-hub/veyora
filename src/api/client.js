@@ -154,8 +154,22 @@ const functions = {
 
 // Storage: public bucket, per-user folder.
 const BUCKET = 'public-uploads';
+const IMPORT_BUCKET = 'admin-imports';
 const integrations = {
   Core: {
+    // Back-office data files (CSV / XLSX / JSON): private bucket, admins only, any file type.
+    // Returns a short-lived signed URL that the Edge Function downloads.
+    async UploadPrivateFile({ file }) {
+      const { data: session } = await supabase.auth.getSession();
+      const uid = session?.session?.user?.id;
+      if (!uid) throw new Error('Sign in to upload files');
+      const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
+      const path = `${uid}/${newId()}.${ext}`;
+      unwrap(await supabase.storage.from(IMPORT_BUCKET).upload(path, file, { contentType: file.type || 'application/octet-stream', upsert: false }));
+      const { data, error } = await supabase.storage.from(IMPORT_BUCKET).createSignedUrl(path, 600);
+      if (error) throw new Error(error.message);
+      return { file_url: data.signedUrl };
+    },
     async UploadPublicFile({ file }) {
       const { data: session } = await supabase.auth.getSession();
       const uid = session?.session?.user?.id;

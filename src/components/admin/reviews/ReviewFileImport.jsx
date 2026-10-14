@@ -21,7 +21,7 @@ export default function ReviewFileImport({ product, onImported }) {
     setError("");
     setResult(null);
     try {
-      const { file_url } = await api.integrations.Core.UploadPublicFile({ file });
+      const { file_url } = await api.integrations.Core.UploadPrivateFile({ file });
       const res = await api.functions.invoke("reviewImport", {
         product_id: product.id,
         file_url,

@@ -81,7 +81,7 @@ export default function Compare() {
     } },
     { label: t("compare.brand"), render: (p) => p.brand },
     { label: t("compare.category"), render: (p) => tCat(p.category) },
-    { label: t("compare.rating"), render: (p) => `★ ${p.rating} (${p.reviews_count || 0})` },
+    { label: t("compare.rating"), render: (p) => ((p.reviews_count || 0) > 0 ? `★ ${p.rating} (${p.reviews_count})` : "—") },
     { label: t("compare.stock"), render: (p) => t(`stock.${p.stock_status || "UNKNOWN"}`) },
     { label: t("compare.delivery"), render: (p) => t("card.deliveryDays", { n: p.delivery_days || 5 }) },
   ];
