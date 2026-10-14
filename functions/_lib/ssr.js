@@ -92,7 +92,7 @@ const flat = (v) => {
   return Object.entries(v).map(([k, x]) => `${k}: ${flat(x)}`).join(" · ");
 };
 
-export function productPage(p, origin, related = []) {
+export function productPage(p, origin, related = [], reviews = []) {
   const url = `${origin}/product/${p.slug}`;
   const fullName = `${p.brand ? `${p.brand} ` : ""}${p.name}`;
   const title = p.seo_title || seoTitle(fullName, ["Price, Specs & Installments", "Price & Specs", "Price"]);
@@ -135,9 +135,25 @@ export function productPage(p, origin, related = []) {
           },
         }
       : {}),
-    // Rating only when real customer reviews exist.
-    ...(Number(p.reviews_count) > 0 && Number(p.rating) > 0
-      ? { aggregateRating: { "@type": "AggregateRating", ratingValue: Number(p.rating), reviewCount: Number(p.reviews_count) } }
+    // Ratings and reviews come ONLY from published first-party reviews (verified buyers, moderated).
+    ...(reviews.length
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: Math.round((reviews.reduce((t, r) => t + Number(r.rating), 0) / reviews.length) * 10) / 10,
+            reviewCount: reviews.length,
+            bestRating: 5,
+            worstRating: 1,
+          },
+          review: reviews.slice(0, 10).map((r) => ({
+            "@type": "Review",
+            reviewRating: { "@type": "Rating", ratingValue: Number(r.rating), bestRating: 5, worstRating: 1 },
+            author: { "@type": "Person", name: r.verified_buyer ? "Verified buyer" : "Customer" },
+            datePublished: String(r.created_date || "").slice(0, 10) || undefined,
+            ...(r.title ? { name: clip(r.title, 120) } : {}),
+            reviewBody: clip(r.text || "", 1000),
+          })),
+        }
       : {}),
   };
   const crumbs = [
@@ -160,6 +176,7 @@ ${price > 0 ? `<p><strong>${esc(price.toFixed(2))} ${esc(p.currency || "USD")}</
 <p>${esc(clip(longDescription, 1500))}</p>
 ${specs.length ? `<h2>Specifications</h2><table>${specs.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(flat(v))}</td></tr>`).join("")}</table>` : ""}
 ${p.brand ? `<p><a href="/brand/${encodeURIComponent(p.brand)}">More ${esc(p.brand)} products</a></p>` : ""}
+${reviews.length ? `<h2>Customer reviews</h2><p>${esc((reviews.reduce((t, r) => t + Number(r.rating), 0) / reviews.length).toFixed(1))} / 5 from ${reviews.length} verified review${reviews.length > 1 ? "s" : ""}</p><ul>${reviews.slice(0, 5).map((r) => `<li>${"★".repeat(Math.max(1, Math.min(5, Math.round(Number(r.rating)))))} ${esc(clip(r.text || r.title || "", 400))}</li>`).join("")}</ul>` : ""}
 ${related.length ? `<h2>Related products</h2><ul>${related.map((r) => `<li><a href="/product/${esc(r.slug)}">${esc(r.brand ? `${r.brand} ${r.name}` : r.name)}</a>${Number(r.customer_price) > 0 ? ` — ${esc(Number(r.customer_price).toFixed(2))} ${esc(r.currency || "USD")}` : ""}</li>`).join("")}</ul>` : ""}
 <p><a href="/return-policy">30-day returns</a> · <a href="/shipping-policy">Shipping</a> · <a href="/warranty">2-year warranty</a></p>
 </main>`;
@@ -194,6 +211,31 @@ export function brandPage(brand, products, origin) {
 <ul>${products.map((p) => `<li><a href="/product/${esc(p.slug)}">${esc(p.name)}</a>${Number(p.customer_price) > 0 ? ` — ${esc(Number(p.customer_price).toFixed(2))} ${esc(p.currency || "USD")}` : ""}</li>`).join("")}</ul>
 </main>`;
   return { title, description, url, image: products[0]?.image_url, type: "website", jsonLd: [list, breadcrumb], body, path };
+}
+
+export function legalPage(key, doc, origin) {
+  const path = key === "legal" ? "/legal" : `/${key}`;
+  const url = `${origin}${path}`;
+  const sections = Array.isArray(doc.sections) ? doc.sections : [];
+  const page = {
+    "@context": "https://schema.org", "@type": "WebPage", "@id": `${url}#webpage`, url, name: `${doc.title} | VEYRO`,
+    description: doc.summary, isPartOf: { "@id": `${origin}/#website` },
+  };
+  const breadcrumb = {
+    "@context": "https://schema.org", "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: `${origin}/` },
+      ...(key === "legal" ? [] : [{ "@type": "ListItem", position: 2, name: "Legal", item: `${origin}/legal` }]),
+      { "@type": "ListItem", position: key === "legal" ? 2 : 3, name: doc.title, item: url },
+    ],
+  };
+  const body = `<main data-ssr="legal" style="max-width:760px;margin:0 auto;padding:24px;font-family:system-ui,sans-serif">
+<h1>${esc(doc.title)}</h1>
+<p>Last updated: ${esc(doc.updated || "")}</p>
+${sections.map((sec) => `<h2>${esc(sec.h)}</h2>${(sec.body || []).map((t) => `<p>${esc(t)}</p>`).join("")}`).join("")}
+<p><a href="/legal">All policies</a> · <a href="/support">Support</a></p>
+</main>`;
+  return { title: `${doc.title} | VEYRO`, description: clip(doc.summary, 158), url, type: "website", jsonLd: [page, breadcrumb], body, path };
 }
 
 export function homePage(origin, products) {

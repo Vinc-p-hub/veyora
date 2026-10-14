@@ -23,7 +23,12 @@ export async function onRequestGet(context) {
         related = [...related, ...byBrand.filter((r) => !seen.has(r.slug))].slice(0, 8);
       }
     } catch { /* related links are a bonus */ }
-    return render(context, productPage(p, origin, related));
+    // First-party, published (moderated) reviews only — never imported third-party text.
+    let reviews = [];
+    try {
+      reviews = await sb(context.env, `reviews?product_id=eq.${encodeURIComponent(p.id)}&status=eq.PUBLISHED&order=created_date.desc&limit=100&select=rating,title,text,created_date,verified_buyer`);
+    } catch { /* no reviews block */ }
+    return render(context, productPage(p, origin, related, reviews));
   } catch {
     return context.next(); // never break the app if the data source is unavailable
   }
