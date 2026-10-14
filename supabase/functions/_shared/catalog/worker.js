@@ -14,7 +14,7 @@ import { premiumScore } from "./premium.js";
 import { mergeConfig, resolveRules, computePriceChain } from "../commerce/rules.js";
 import { getAllocationDefault, applyStockAllocation } from "../commerce/stock.js";
 import { CURRENCIES, round2 } from "../commerce/pricing.js";
-import { parseProductPage, enrichFeedRaw, verifyImageAccessible, absolutizeImageUrl } from "./extract.js";
+import { parseProductPage, enrichFeedRaw, verifyImageAccessible, absolutizeImageUrl, extractProductLinks } from "./extract.js";
 import { importSourceReviews } from "./reviews.js";
 
 const BACKOFFS = [60, 300, 900]; // seconds: 1min, 5min, 15min
@@ -154,19 +154,62 @@ export async function processQueueBatch({ admin, actor, maxJobs = 25, sourceId =
       let raw = null;
       let pageImageCandidates = [];
       let pageReviews = [];
+      let pageHtml = "";
       if (job.payload && (job.payload.title || job.payload.name)) {
         raw = enrichFeedRaw(job.payload);
       } else {
         if (!(await robotsAllows(job.url))) throw new Error("Blocked by robots.txt");
         const res = await fetchWithTimeout(job.url, 15000);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const parsed = parseProductPage(await res.text(), job.url);
+        pageHtml = await res.text();
+        const parsed = parseProductPage(pageHtml, job.url);
         raw = enrichFeedRaw(parsed.raw);
         pageImageCandidates = parsed.imageCandidates;
         pageReviews = parsed.sourceReviews || [];
       }
 
       raw.title = normalizeTitle(raw.title);
+
+      // A page without a title, or without a price but full of product links, is a LISTING
+      // (home, category, brand, "all products"): not a failure. Its product links become new jobs.
+      if (pageHtml && (!raw.title || raw.price == null)) {
+        const links = extractProductLinks(pageHtml, job.url);
+        if (!raw.title || links.length >= 8) {
+          const depth = Number(job.payload && job.payload.depth) || 0;
+          const maxDepth = Number(source.max_depth) || 2;
+          let queued = 0;
+          if (links.length && depth + 1 <= maxDepth) {
+            const known = new Set(
+              (await admin.entities.CrawlerJob.filter({ source_id: source.id }, "-created_date", 2000)).map((j) => j.url)
+            );
+            const fresh = links.filter((u) => !known.has(u)).slice(0, 25);
+            if (fresh.length) {
+              await admin.entities.CrawlerJob.bulkCreate(
+                fresh.map((u) => ({
+                  type: "FETCH_PRODUCT",
+                  source_id: source.id,
+                  url: u,
+                  priority: Math.min(9, (job.priority || 5) + 1),
+                  status: "QUEUED",
+                  scheduled_at: now.toISOString(),
+                  payload: { depth: depth + 1 },
+                }))
+              );
+            }
+            queued = fresh.length;
+          }
+          jobUpdates.push({
+            id: job.id,
+            status: "COMPLETED",
+            completed_at: now.toISOString(),
+            locked_at: null,
+            result: JSON.stringify({ action: "LISTING", links_found: links.length, queued, depth }),
+          });
+          completed++;
+          bump(source.id, "ok");
+          continue;
+        }
+      }
       if (!raw.title) throw new Error("Rejected: no product title found on page");
       raw.price = normalizePrice(raw.price);
       raw.currency = normalizeCurrency(raw.currency) || normalizeCurrency(source.default_currency) || "USD";

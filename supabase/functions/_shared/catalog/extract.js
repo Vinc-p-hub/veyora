@@ -300,6 +300,66 @@ export function parseProductPage(html, url) {
   return { raw, imageCandidates, sourceReviews };
 }
 
+// Product links found on a LISTING page (category, brand, home, "all products"): JSON-LD ItemList
+// entries first, then same-site anchors that look like product detail pages. Used so such pages feed
+// the queue instead of being rejected as "product without a price".
+const NON_PRODUCT_PATH = /(^|\/)(cart|basket|checkout|login|signin|account|register|wishlist|search|blog|news|press|contact|about|faq|help|support|polic(y|ies)|terms|privacy|returns?|shipping|store-locator|stores|careers|sitemap|collections?|categor(y|ies)|brands?|all-brands|tags?|pages?)(\/?$)/i;
+export function extractProductLinks(html, baseUrl, limit = 40) {
+  let base;
+  try {
+    base = new URL(baseUrl);
+  } catch (_e) {
+    return [];
+  }
+  const host = (h) => h.replace(/^www\./, "");
+  const out = new Set();
+  const accept = (href, explicit = false) => {
+    try {
+      const u = new URL(href, base);
+      if (host(u.hostname) !== host(base.hostname)) return;
+      const path = u.pathname.replace(/\/+$/, "") || "/";
+      if (path === "/" || path === (base.pathname.replace(/\/+$/, "") || "/")) return;
+      if (/\.(jpe?g|png|gif|webp|svg|css|js|pdf|xml|ico|zip)$/i.test(path)) return;
+      if (NON_PRODUCT_PATH.test(path)) return;
+      const segs = path.split("/").filter(Boolean);
+      const last = segs[segs.length - 1] || "";
+      const productish =
+        explicit ||
+        /(^|\/)(products?|p|item|items|dp|buy|shop)\/[^/]+/i.test(path) ||
+        (last.split("-").length >= 3 && /[a-z]/i.test(last) && /\d|pro|max|ultra|plus|mini|gb|tb/i.test(last));
+      if (!productish) return;
+      out.add(u.origin + path);
+    } catch (_e) {
+      /* skip malformed href */
+    }
+  };
+  // 1) JSON-LD ItemList / CollectionPage entries
+  const re = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let m;
+  const walk = (node) => {
+    if (!node || typeof node !== "object") return;
+    if (Array.isArray(node)) return node.forEach(walk);
+    if (Array.isArray(node.itemListElement)) {
+      for (const el of node.itemListElement) {
+        const u = typeof el === "string" ? el : el?.url || el?.item?.url || el?.item?.["@id"] || (typeof el?.item === "string" ? el.item : null);
+        if (u) accept(u, true);
+      }
+    }
+    for (const v of Object.values(node)) if (v && typeof v === "object") walk(v);
+  };
+  while ((m = re.exec(html))) {
+    try {
+      walk(JSON.parse(m[1]));
+    } catch (_e) {
+      /* malformed block */
+    }
+  }
+  // 2) anchors
+  const aRe = /<a\b[^>]*?href\s*=\s*["']([^"'#][^"']*)["']/gi;
+  while ((m = aRe.exec(html))) accept(decodeHtmlEntities(m[1]));
+  return [...out].slice(0, limit);
+}
+
 // Enriches mapped feed items (Shopify-style shape) into a normalized raw product:
 // best available variant wins, gallery extracted, HTML descriptions stripped,
 // compare-at prices kept for discount display, variants preserved for specs.
@@ -344,23 +404,39 @@ export function enrichFeedRaw(raw) {
 }
 
 // Verifies an image is really accessible before it gets published.
-export async function verifyImageAccessible(url, timeoutMs = 6000) {
-  if (!url) return false;
+export async function verifyImageAccessible(url, timeoutMs = 8000) {
+  if (!url || !/^https?:/i.test(url)) return false;
+  let referer;
   try {
-    const res = await fetch(url, {
-      method: "HEAD",
-      signal: AbortSignal.timeout(timeoutMs),
-      headers: { "user-agent": "VeyroBot/1.0 (+catalog ingestion)" },
-    });
-    if (res.ok) return true;
-    if (res.status === 403 || res.status === 405) {
-      const get = await fetch(url, {
-        signal: AbortSignal.timeout(timeoutMs),
-        headers: { "user-agent": "Mozilla/5.0 (compatible; VeyroBot/1.0)", range: "bytes=0-0" },
-      });
-      return get.ok || get.status === 206;
-    }
+    referer = new URL(url).origin + "/";
+  } catch (_e) {
     return false;
+  }
+  // Many CDNs refuse HEAD, hot-link checks without a referer, or non-browser agents: try HEAD, then a
+  // 1-byte ranged GET, and only accept something that really is an image.
+  const attempt = async (method) => {
+    const res = await fetch(url, {
+      method,
+      redirect: "follow",
+      signal: AbortSignal.timeout(timeoutMs),
+      headers: {
+        "user-agent": "Mozilla/5.0 (compatible; VeyroBot/1.0; +catalog ingestion)",
+        referer,
+        accept: "image/*,*/*;q=0.8",
+        ...(method === "GET" ? { range: "bytes=0-0" } : {}),
+      },
+    });
+    if (!(res.ok || res.status === 206)) return false;
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    return !ct || ct.startsWith("image/") || ct.includes("octet-stream");
+  };
+  try {
+    if (await attempt("HEAD")) return true;
+  } catch (_e) {
+    /* fall through to GET */
+  }
+  try {
+    return await attempt("GET");
   } catch (_e) {
     return false;
   }

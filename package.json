@@ -10,7 +10,7 @@
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p ./jsconfig.json",
     "preview": "vite preview",
-    "test": "node --test tests/pipeline.test.mjs tests/csv.test.mjs && node tests/smoke.mjs"
+    "test": "node --test tests/pipeline.test.mjs tests/csv.test.mjs tests/listing.test.mjs && node tests/smoke.mjs"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^17.0.0",
