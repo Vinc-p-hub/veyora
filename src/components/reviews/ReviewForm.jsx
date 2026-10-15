@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 // Review form — create or edit. Purchase eligibility is enforced server-side
 // (reviewSubmit): only real buyers can submit, verified_buyer never comes from
 // the client.
-export default function ReviewForm({ product, existing, photosEnabled, onDone }) {
+export default function ReviewForm({ product, existing, photosEnabled, proof, onDone }) {
   const { t } = useLang();
   const [rating, setRating] = useState(existing?.rating || 0);
   const [title, setTitle] = useState(existing?.title || "");
@@ -38,15 +38,16 @@ export default function ReviewForm({ product, existing, photosEnabled, onDone })
     if (!text.trim()) return setError(t("reviews.reviewText"));
     setBusy(true);
     try {
-      await api.functions.invoke("reviewSubmit", {
+      const res = await api.functions.invoke("reviewSubmit", {
         product_id: product.id,
         rating,
         title,
         text,
         photos,
         review_id: existing?.id,
+        ...(proof ? { order_number: proof.order_number, email: proof.email } : {}),
       });
-      if (onDone) onDone();
+      if (onDone) onDone(res.data?.status);
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     } finally {

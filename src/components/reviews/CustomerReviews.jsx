@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useLang } from "@/lib/i18n";
 import { Image } from "@/components/ui/image";
 import { cn } from "@/lib/utils";
+import { readGuestOrders } from "@/lib/guestOrders";
 import Stars from "./Stars";
 import ReviewForm from "./ReviewForm";
 
@@ -22,6 +23,9 @@ export default function CustomerReviews({ product }) {
   const [settings, setSettings] = useState({ reviews: true, verified: true, photos: true });
   const [showForm, setShowForm] = useState(false);
   const [reported, setReported] = useState(null);
+  const [proof, setProof] = useState(null); // guest purchase proof { order_number, email }
+  const [notice, setNotice] = useState("");
+  const [verify, setVerify] = useState({ order: "", email: "", error: "", busy: false });
 
   const load = useCallback(() => {
     let live = true;
@@ -63,12 +67,48 @@ export default function CustomerReviews({ product }) {
     api.entities.Review.filter({ product_id: product.id }, "-created_date", 50)
       .then((rows) => live && setOwnReview(rows.find((r) => r.created_by_id === user.id) || null))
       .catch(() => {});
+    // Guest buyers (no account): any order remembered on this device that contains this product unlocks reviewing.
+    if (!user) {
+      (async () => {
+        for (const g of readGuestOrders().slice(0, 10)) {
+          try {
+            const res = await api.functions.invoke("payments", { action: "order_lookup", order_number: g.n, email: g.e });
+            const o = res.data?.order;
+            if (o && ELIGIBLE_STATUS.includes(o.status) && (o.items || []).some((it) => (it.product_id || it.id) === product.id)) {
+              if (live) { setProof({ order_number: o.order_number, email: g.e }); setEligible(true); }
+              return;
+            }
+          } catch (_e) { /* try the next remembered order */ }
+        }
+      })();
+    }
     return () => {
       live = false;
     };
   }, [product?.id, user?.id]);
 
   useEffect(load, [load]);
+
+  // Manual verification: order number + the e-mail used at checkout (works with or without an account).
+  const verifyPurchase = async () => {
+    setVerify((v) => ({ ...v, busy: true, error: "" }));
+    try {
+      const num = verify.order.trim().toUpperCase();
+      const mail = verify.email.trim().toLowerCase();
+      const res = await api.functions.invoke("payments", { action: "order_lookup", order_number: num, email: mail });
+      const o = res.data?.order;
+      if (!o) throw new Error("No order matches these details");
+      if (!ELIGIBLE_STATUS.includes(o.status)) throw new Error("This order has not been paid yet.");
+      if (!(o.items || []).some((it) => (it.product_id || it.id) === product.id)) throw new Error("This order does not contain this product.");
+      setProof({ order_number: o.order_number, email: mail });
+      setEligible(true);
+      setShowForm(true);
+    } catch (e) {
+      setVerify((v) => ({ ...v, error: e.message || "Could not verify this order" }));
+    } finally {
+      setVerify((v) => ({ ...v, busy: false }));
+    }
+  };
 
   const report = async (id) => {
     try {
@@ -85,7 +125,7 @@ export default function CustomerReviews({ product }) {
   const canEdit = ownReview && ownReview.status !== "REJECTED";
 
   return (
-    <section className="bg-surface-card border border-border-hairline rounded-xl p-5">
+    <section id="reviews" className="bg-surface-card border border-border-hairline rounded-xl p-5 scroll-mt-24">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <h3 className="font-display font-bold text-lg">{t("reviews.customerTitle")}</h3>
@@ -95,7 +135,7 @@ export default function CustomerReviews({ product }) {
             </span>
           )}
         </div>
-        {eligible && !ownReview && (
+        {eligible && !ownReview && !showForm && (
           <button
             onClick={() => setShowForm(true)}
             className="px-4 py-2 rounded-lg bg-noon text-noon-fg text-sm font-semibold hover:opacity-90 flex items-center gap-2"
@@ -118,8 +158,12 @@ export default function CustomerReviews({ product }) {
           <ReviewForm
             product={product}
             existing={ownReview}
-            photosEnabled={settings.photos}
-            onDone={load}
+            photosEnabled={settings.photos && !!user}
+            proof={user ? null : proof}
+            onDone={(status) => {
+              setNotice(status === "PUBLISHED" ? "Thank you — your review is now live on this product." : "Thank you — your review was received and will appear after a quick check.");
+              load();
+            }}
           />
         </div>
       )}
@@ -130,8 +174,24 @@ export default function CustomerReviews({ product }) {
           {ownReview.status === "REJECTED" && ` — ${t("reviews.rejectedNote")}`}
         </p>
       )}
-      {user && !eligible && !ownReview && (
-        <p className="mt-3 text-xs text-text-muted">{t("reviews.purchaseRequired")}</p>
+      {notice && <p className="mt-3 rounded-lg bg-emerald-50 text-emerald-800 p-3 text-xs">{notice}</p>}
+      {!eligible && !ownReview && (
+        <div className="mt-3 rounded-2xl bg-surface-primary p-3 space-y-2">
+          <p className="text-xs text-text-muted">
+            Bought this product? Verify your purchase to leave a review — no account needed.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <input value={verify.order} onChange={(e) => setVerify((v) => ({ ...v, order: e.target.value }))} placeholder="Order number"
+              className="flex-1 min-w-[140px] bg-surface-card border border-border-hairline rounded-full px-4 py-2 text-xs" />
+            <input value={verify.email} onChange={(e) => setVerify((v) => ({ ...v, email: e.target.value }))} placeholder="E-mail used at checkout"
+              className="flex-1 min-w-[160px] bg-surface-card border border-border-hairline rounded-full px-4 py-2 text-xs" />
+            <button onClick={verifyPurchase} disabled={verify.busy || !verify.order || !verify.email}
+              className="px-4 py-2 rounded-full bg-noon text-noon-fg text-xs font-semibold disabled:opacity-50">
+              {verify.busy ? "Checking…" : "Verify"}
+            </button>
+          </div>
+          {verify.error && <p className="text-xs text-destructive">{verify.error}</p>}
+        </div>
       )}
 
       <div className="mt-4 space-y-4">
@@ -152,6 +212,7 @@ export default function CustomerReviews({ product }) {
                   <UserCheck className="w-3.5 h-3.5" /> {t("reviews.invited")}
                 </span>
               )}
+              {r.author_name && <span className="text-xs font-medium">{r.author_name}</span>}
               <span className="text-[11px] text-text-muted ms-auto">
                 {r.created_date ? new Date(r.created_date).toLocaleDateString() : ""}
               </span>

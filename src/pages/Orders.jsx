@@ -202,8 +202,13 @@ export default function Orders() {
                 {/* Items */}
                 <div className="p-4 space-y-2">
                   {order.items?.map((it, idx) => (
-                    <div key={idx} className="flex justify-between text-sm">
-                      <span className="text-text-muted">{it.brand} {it.name} ×{it.qty}</span>
+                    <div key={idx} className="flex justify-between items-center gap-3 text-sm">
+                      <span className="text-text-muted">
+                        {it.brand} {it.name} ×{it.qty}
+                        {order.status !== "PENDING_PAYMENT" && it.id && (
+                          <Link to={`/product/${it.id}#reviews`} className="ms-3 text-xs underline text-accent-cyan whitespace-nowrap">Write a review</Link>
+                        )}
+                      </span>
                       <span className="text-mono">{formatPrice(it.price * it.qty, currency)}</span>
                     </div>
                   ))}

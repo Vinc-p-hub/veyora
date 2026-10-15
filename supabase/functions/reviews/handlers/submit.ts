@@ -4,7 +4,12 @@
 // the VEYRO customer service team (invitation on file). verified_buyer is set here,
 // server-side only — the client can never grant it. No review content is ever
 // generated or altered by VEYRO.
-import { createContext, waitUntil } from "../../_shared/runtime.ts";
+//
+// Guest checkout: a buyer WITHOUT an account proves the purchase with the order number + the
+// e-mail used at checkout. Verified-buyer reviews that pass the automatic content screen are
+// published immediately — positive or negative, nothing is filtered by sentiment. Only flagged content
+// (links, contact details, insults, spam) waits for a moderator.
+import { createContext } from "../../_shared/runtime.ts";
 
 const ELIGIBLE_ORDER_STATUS = ["PAID", "VERIFYING_SUPPLIER", "PROCESSING", "SHIPPED", "IN_TRANSIT", "DELIVERED", "COMPLETED"];
 
@@ -24,11 +29,19 @@ function screenReview(text) {
   return flags.join(", ") || null;
 }
 
+// "Marie Laurent" -> "Marie L." (never an e-mail, never a full surname).
+const displayName = (full) => {
+  const parts = String(full || "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length || parts[0].includes("@")) return null;
+  const first = parts[0].slice(0, 24);
+  return parts.length > 1 ? `${first} ${parts[parts.length - 1][0].toUpperCase()}.` : first;
+};
+
 export default async function(req) {
   try {
     const __ctx = await createContext(req);
-    const user = __ctx.user;
-    if (!user) return Response.json({ error: "Unauthorized" }, { status: 401 });
+    const user = __ctx.user; // optional: guests are welcome
+    const admin = __ctx.admin;
 
     const body = await req.json();
     const productId = String(body.product_id || "");
@@ -38,11 +51,10 @@ export default async function(req) {
     if (!productId) return Response.json({ error: "Missing product" }, { status: 400 });
     if (!(rating >= 1 && rating <= 5)) return Response.json({ error: "Rating must be between 1 and 5" }, { status: 400 });
     if (!text) return Response.json({ error: "Review text is required" }, { status: 400 });
-    const photos = (Array.isArray(body.photos) ? body.photos : [])
-      .filter((p) => typeof p === "string" && /^https?:\/\//.test(p))
-      .slice(0, 3);
+    const photos = user
+      ? (Array.isArray(body.photos) ? body.photos : []).filter((p) => typeof p === "string" && /^https?:\/\//.test(p)).slice(0, 3)
+      : [];
 
-    const admin = __ctx.admin;
     const settings = await admin.entities.SiteSetting.list(null, 100);
     const setting = (key, fallback) => {
       const row = settings.find((s) => s.key === key);
@@ -63,45 +75,53 @@ export default async function(req) {
     }
     if (!product) return Response.json({ error: "Product not found" }, { status: 404 });
 
-    // Purchase verification — the customer must have a real paid order
-    // containing this exact product. This is the Verified Buyer proof.
-    const orders = await admin.entities.Order.filter({ created_by_id: user.id }, "-created_date", 100);
-    const purchase = orders.find(
-      (o) =>
-        ELIGIBLE_ORDER_STATUS.includes(o.status) &&
-        (Array.isArray(o.items) ? o.items : []).some((it) => it.id === productId || it.product_id === productId)
-    );
-    // No purchase: a customer-service invitation also unlocks submission — the
-    // review is real (written by the invited person) but is NOT a Verified Buyer.
+    // ── Purchase verification ──
+    // Signed-in: orders of the account or placed with the account's e-mail. Guest: order number + checkout e-mail.
+    const containsProduct = (o) => (Array.isArray(o.items) ? o.items : []).some((it) => it.id === productId || it.product_id === productId);
+    const eligible = (o) => ELIGIBLE_ORDER_STATUS.includes(o.status) && containsProduct(o);
+    let candidates = [];
+    const proofNumber = String(body.order_number || "").trim().toUpperCase();
+    const proofEmail = String(body.email || "").trim().toLowerCase();
+    if (proofNumber && proofEmail) {
+      const o = (await admin.entities.Order.filter({ order_number: proofNumber }, null, 1))[0];
+      if (o && String(o.customer_email || "").toLowerCase() === proofEmail) candidates.push(o);
+    }
+    if (user) {
+      const byId = await admin.entities.Order.filter({ created_by_id: user.id }, "-created_date", 100);
+      const mail = String(user.email || "").toLowerCase();
+      const byMail = mail ? (await admin.entities.Order.filter({ customer_email: mail }, "-created_date", 100)) : [];
+      candidates = [...candidates, ...byId, ...byMail];
+    }
+    const purchase = candidates.find(eligible);
+
+    // No purchase: a customer-service invitation unlocks submission for a signed-in user only (kept moderated, never "verified").
     let invited = false;
-    if (!purchase) {
-      const email = String(user.email || "").toLowerCase();
+    if (!purchase && user) {
       const invitations = await admin.entities.ReviewInvitation.filter(
-        { product_id: productId, email, status: "PENDING" },
+        { product_id: productId, email: String(user.email || "").toLowerCase(), status: "PENDING" },
         "-created_date",
         20
       );
       invited = invitations.length > 0;
-      if (!invited) {
-        // Editing one's own existing review stays allowed even when the
-        // invitation has already been used.
-        const own = (await admin.entities.Review.filter({ product_id: productId }, "-created_date", 100)).find(
-          (r) => r.created_by_id === user.id
-        );
-        if (!own) {
-          return Response.json({ error: "Purchase required: only customers who bought this product or invited buyers can review it." }, { status: 403 });
-        }
-      }
+    }
+    const allForProduct = await admin.entities.Review.filter({ product_id: productId }, "-created_date", 500);
+    const mine = (r) => (user && r.created_by_id === user.id) || (purchase && r.order_number === purchase.order_number);
+    const existing = allForProduct.find(mine);
+    if (!purchase && !invited && !existing) {
+      return Response.json({
+        error: user
+          ? "Purchase required: only customers who bought this product can review it."
+          : "We could not match this order. Check the order number and the e-mail used at checkout (the order must be paid).",
+      }, { status: 403 });
     }
 
     const flagReason = screenReview(`${title} ${text}`);
-    const existing = (await admin.entities.Review.filter({ product_id: productId }, "-created_date", 100)).find(
-      (r) => r.created_by_id === user.id
-    );
+    // Verified buyers are published right away unless the content screen flags something.
+    const autoPublish = setting("review_auto_publish", "true") === "true" && !!purchase && !flagReason;
+    const status = autoPublish ? "PUBLISHED" : "PENDING";
+    const author = displayName(purchase?.customer_name || user?.full_name);
 
-    // Edit path: the author may update their own review; it goes back to
-    // moderation (PENDING) and the verified status is re-checked implicitly
-    // (purchase already verified above).
+    // Edit path (account holders): back to the same publication rule.
     if (body.review_id) {
       if (!existing || existing.id !== String(body.review_id)) {
         return Response.json({ error: "Review not found for this account" }, { status: 404 });
@@ -110,48 +130,36 @@ export default async function(req) {
         return Response.json({ error: "This review was rejected and can no longer be edited." }, { status: 403 });
       }
       await admin.entities.Review.update(existing.id, {
-        rating,
-        title,
-        text,
-        photos,
-        status: "PENDING",
-        flag_reason: flagReason,
-        edit_count: (existing.edit_count || 0) + 1,
-        last_edited_at: new Date().toISOString(),
+        rating, title, text, photos, status, flag_reason: flagReason,
+        edit_count: (existing.edit_count || 0) + 1, last_edited_at: new Date().toISOString(),
       });
-      return Response.json({ ok: true, status: "PENDING", updated: true });
+      return Response.json({ ok: true, status, updated: true });
     }
-
     if (existing) {
-      return Response.json({ error: "You already reviewed this product — you can edit your existing review." }, { status: 409 });
+      return Response.json({ error: "You already reviewed this product." }, { status: 409 });
     }
 
     await admin.entities.Review.create({
       product_id: productId,
       product_slug: product.slug,
-      rating,
-      title,
-      text,
-      photos,
+      rating, title, text, photos,
+      author_name: author,
       verified_buyer: !!purchase,
       invited_buyer: !purchase,
       order_id: purchase ? purchase.id : null,
       order_number: purchase ? purchase.order_number : null,
-      status: "PENDING",
+      status,
       flag_reason: flagReason,
     });
-    if (invited) {
-      const email = String(user.email || "").toLowerCase();
+    if (invited && user) {
       const invitations = await admin.entities.ReviewInvitation.filter(
-        { product_id: productId, email, status: "PENDING" },
-        null,
-        20
+        { product_id: productId, email: String(user.email || "").toLowerCase(), status: "PENDING" }, null, 20
       );
       for (const inv of invitations) {
         await admin.entities.ReviewInvitation.update(inv.id, { status: "USED", used_at: new Date().toISOString() });
       }
     }
-    return Response.json({ ok: true, status: "PENDING" });
+    return Response.json({ ok: true, status });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }

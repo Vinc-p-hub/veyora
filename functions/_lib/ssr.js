@@ -148,7 +148,7 @@ export function productPage(p, origin, related = [], reviews = []) {
           review: reviews.slice(0, 10).map((r) => ({
             "@type": "Review",
             reviewRating: { "@type": "Rating", ratingValue: Number(r.rating), bestRating: 5, worstRating: 1 },
-            author: { "@type": "Person", name: r.verified_buyer ? "Verified buyer" : "Customer" },
+            author: { "@type": "Person", name: r.author_name || (r.verified_buyer ? "Verified buyer" : "Customer") },
             datePublished: String(r.created_date || "").slice(0, 10) || undefined,
             ...(r.title ? { name: clip(r.title, 120) } : {}),
             reviewBody: clip(r.text || "", 1000),

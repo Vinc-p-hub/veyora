@@ -7,6 +7,9 @@ export async function onRequestGet(context) {
   try {
     const rows = await sb(context.env, `products?slug=eq.${encodeURIComponent(slug)}&status=eq.PUBLISHED&limit=1`);
     if (!rows[0]) {
+      // Old links by product id (e.g. from an order) → permanent redirect to the canonical slug URL.
+      const byId = await sb(context.env, `products?id=eq.${encodeURIComponent(slug)}&status=eq.PUBLISHED&limit=1&select=slug`);
+      if (byId[0]?.slug) return Response.redirect(`${origin}/product/${encodeURIComponent(byId[0].slug)}${new URL(request.url).search}`, 301);
       // Unknown / unpublished product: real 404 so it never gets indexed.
       return render(context, { title: "Product not found | VEYRO", description: "This product is no longer available.", url: `${origin}/product/${encodeURIComponent(slug)}`, type: "website", jsonLd: [], body: "<main><h1>Product not found</h1><p><a href=\"/category\">Browse the catalog</a></p></main>" }, 404);
     }
@@ -26,7 +29,7 @@ export async function onRequestGet(context) {
     // First-party, published (moderated) reviews only — never imported third-party text.
     let reviews = [];
     try {
-      reviews = await sb(context.env, `reviews?product_id=eq.${encodeURIComponent(p.id)}&status=eq.PUBLISHED&order=created_date.desc&limit=100&select=rating,title,text,created_date,verified_buyer`);
+      reviews = await sb(context.env, `reviews?product_id=eq.${encodeURIComponent(p.id)}&status=eq.PUBLISHED&order=created_date.desc&limit=100&select=rating,title,text,created_date,verified_buyer,author_name`);
     } catch { /* no reviews block */ }
     return render(context, productPage(p, origin, related, reviews));
   } catch {
