@@ -139,7 +139,10 @@ export default async function(req) {
       return Response.json({ error: "You already reviewed this product." }, { status: 409 });
     }
 
+    try {
     await admin.entities.Review.create({
+      created_by_id: user ? user.id : null, // set explicitly: the function runs with the service role
+      created_by: user ? user.email : null,
       product_id: productId,
       product_slug: product.slug,
       rating, title, text, photos,
@@ -151,6 +154,11 @@ export default async function(req) {
       status,
       flag_reason: flagReason,
     });
+    } catch (e) {
+      // The unique indexes (one review per purchase / per account) close the race between parallel submissions.
+      if (/duplicate key|unique/i.test(String(e.message))) return Response.json({ error: "You already reviewed this product." }, { status: 409 });
+      throw e;
+    }
     if (invited && user) {
       const invitations = await admin.entities.ReviewInvitation.filter(
         { product_id: productId, email: String(user.email || "").toLowerCase(), status: "PENDING" }, null, 20
