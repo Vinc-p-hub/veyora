@@ -78,9 +78,23 @@ const TITLE_MAX = 68;
 // always last, and the whole string stays inside the visible length. The extra
 // segments are tried longest-first, so the title degrades gracefully (a long
 // product name keeps "Price" rather than losing the buying intent entirely).
+// "MSI" + "MSI Mercedes…" must not become "MSI MSI Mercedes…".
+export const withBrand = (brand, name) => {
+  const n = String(name || "").trim();
+  const b = String(brand || "").trim();
+  return b && !n.toLowerCase().startsWith(b.toLowerCase()) ? `${b} ${n}` : n;
+};
+
+// Google shows ~60 characters: long marketplace titles are cut at a word boundary, never mid-word.
+export function clipTitle(title, max = TITLE_MAX) {
+  const t = String(title || "").replace(/\s+/g, " ").trim();
+  if (t.length <= max) return t;
+  return t.slice(0, max - 1).replace(/[\s,;:|\-–—(]+\S*$/, "").replace(/[\s,;:|\-–—(]+$/, "") + "…";
+}
+
 export function seoTitle(keyword, extras, brand = "VEYRO") {
-  const head = String(keyword || "").trim();
   const tail = ` | ${brand}`;
+  const head = clipTitle(keyword, TITLE_MAX - tail.length);
   const list = (Array.isArray(extras) ? extras : [extras]).filter(Boolean);
   for (const extra of list) {
     if (head.length + extra.length + tail.length + 3 <= TITLE_MAX) return `${head} — ${extra}${tail}`;

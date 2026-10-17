@@ -57,9 +57,23 @@ const returnPolicy = (origin, countries) => ({
 });
 
 const TITLE_MAX = 68;
+// "MSI" + "MSI Mercedes…" must not become "MSI MSI Mercedes…".
+export const withBrand = (brand, name) => {
+  const n = String(name || "").trim();
+  const b = String(brand || "").trim();
+  return b && !n.toLowerCase().startsWith(b.toLowerCase()) ? `${b} ${n}` : n;
+};
+
+// Google shows ~60 characters: long marketplace titles are cut at a word boundary, never mid-word.
+export function clipTitle(title, max = TITLE_MAX) {
+  const t = String(title || "").replace(/\s+/g, " ").trim();
+  if (t.length <= max) return t;
+  return t.slice(0, max - 1).replace(/[\s,;:|\-–—(]+\S*$/, "").replace(/[\s,;:|\-–—(]+$/, "") + "…";
+}
+
 export function seoTitle(keyword, extras, brand = "VEYRO") {
-  const head = String(keyword || "").trim();
   const tail = ` | ${brand}`;
+  const head = clipTitle(keyword, TITLE_MAX - tail.length);
   for (const extra of extras) if (head.length + extra.length + tail.length + 3 <= TITLE_MAX) return `${head} — ${extra}${tail}`;
   return `${head}${tail}`;
 }
@@ -94,8 +108,8 @@ const flat = (v) => {
 
 export function productPage(p, origin, related = [], reviews = []) {
   const url = `${origin}/product/${p.slug}`;
-  const fullName = `${p.brand ? `${p.brand} ` : ""}${p.name}`;
-  const title = p.seo_title || seoTitle(fullName, ["Price, Specs & Installments", "Price & Specs", "Price"]);
+  const fullName = withBrand(p.brand, p.name);
+  const title = clipTitle(p.seo_title) || seoTitle(fullName, ["Price, Specs & Installments", "Price & Specs", "Price"]);
   const price0 = Number(p.customer_price);
   // SERP snippets show ~155 characters: lead with the product, the real price and the buying signals.
   const description = clip(
@@ -177,7 +191,7 @@ ${price > 0 ? `<p><strong>${esc(price.toFixed(2))} ${esc(p.currency || "USD")}</
 ${specs.length ? `<h2>Specifications</h2><table>${specs.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(flat(v))}</td></tr>`).join("")}</table>` : ""}
 ${p.brand ? `<p><a href="/brand/${encodeURIComponent(p.brand)}">More ${esc(p.brand)} products</a></p>` : ""}
 ${reviews.length ? `<h2>Customer reviews</h2><p>${esc((reviews.reduce((t, r) => t + Number(r.rating), 0) / reviews.length).toFixed(1))} / 5 from ${reviews.length} verified review${reviews.length > 1 ? "s" : ""}</p><ul>${reviews.slice(0, 5).map((r) => `<li>${"★".repeat(Math.max(1, Math.min(5, Math.round(Number(r.rating)))))} ${esc(clip(r.text || r.title || "", 400))}</li>`).join("")}</ul>` : ""}
-${related.length ? `<h2>Related products</h2><ul>${related.map((r) => `<li><a href="/product/${esc(r.slug)}">${esc(r.brand ? `${r.brand} ${r.name}` : r.name)}</a>${Number(r.customer_price) > 0 ? ` — ${esc(Number(r.customer_price).toFixed(2))} ${esc(r.currency || "USD")}` : ""}</li>`).join("")}</ul>` : ""}
+${related.length ? `<h2>Related products</h2><ul>${related.map((r) => `<li><a href="/product/${esc(r.slug)}">${esc(withBrand(r.brand, r.name))}</a>${Number(r.customer_price) > 0 ? ` — ${esc(Number(r.customer_price).toFixed(2))} ${esc(r.currency || "USD")}` : ""}</li>`).join("")}</ul>` : ""}
 <p><a href="/return-policy">30-day returns</a> · <a href="/shipping-policy">Shipping</a> · <a href="/warranty">2-year warranty</a></p>
 </main>`;
 
@@ -253,7 +267,7 @@ export function homePage(origin, products) {
 <ul>${CATEGORIES.map((c) => `<li><a href="/category?cat=${encodeURIComponent(c)}">${esc(c)}</a></li>`).join("")}</ul>
 ${brands.length ? `<h2>Popular brands</h2><ul>${brands.map((b) => `<li><a href="/brand/${encodeURIComponent(b)}">${esc(b)}</a></li>`).join("")}</ul>` : ""}
 <h2>Featured products</h2>
-<ul>${products.slice(0, 24).map((p) => `<li><a href="/product/${esc(p.slug)}">${esc(p.brand ? `${p.brand} ${p.name}` : p.name)}</a>${Number(p.customer_price) > 0 ? ` — ${esc(Number(p.customer_price).toFixed(2))} ${esc(p.currency || "USD")}` : ""}</li>`).join("")}</ul>
+<ul>${products.slice(0, 24).map((p) => `<li><a href="/product/${esc(p.slug)}">${esc(withBrand(p.brand, p.name))}</a>${Number(p.customer_price) > 0 ? ` — ${esc(Number(p.customer_price).toFixed(2))} ${esc(p.currency || "USD")}` : ""}</li>`).join("")}</ul>
 </main>`;
   return { title, description, url: `${origin}/`, type: "website", jsonLd: [list], body, path: "/" };
 }
@@ -280,7 +294,7 @@ export function categoryPage(cat, products, origin, { indexable = true } = {}) {
   };
   const body = `<main data-ssr="category" style="max-width:960px;margin:0 auto;padding:24px;font-family:system-ui,sans-serif">
 <h1>${esc(name)}</h1>
-<ul>${products.map((p) => `<li><a href="/product/${esc(p.slug)}">${esc(p.brand ? `${p.brand} ${p.name}` : p.name)}</a>${Number(p.customer_price) > 0 ? ` — ${esc(Number(p.customer_price).toFixed(2))} ${esc(p.currency || "USD")}` : ""}</li>`).join("")}</ul>
+<ul>${products.map((p) => `<li><a href="/product/${esc(p.slug)}">${esc(withBrand(p.brand, p.name))}</a>${Number(p.customer_price) > 0 ? ` — ${esc(Number(p.customer_price).toFixed(2))} ${esc(p.currency || "USD")}` : ""}</li>`).join("")}</ul>
 <h2>Other categories</h2>
 <ul>${CATEGORIES.filter((c) => c !== cat).map((c) => `<li><a href="/category?cat=${encodeURIComponent(c)}">${esc(c)}</a></li>`).join("")}</ul>
 </main>`;
